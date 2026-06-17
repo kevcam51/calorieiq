@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ROLES, getProfile, joinTrainer, getMyClients, myInviteCode } from "./profile.js";
+import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode } from "./profile.js";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -6749,12 +6749,22 @@ function RolePanel() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [trainerName, setTrainerName] = useState("");
 
   const load = async () => {
     const p = await getProfile();
     setProfile(p || null);
     if (p && (p.role === ROLES.HEAD_TRAINER || p.role === ROLES.SUB_TRAINER)) {
       try { setClients(await getMyClients()); } catch { /* ignore */ }
+      try { setInviteCode(await ensureInviteCode()); } catch { /* ignore */ }
+    } else if (p && p.assignedTrainerId) {
+      // Client view: look up the trainer's friendly name to display instead of
+      // their raw uid.
+      try {
+        const t = await getProfile(p.assignedTrainerId);
+        if (t) setTrainerName(t.displayName || t.email || "");
+      } catch { /* ignore */ }
     }
   };
   useEffect(() => { load(); }, []);
@@ -6778,8 +6788,9 @@ function RolePanel() {
   };
 
   const copyCode = async () => {
+    if (!inviteCode) return;
     try {
-      await navigator.clipboard.writeText(myInviteCode());
+      await navigator.clipboard.writeText(formatInviteCode(inviteCode));
       setCopied(true); setTimeout(() => setCopied(false), 1500);
     } catch { /* clipboard unavailable */ }
   };
@@ -6805,10 +6816,13 @@ function RolePanel() {
             Share your invite code with clients so they can link to you.
           </div>
           <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"4px 0 14px" }}>
-            <code style={{ ...field, fontFamily:"monospace", display:"inline-block" }}>
-              {myInviteCode()}
+            <code style={{ ...field, fontFamily:"monospace", display:"inline-block",
+              letterSpacing:"1px", fontSize:"1rem" }}>
+              {inviteCode ? formatInviteCode(inviteCode) : "…"}
             </code>
-            <button style={btn} onClick={copyCode}>{copied ? "Copied!" : "Copy code"}</button>
+            <button style={btn} onClick={copyCode} disabled={!inviteCode}>
+              {copied ? "Copied!" : "Copy code"}
+            </button>
           </div>
           <div className="card-sub" style={{ marginBottom:6 }}>
             Your clients ({clients.length})
@@ -6834,9 +6848,9 @@ function RolePanel() {
           {profile.assignedTrainerId ? (
             <div className="card-sub">
               You're linked to trainer:{" "}
-              <code style={{ fontFamily:"monospace", color:"var(--text)" }}>
-                {profile.assignedTrainerId}
-              </code>
+              <strong style={{ color:"var(--text)" }}>
+                {trainerName || profile.assignedTrainerId}
+              </strong>
             </div>
           ) : (
             <>

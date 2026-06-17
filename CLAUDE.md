@@ -84,8 +84,13 @@ enabled (Blaze has no default spending cap).
   clients access in the rules, with 29 passing emulator tests. Minimal in-app role panel
   (trainer sees invite code + linked clients; client joins via invite code). Blaze migration
   path documented.
-- Invite code is currently the trainer's **UID** (MVP shortcut). A friendly short-code is a
-  planned improvement.
+- Session 4: **Friendly invite codes.** Trainers now get a short, readable code (7 chars, no
+  ambiguous O/0/I/1/L, displayed as `XXX-XXXX`) stored on their profile (`inviteCode` field);
+  clients link by entering it and it's resolved back to the trainer's uid at join time. Raw-uid
+  entry still works as a fallback for codes shared under the old scheme, and `joinTrainer` now
+  validates the target is actually a trainer before linking. No `firestore.rules` change was
+  needed (lookup uses the already-open signed-in read; the code is written by the trainer to
+  their own profile). Helpers added to `profile.js`: `ensureInviteCode`, `formatInviteCode`.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 
@@ -96,7 +101,6 @@ enabled (Blaze has no default spending cap).
   stays `calorieiq-29762` regardless, so this is a UI-text + domain change whenever it happens.
 
 - Role-aware **Trainer and Client dashboards** (real UIs; current role panel is MVP scaffolding).
-- **Friendly invite codes** (short code/link instead of raw UID).
 - **Two trial periods**: self-serve client trial (~7–14 days) and trainer migration trial
   (~30 days). Store trial state per-user (the reserved profile fields above); gate features at
   expiry. Anonymous auth is the frictionless entry point.
