@@ -40,11 +40,19 @@ export default function AuthGate({ children }) {
   const [mode, setMode] = useState("login"); // "login" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   // role chosen on the signup form ("client" maps to client, "trainer" -> head_trainer)
   const [signupRole, setSignupRole] = useState(ROLES.CLIENT);
+  // If the page was opened from a trainer's invite link (?invite=CODE), we show a
+  // hint on signup. The actual linking happens inside the app once the client has
+  // a profile (see RolePanel auto-link).
+  const inviteParam = (() => {
+    try { return (new URLSearchParams(window.location.search).get("invite") || "").trim(); }
+    catch { return ""; }
+  })();
   // profile-completion gate: every signed-in user must have a users/{uid} profile
   const [profileChecked, setProfileChecked] = useState(false);
   const [needsProfile, setNeedsProfile] = useState(false);
@@ -104,12 +112,19 @@ export default function AuthGate({ children }) {
     setError(""); setNotice(""); setBusy(true);
     try {
       if (mode === "signup") {
+        // Trainers run a business on the platform, so a name is required for them.
+        // Clients may add one later.
+        if (signupRole === ROLES.HEAD_TRAINER && !name.trim()) {
+          setError("Please enter your name — trainers need one.");
+          return;
+        }
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         createdRef.current = true; // skip the gate's re-check for this fresh account
         await createProfile({
           uid: cred.user.uid,
           email: cred.user.email,
           role: signupRole,
+          displayName: name.trim(),
         });
         setNeedsProfile(false);
         setProfileChecked(true);
@@ -151,6 +166,13 @@ export default function AuthGate({ children }) {
         <h1 style={S.brand}>CalorieIQ</h1>
         <p style={S.sub}>{mode === "signup" ? "Create your account" : "Sign in"}</p>
 
+        {inviteParam && (
+          <div style={S.notice}>
+            You've been invited by a trainer. Sign up (or sign in) as a client and
+            you'll be linked automatically.
+          </div>
+        )}
+
         <input
           style={S.input} type="email" placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)} autoComplete="email"
@@ -163,7 +185,14 @@ export default function AuthGate({ children }) {
         />
 
         {mode === "signup" && (
-          <RoleToggle value={signupRole} onChange={setSignupRole} />
+          <>
+            <input
+              style={S.input} type="text" autoComplete="name"
+              placeholder={signupRole === ROLES.HEAD_TRAINER ? "Your name (required)" : "Your name (optional)"}
+              value={name} onChange={(e) => setName(e.target.value)}
+            />
+            <RoleToggle value={signupRole} onChange={setSignupRole} />
+          </>
         )}
 
         {error && <div style={S.error}>{error}</div>}
@@ -224,11 +253,18 @@ function RoleToggle({ value, onChange }) {
 function RoleChooser({ user, onDone }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [name, setName] = useState(user.displayName || "");
 
   const choose = async (role) => {
-    setError(""); setBusy(true);
+    setError("");
+    // Trainers must provide a name (they run a business on the platform).
+    if (role === ROLES.HEAD_TRAINER && !name.trim()) {
+      setError("Please enter your name — trainers need one.");
+      return;
+    }
+    setBusy(true);
     try {
-      await createProfile({ uid: user.uid, email: user.email, role });
+      await createProfile({ uid: user.uid, email: user.email, role, displayName: name.trim() });
       onDone();
     } catch (e) {
       setError(prettyError(e));
@@ -241,7 +277,11 @@ function RoleChooser({ user, onDone }) {
       <SignOutButton />
       <div style={S.card}>
         <h1 style={S.brand}>CalorieIQ</h1>
-        <p style={S.sub}>One quick thing — are you a trainer or a client?</p>
+        <p style={S.sub}>One quick thing — what's your name, and are you a trainer or a client?</p>
+        <input
+          style={S.input} type="text" autoComplete="name" placeholder="Your name"
+          value={name} onChange={(e) => setName(e.target.value)}
+        />
         {error && <div style={S.error}>{error}</div>}
         <button style={S.primary} disabled={busy} onClick={() => choose(ROLES.CLIENT)}>
           I'm a client

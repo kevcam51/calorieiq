@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode } from "./profile.js";
+import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setDisplayName, leaveTrainer } from "./profile.js";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -6742,6 +6742,20 @@ Respond in this exact JSON format (no markdown, no backticks):
 //   • trainer → their invite code (copyable) + their list of clients
 // Full dashboards are a later session; this just makes the role system usable
 // and proves the trainer-sees-clients security rule works end to end.
+// Read the invite code from the page URL (?invite=CODE), if present.
+function getInviteFromUrl() {
+  try { return (new URLSearchParams(window.location.search).get("invite") || "").trim(); }
+  catch { return ""; }
+}
+// Remove ?invite= from the URL without reloading, so it can't re-fire.
+function clearInviteFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("invite");
+    window.history.replaceState({}, "", url.toString());
+  } catch { /* ignore */ }
+}
+
 function RolePanel() {
   const [profile, setProfile] = useState(undefined); // undefined = loading
   const [code, setCode] = useState("");
@@ -6751,10 +6765,30 @@ function RolePanel() {
   const [copied, setCopied] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [trainerName, setTrainerName] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const load = async () => {
-    const p = await getProfile();
+    let p = await getProfile();
+
+    // Auto-link from an invite link: if a client opened ?invite=CODE and isn't
+    // already linked, link them to that trainer, then clean the code out of the
+    // URL so it can't re-fire on refresh.
+    const invite = getInviteFromUrl();
+    if (p && p.role === ROLES.CLIENT && !p.assignedTrainerId && invite) {
+      try {
+        const tUid = await joinTrainer(invite);
+        const t = await getProfile(tUid);
+        setMsg(`You've been linked to ${(t && (t.displayName || t.email)) || "your trainer"}.`);
+        p = await getProfile(); // refresh with the new link
+      } catch (e) {
+        setMsg((e && e.message) || "Couldn't use that invite link.");
+      }
+      clearInviteFromUrl();
+    }
+
     setProfile(p || null);
+    if (p) setNameInput(p.displayName || "");
     if (p && (p.role === ROLES.HEAD_TRAINER || p.role === ROLES.SUB_TRAINER)) {
       try { setClients(await getMyClients()); } catch { /* ignore */ }
       try { setInviteCode(await ensureInviteCode()); } catch { /* ignore */ }
@@ -6795,6 +6829,44 @@ function RolePanel() {
     } catch { /* clipboard unavailable */ }
   };
 
+  // Full shareable link a trainer can send to a new client.
+  const shareLink = inviteCode
+    ? `${window.location.origin}/?invite=${inviteCode}`
+    : "";
+
+  const copyLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true); setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard unavailable */ }
+  };
+
+  const saveName = async () => {
+    const n = nameInput.trim();
+    if (isTrainer && !n) { setMsg("Trainers need a name."); return; }
+    setSavingName(true); setMsg("");
+    try {
+      await setDisplayName(n);
+      setMsg("Name saved.");
+      await load();
+    } catch (e) {
+      setMsg((e && e.message) || "Couldn't save your name.");
+    } finally { setSavingName(false); }
+  };
+
+  const leave = async () => {
+    setBusy(true); setMsg("");
+    try {
+      await leaveTrainer();
+      setTrainerName("");
+      setMsg("You've left your trainer. You can join another with a code below.");
+      await load();
+    } catch (e) {
+      setMsg((e && e.message) || "Couldn't leave your trainer.");
+    } finally { setBusy(false); }
+  };
+
   const field = { padding:"10px 12px", fontSize:".9rem", borderRadius:"8px",
     border:"1px solid rgba(255,255,255,.15)", background:"rgba(255,255,255,.05)",
     color:"var(--text)", flex:1, minWidth:0 };
@@ -6810,6 +6882,20 @@ function RolePanel() {
         </span>
       </div>
 
+      <div className="card-sub" style={{ marginBottom:6 }}>
+        Your name{isTrainer ? "" : " (optional)"}
+      </div>
+      <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"0 0 16px" }}>
+        <input
+          style={field} value={nameInput} placeholder="Your name"
+          onChange={(e) => setNameInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && saveName()}
+        />
+        <button style={btn} onClick={saveName} disabled={savingName}>
+          {savingName ? "…" : "Save"}
+        </button>
+      </div>
+
       {isTrainer ? (
         <>
           <div className="card-sub">
@@ -6822,6 +6908,19 @@ function RolePanel() {
             </code>
             <button style={btn} onClick={copyCode} disabled={!inviteCode}>
               {copied ? "Copied!" : "Copy code"}
+            </button>
+          </div>
+          <div className="card-sub" style={{ marginBottom:6 }}>
+            Or send a one-click invite link — new clients who open it are linked to
+            you automatically.
+          </div>
+          <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"4px 0 14px" }}>
+            <code style={{ ...field, fontFamily:"monospace", display:"inline-block",
+              fontSize:".78rem", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+              {shareLink || "…"}
+            </code>
+            <button style={btn} onClick={copyLink} disabled={!shareLink}>
+              Copy link
             </button>
           </div>
           <div className="card-sub" style={{ marginBottom:6 }}>
@@ -6846,12 +6945,21 @@ function RolePanel() {
       ) : (
         <>
           {profile.assignedTrainerId ? (
-            <div className="card-sub">
-              You're linked to trainer:{" "}
-              <strong style={{ color:"var(--text)" }}>
-                {trainerName || profile.assignedTrainerId}
-              </strong>
-            </div>
+            <>
+              <div className="card-sub">
+                You're linked to trainer:{" "}
+                <strong style={{ color:"var(--text)" }}>
+                  {trainerName || profile.assignedTrainerId}
+                </strong>
+              </div>
+              <button
+                style={{ ...btn, background:"transparent", color:"var(--muted)",
+                  border:"1px solid rgba(255,255,255,.2)", marginTop:10 }}
+                onClick={leave} disabled={busy}
+              >
+                {busy ? "…" : "Leave trainer"}
+              </button>
+            </>
           ) : (
             <>
               <div className="card-sub">

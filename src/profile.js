@@ -161,3 +161,19 @@ export async function getMySubTrainers(headUid = auth.currentUser && auth.curren
 export function myInviteCode(uid = auth.currentUser && auth.currentUser.uid) {
   return uid || "";
 }
+
+// Update the signed-in user's display name. Owner-only self-write (allowed by
+// the existing rules: owner may update their own profile as long as role is
+// unchanged).
+export async function setDisplayName(name) {
+  const uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) throw new Error("Not signed in");
+  await updateDoc(profileRef(uid), { displayName: (name || "").trim() });
+}
+
+// Client leaves their current trainer (clears the link). Owner-only self-write.
+export async function leaveTrainer() {
+  const uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) throw new Error("Not signed in");
+  await updateDoc(profileRef(uid), { assignedTrainerId: null });
+}

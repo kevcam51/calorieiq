@@ -91,6 +91,17 @@ enabled (Blaze has no default spending cap).
   validates the target is actually a trainer before linking. No `firestore.rules` change was
   needed (lookup uses the already-open signed-in read; the code is written by the trainer to
   their own profile). Helpers added to `profile.js`: `ensureInviteCode`, `formatInviteCode`.
+- Session 5: **Display names, leave/switch trainer, and one-click invite links.**
+  (1) **Display name** is now captured at signup (a name field on the signup form and the
+  one-time role chooser) — **required for trainers**, optional for clients — and editable
+  anytime from the role panel. Stored in the profile's `displayName`; the client view shows the
+  trainer's name (falling back to email, then uid). (2) **Leave / switch trainer:** clients get
+  a "Leave trainer" button that clears `assignedTrainerId`; switching is leave-then-join-a-new-
+  code. (3) **Invite links:** trainers can copy a `…/?invite=CODE` link; when a client opens it
+  and signs up/in (and isn't already linked), the app auto-links them and confirms on screen
+  (guarded to clients only, never overrides an existing link, and the code is stripped from the
+  URL after). All three are owner self-writes, so **no `firestore.rules` change** was needed.
+  Helpers added to `profile.js`: `setDisplayName`, `leaveTrainer`.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 
