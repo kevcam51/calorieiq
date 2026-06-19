@@ -150,6 +150,19 @@ enabled (Blaze has no default spending cap).
   auto-create of `caliq-self` on join (today it's created on first edit), and enriching ClientHome
   with a plan summary. Assumption: one shared "self" plan per client (multiple plans per client is a
   later roadmap item).
+- Session 9: **Manual meal / food logging (free self-log tier, non-Blaze).** The Daily Dashboard now
+  has a **"Meals & Food Today"** section (new `MealLog` component): an itemized list of foods logged
+  today (each with optional name, optional meal type Breakfast/Lunch/Dinner/Snack, required calories,
+  and optional protein/carbs/fat), with per-item delete. Entries roll into the day's calorie + macro
+  totals (Kevin chose **Option A** — additive: the existing quick-add buttons stay, and meals add on
+  top; both feed the total). Each entry can be a full named food, a by-meal estimate (type + calories,
+  no name), or a quick calorie number. Stored as a `meals[]` array inside the existing per-day log
+  (`caliq-log-{id}-{date}`). New App handlers `onAddMeal`/`onRemoveMeal` adjust meals + totals.
+  **Daily log is now remote-aware:** `logRead`/`logWrite`/`persistLog` route the daily log to the
+  linked client's account when a trainer has a client's plan open (`activeRemoteUid`), so trainer-on-
+  behalf logging lands in the client's account (fixes a gap from Part C); the load effect now also
+  depends on `activeRemoteUid`. **Forward-compatible with the food-library API (Blaze, later):** that
+  API will simply auto-fill these same fields instead of typing them. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 

@@ -5672,9 +5672,155 @@ function TimelineTab({ data, tdee, totalBurn }) {
 // The primary view after plan setup — transforms CalorieIQ from a calculator
 // into a daily-use platform. This is what drives retention and daily engagement.
 
+// ─── Meal / food log (Session 9) ────────────────────────────────────────────
+// Itemized food logging that rolls into the day's totals. Each entry can be as
+// detailed (named food + macros + meal type) or as simple (just calories,
+// optionally tagged to a meal) as the user wants. This is the manual/free tier;
+// the food-library API (Blaze) will later auto-fill these same fields.
+function MealLog({ meals, onAddMeal, onRemoveMeal }) {
+  const [name, setName] = useState("");
+  const [cals, setCals] = useState("");
+  const [showMacros, setShowMacros] = useState(false);
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
+  // Which meal's add-form is open: "Breakfast"/"Lunch"/"Dinner"/"Snack",
+  // "other", or null (none open).
+  const [addingTo, setAddingTo] = useState(null);
+
+  const list = meals || [];
+  const TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"];
+
+  const resetFields = () => { setName(""); setCals(""); setProtein(""); setCarbs(""); setFat(""); setShowMacros(false); };
+  const openForm = (key) => { resetFields(); setAddingTo(key); };
+  const closeForm = () => { resetFields(); setAddingTo(null); };
+  const submit = () => {
+    const c = parseInt(cals);
+    if (!c || c <= 0) return; // calories are the one required field
+    onAddMeal({ name: name.trim(), type: addingTo === "other" ? "" : addingTo, calories: c,
+      protein: parseInt(protein) || 0, carbs: parseInt(carbs) || 0, fat: parseInt(fat) || 0 });
+    closeForm();
+  };
+
+  const inp = { padding:"9px 11px", fontSize:".85rem", borderRadius:"8px",
+    border:"1px solid var(--border)", background:"var(--s2)", color:"var(--text)", minWidth:0 };
+  const addBtn = { marginTop:"4px", padding:"6px 10px", fontSize:".76rem", fontWeight:600,
+    borderRadius:"6px", border:"1px dashed var(--border)", background:"transparent",
+    color:"var(--accent)", cursor:"pointer" };
+
+  const mealRow = (m) => (
+    <div key={m.id} style={{ display:"flex", alignItems:"center", gap:"8px",
+      padding:"6px 8px", borderRadius:"6px", background:"rgba(255,255,255,.04)" }}>
+      <span style={{ flex:1, fontSize:".82rem" }}>
+        {m.name || <span style={{ color:"var(--muted)" }}>Quick entry</span>}
+        {(m.protein || m.carbs || m.fat) ? (
+          <span style={{ color:"var(--muted)", fontSize:".72rem" }}>
+            {"  "}({m.protein||0}p / {m.carbs||0}c / {m.fat||0}f)
+          </span>
+        ) : null}
+      </span>
+      <span style={{ fontWeight:700, fontSize:".82rem" }}>{(m.calories||0).toLocaleString()} cal</span>
+      <button onClick={() => onRemoveMeal(m.id)} title="Remove"
+        style={{ border:"none", background:"transparent", color:"var(--muted)",
+          cursor:"pointer", fontSize:"1rem", lineHeight:1 }}>✕</button>
+    </div>
+  );
+
+  // The inline add-form, shown under whichever meal you tapped "+ Add" on.
+  const addForm = () => (
+    <div style={{ marginTop:"6px", display:"flex", flexDirection:"column", gap:"6px",
+      padding:"8px", borderRadius:"8px", background:"rgba(255,255,255,.04)" }}>
+      <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+        <input autoFocus style={{ ...inp, flex:"2 1 140px" }} placeholder="Food (optional)"
+          value={name} onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()} />
+        <input style={{ ...inp, flex:"1 1 90px" }} type="number" inputMode="numeric"
+          placeholder="Calories" value={cals} onChange={(e) => setCals(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()} />
+      </div>
+      <button onClick={() => setShowMacros((s) => !s)}
+        style={{ border:"none", background:"transparent", color:"var(--muted)", cursor:"pointer",
+          fontSize:".72rem", textDecoration:"underline", padding:"0", textAlign:"left" }}>
+        {showMacros ? "Hide macros" : "+ Add macros (optional)"}
+      </button>
+      {showMacros && (
+        <div style={{ display:"flex", gap:"6px" }}>
+          <input style={{ ...inp, flex:1 }} type="number" inputMode="numeric" placeholder="Protein g"
+            value={protein} onChange={(e) => setProtein(e.target.value)} />
+          <input style={{ ...inp, flex:1 }} type="number" inputMode="numeric" placeholder="Carbs g"
+            value={carbs} onChange={(e) => setCarbs(e.target.value)} />
+          <input style={{ ...inp, flex:1 }} type="number" inputMode="numeric" placeholder="Fat g"
+            value={fat} onChange={(e) => setFat(e.target.value)} />
+        </div>
+      )}
+      <div style={{ display:"flex", gap:"6px" }}>
+        <button onClick={submit}
+          style={{ padding:"8px 16px", fontSize:".82rem", fontWeight:700, borderRadius:"8px",
+            border:"none", background:"var(--accent)", color:"#0b0b12", cursor:"pointer" }}>Add</button>
+        <button onClick={closeForm}
+          style={{ padding:"8px 12px", fontSize:".82rem", borderRadius:"8px",
+            border:"1px solid var(--border)", background:"transparent", color:"var(--muted)", cursor:"pointer" }}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ padding:"12px 14px", background:"var(--s2)", borderRadius:"8px",
+      border:"1px solid var(--border)", marginBottom:"6px" }}>
+      <div className="sec-title" style={{ marginTop:0 }}>🍽️ Meals &amp; Food Today</div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+        {TYPES.map((t) => {
+          const items = list.filter((m) => m.type === t);
+          const subtotal = items.reduce((s, m) => s + (m.calories||0), 0);
+          return (
+            <div key={t}>
+              <div style={{ fontSize:".72rem", fontWeight:700, color:"var(--muted)",
+                textTransform:"uppercase", letterSpacing:".5px", marginBottom:"4px",
+                display:"flex", justifyContent:"space-between" }}>
+                <span>{t}</span>
+                {items.length > 0 && <span>{subtotal.toLocaleString()} cal</span>}
+              </div>
+              {items.length > 0 && (
+                <div style={{ display:"flex", flexDirection:"column", gap:"4px" }}>{items.map(mealRow)}</div>
+              )}
+              {addingTo === t ? addForm() : (
+                <button style={addBtn} onClick={() => openForm(t)}>+ Add food to {t}</button>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Quick / untyped entries */}
+        <div>
+          <div style={{ fontSize:".72rem", fontWeight:700, color:"var(--muted)",
+            textTransform:"uppercase", letterSpacing:".5px", marginBottom:"4px" }}>
+            Other / quick entries
+          </div>
+          {list.filter((m) => !m.type).length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:"4px" }}>
+              {list.filter((m) => !m.type).map(mealRow)}
+            </div>
+          )}
+          {addingTo === "other" ? addForm() : (
+            <button style={addBtn} onClick={() => openForm("other")}>+ Add a quick entry</button>
+          )}
+        </div>
+
+        {list.length > 0 && (
+          <div style={{ fontSize:".72rem", color:"var(--muted)", textAlign:"right",
+            borderTop:"1px solid var(--border)", paddingTop:"6px" }}>
+            {list.reduce((s, m) => s + (m.calories||0), 0).toLocaleString()} cal from {list.length} item{list.length!==1?"s":""}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPerDay,
   onOpenPlan, onOpenResults, onEditWorkouts, onLogUpdate, dailyLog, streak,
-  onUpdateCardio, onUpdateStrength }) {
+  onUpdateCardio, onUpdateStrength, onAddMeal, onRemoveMeal }) {
 
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [expandedStat, setExpandedStat] = useState(null);
@@ -6007,6 +6153,8 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
           </div>
         </div>
       )}
+
+      <MealLog meals={dailyLog.meals} onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal} />
 
       <div className="dash-log-row">
         <span className="dash-log-icon">💧</span>
@@ -8106,40 +8254,91 @@ export default function App() {
 
   // ── Daily log handler ──
   const todayKey = new Date().toISOString().slice(0,10);
+  // Daily logs live with the plan: when a trainer is editing a LINKED client's
+  // plan (activeRemoteUid set), the log reads/writes go to the CLIENT's account;
+  // otherwise they use the signed-in user's own storage.
+  const logRead = async (key) => {
+    try {
+      if (activeRemoteUid) { const r = await getForUser(activeRemoteUid, key); return r && r.value ? r.value : null; }
+      const r = await window.storage.get(key); return r && r.value ? r.value : null;
+    } catch (e) { return null; }
+  };
+  const logWrite = (key, value) => {
+    try {
+      if (activeRemoteUid) setForUser(activeRemoteUid, key, value);
+      else window.storage.set(key, value);
+    } catch (e) {}
+  };
+  const persistLog = (logObj) => {
+    if (!activeId) return;
+    logWrite(`caliq-log-${activeId}-${todayKey}`, JSON.stringify(logObj));
+  };
+
   const onLogUpdate = (field, value) => {
     const updated = {...dailyLog, [field]: value};
     setDailyLog(updated);
-    if (activeId) {
-      try { window.storage.set(`caliq-log-${activeId}-${todayKey}`, JSON.stringify(updated)); } catch(e) {}
-    }
+    persistLog(updated);
     // Update streak: if calories logged > 0, count as active day
     if (field === "calories" && value > 0) setStreak(s => Math.max(s, 1));
   };
 
-  // Load daily log when profile changes
+  // Add a logged food/meal: appends to the day's meals and rolls its calories +
+  // macros into the day's totals (Option A — meals add to the running total).
+  const onAddMeal = (meal) => {
+    const m = { id:`m${Date.now()}${Math.floor(Math.random()*1000)}`,
+      name: meal.name||"", type: meal.type||"", calories: Number(meal.calories)||0,
+      protein: Number(meal.protein)||0, carbs: Number(meal.carbs)||0, fat: Number(meal.fat)||0 };
+    const updated = {
+      ...dailyLog,
+      meals: [...(dailyLog.meals||[]), m],
+      calories: (dailyLog.calories||0) + m.calories,
+      protein: (dailyLog.protein||0) + m.protein,
+      carbs: (dailyLog.carbs||0) + m.carbs,
+      fat: (dailyLog.fat||0) + m.fat,
+    };
+    setDailyLog(updated);
+    persistLog(updated);
+    if (m.calories > 0) setStreak(s => Math.max(s, 1));
+  };
+
+  // Remove a logged food/meal and subtract its contribution from the totals.
+  const onRemoveMeal = (id) => {
+    const meals = dailyLog.meals || [];
+    const m = meals.find(x => x.id === id);
+    if (!m) return;
+    const updated = {
+      ...dailyLog,
+      meals: meals.filter(x => x.id !== id),
+      calories: Math.max(0, (dailyLog.calories||0) - (m.calories||0)),
+      protein: Math.max(0, (dailyLog.protein||0) - (m.protein||0)),
+      carbs: Math.max(0, (dailyLog.carbs||0) - (m.carbs||0)),
+      fat: Math.max(0, (dailyLog.fat||0) - (m.fat||0)),
+    };
+    setDailyLog(updated);
+    persistLog(updated);
+  };
+
+  // Load daily log when the active plan changes (own profile or a linked client)
   useEffect(() => {
     if (!activeId) return;
     (async () => {
-      try {
-        const r = await window.storage.get(`caliq-log-${activeId}-${todayKey}`);
-        if (r && r.value) setDailyLog(JSON.parse(r.value));
-        else setDailyLog({calories:0, water:0, weight:0});
-      } catch(e) { setDailyLog({calories:0, water:0, weight:0}); }
-      // Simple streak: count consecutive days with logs
+      const v = await logRead(`caliq-log-${activeId}-${todayKey}`);
+      let parsed = {calories:0, water:0, weight:0, meals:[]};
+      if (v) { try { parsed = JSON.parse(v); } catch(e) {} }
+      setDailyLog(parsed);
+      // Simple streak: count consecutive days with logged calories
       let s = 0;
       for (let i = 0; i < 365; i++) {
         const d = new Date(); d.setDate(d.getDate() - i);
         const dk = d.toISOString().slice(0,10);
-        try {
-          const lr = await window.storage.get(`caliq-log-${activeId}-${dk}`);
-          if (lr && lr.value) { const p = JSON.parse(lr.value); if (p.calories > 0) { s++; continue; } }
-        } catch(e) {}
+        const lv = await logRead(`caliq-log-${activeId}-${dk}`);
+        if (lv) { try { const p = JSON.parse(lv); if (p.calories > 0) { s++; continue; } } catch(e) {} }
         if (i === 0) continue; // today might not have logs yet
         break;
       }
       setStreak(s);
     })();
-  }, [activeId]);
+  }, [activeId, activeRemoteUid]);
 
   // ── Compute values for dashboard (same formulas as Results) ──
   const actObj = ACTIVITY_LEVELS.find(a=>a.id===data.activityLevel) || ACTIVITY_LEVELS[0];
@@ -8248,6 +8447,7 @@ export default function App() {
               onOpenPlan={()=>{setNavFrom("dashboard");setStepAndSave(0);}} onOpenResults={()=>{setNavFrom("dashboard");setShowDash(false);}}
               onEditWorkouts={()=>{setNavFrom("dashboard");setStepAndSave(3);}}
               onLogUpdate={onLogUpdate} dailyLog={dailyLog} streak={streak}
+              onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal}
               onUpdateCardio={(day,idx,field,val)=>setDataAndSave(p=>{
                 if (field==="_replace") return {...p, cardio:{...p.cardio,[day]:val}};
                 const sessions = Array.isArray(p.cardio[day]) ? [...p.cardio[day]] : [];
