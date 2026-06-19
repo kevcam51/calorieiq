@@ -102,6 +102,13 @@ enabled (Blaze has no default spending cap).
   (guarded to clients only, never overrides an existing link, and the code is stripped from the
   URL after). All three are owner self-writes, so **no `firestore.rules` change** was needed.
   Helpers added to `profile.js`: `setDisplayName`, `leaveTrainer`.
+- Session 6: **Name refinements + leave confirmation.** Names are now captured as separate
+  **first / last** fields (stored as `firstName`, `lastName`, plus the combined `displayName`
+  for back-compat) on signup, the role chooser, and the role-panel editor; both required for
+  trainers. The "Leave trainer" button now asks for an inline **Confirm / Cancel** before
+  unlinking, to prevent accidental leaves. Helpers added to `profile.js`: `setName`, `splitName`
+  (and `splitName` falls back to splitting an older single `displayName`). Still owner
+  self-writes — no `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 
@@ -112,6 +119,15 @@ enabled (Blaze has no default spending cap).
   stays `calorieiq-29762` regardless, so this is a UI-text + domain change whenever it happens.
 
 - Role-aware **Trainer and Client dashboards** (real UIs; current role panel is MVP scaffolding).
+- **Navigation side menu** — a hamburger (≡) menu in the top corner that opens a slide-out
+  panel for editing your profile and moving around the app. Its own UI step (App.jsx is one
+  large component, so navigation restructuring should be planned carefully). No Blaze needed.
+- **Notification center** — notify a trainer when a client joins or leaves (and similar events).
+  Deferred until Blaze/Cloud Functions: a client safely creating a notification on the trainer's
+  side needs server-side logic (client-side writes would require opening up the rules unsafely).
+- **In-app messaging** — direct messages between a trainer and their clients. Deferred until
+  Blaze/Cloud Functions: a shared conversation between two users needs server-side writes (or
+  carefully designed new rules) to stay secure.
 - **Two trial periods**: self-serve client trial (~7–14 days) and trainer migration trial
   (~30 days). Store trial state per-user (the reserved profile fields above); gate features at
   expiry. Anonymous auth is the frictionless entry point.

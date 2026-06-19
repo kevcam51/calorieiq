@@ -15,14 +15,21 @@ export const ROLES = {
 const profileRef = (uid) => doc(db, "users", uid);
 
 // Create a profile at signup. role MUST be 'client' or 'head_trainer'.
-export async function createProfile({ uid, email, role, displayName = "" }) {
+export async function createProfile({ uid, email, role, displayName = "", firstName = "", lastName = "" }) {
   if (role !== ROLES.CLIENT && role !== ROLES.HEAD_TRAINER) {
     throw new Error("Signup role must be 'client' or 'head_trainer'");
   }
+  const first = (firstName || "").trim();
+  const last = (lastName || "").trim();
+  // displayName is the combined name; kept as its own field so everything that
+  // shows a name keeps working.
+  const dn = (displayName || `${first} ${last}`).trim();
   const data = {
     uid,
     email: email || "",
-    displayName,
+    firstName: first,
+    lastName: last,
+    displayName: dn,
     role,
     assignedTrainerId: null,
     // a head trainer is the head of their own tree; clients have no head
@@ -169,6 +176,31 @@ export async function setDisplayName(name) {
   const uid = auth.currentUser && auth.currentUser.uid;
   if (!uid) throw new Error("Not signed in");
   await updateDoc(profileRef(uid), { displayName: (name || "").trim() });
+}
+
+// Update the signed-in user's first/last name (and the combined displayName).
+// Owner-only self-write. Returns the combined name.
+export async function setName(firstName, lastName) {
+  const uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) throw new Error("Not signed in");
+  const first = (firstName || "").trim();
+  const last = (lastName || "").trim();
+  const displayName = `${first} ${last}`.trim();
+  await updateDoc(profileRef(uid), { firstName: first, lastName: last, displayName });
+  return displayName;
+}
+
+// Split a profile into [first, last] for editing. Prefers the stored
+// firstName/lastName; falls back to splitting an older single displayName.
+export function splitName(profile) {
+  if (!profile) return ["", ""];
+  if (profile.firstName || profile.lastName) {
+    return [profile.firstName || "", profile.lastName || ""];
+  }
+  const dn = (profile.displayName || "").trim();
+  if (!dn) return ["", ""];
+  const i = dn.indexOf(" ");
+  return i === -1 ? [dn, ""] : [dn.slice(0, i), dn.slice(i + 1)];
 }
 
 // Client leaves their current trainer (clears the link). Owner-only self-write.

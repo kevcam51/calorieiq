@@ -40,7 +40,8 @@ export default function AuthGate({ children }) {
   const [mode, setMode] = useState("login"); // "login" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -114,8 +115,8 @@ export default function AuthGate({ children }) {
       if (mode === "signup") {
         // Trainers run a business on the platform, so a name is required for them.
         // Clients may add one later.
-        if (signupRole === ROLES.HEAD_TRAINER && !name.trim()) {
-          setError("Please enter your name — trainers need one.");
+        if (signupRole === ROLES.HEAD_TRAINER && (!firstName.trim() || !lastName.trim())) {
+          setError("Please enter your first and last name — trainers need both.");
           return;
         }
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
@@ -124,7 +125,8 @@ export default function AuthGate({ children }) {
           uid: cred.user.uid,
           email: cred.user.email,
           role: signupRole,
-          displayName: name.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
         });
         setNeedsProfile(false);
         setProfileChecked(true);
@@ -186,11 +188,18 @@ export default function AuthGate({ children }) {
 
         {mode === "signup" && (
           <>
-            <input
-              style={S.input} type="text" autoComplete="name"
-              placeholder={signupRole === ROLES.HEAD_TRAINER ? "Your name (required)" : "Your name (optional)"}
-              value={name} onChange={(e) => setName(e.target.value)}
-            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                style={S.input} type="text" autoComplete="given-name"
+                placeholder={signupRole === ROLES.HEAD_TRAINER ? "First name (required)" : "First name (optional)"}
+                value={firstName} onChange={(e) => setFirstName(e.target.value)}
+              />
+              <input
+                style={S.input} type="text" autoComplete="family-name"
+                placeholder={signupRole === ROLES.HEAD_TRAINER ? "Last name (required)" : "Last name (optional)"}
+                value={lastName} onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
             <RoleToggle value={signupRole} onChange={setSignupRole} />
           </>
         )}
@@ -253,18 +262,25 @@ function RoleToggle({ value, onChange }) {
 function RoleChooser({ user, onDone }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [name, setName] = useState(user.displayName || "");
+  // Prefill from the Google display name when available.
+  const googleName = (user.displayName || "").trim();
+  const sp = googleName.indexOf(" ");
+  const [firstName, setFirstName] = useState(sp === -1 ? googleName : googleName.slice(0, sp));
+  const [lastName, setLastName] = useState(sp === -1 ? "" : googleName.slice(sp + 1));
 
   const choose = async (role) => {
     setError("");
     // Trainers must provide a name (they run a business on the platform).
-    if (role === ROLES.HEAD_TRAINER && !name.trim()) {
-      setError("Please enter your name — trainers need one.");
+    if (role === ROLES.HEAD_TRAINER && (!firstName.trim() || !lastName.trim())) {
+      setError("Please enter your first and last name — trainers need both.");
       return;
     }
     setBusy(true);
     try {
-      await createProfile({ uid: user.uid, email: user.email, role, displayName: name.trim() });
+      await createProfile({
+        uid: user.uid, email: user.email, role,
+        firstName: firstName.trim(), lastName: lastName.trim(),
+      });
       onDone();
     } catch (e) {
       setError(prettyError(e));
@@ -278,10 +294,16 @@ function RoleChooser({ user, onDone }) {
       <div style={S.card}>
         <h1 style={S.brand}>CalorieIQ</h1>
         <p style={S.sub}>One quick thing — what's your name, and are you a trainer or a client?</p>
-        <input
-          style={S.input} type="text" autoComplete="name" placeholder="Your name"
-          value={name} onChange={(e) => setName(e.target.value)}
-        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            style={S.input} type="text" autoComplete="given-name" placeholder="First name"
+            value={firstName} onChange={(e) => setFirstName(e.target.value)}
+          />
+          <input
+            style={S.input} type="text" autoComplete="family-name" placeholder="Last name"
+            value={lastName} onChange={(e) => setLastName(e.target.value)}
+          />
+        </div>
         {error && <div style={S.error}>{error}</div>}
         <button style={S.primary} disabled={busy} onClick={() => choose(ROLES.CLIENT)}>
           I'm a client

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setDisplayName, leaveTrainer } from "./profile.js";
+import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setName, splitName, leaveTrainer } from "./profile.js";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -6765,8 +6765,10 @@ function RolePanel() {
   const [copied, setCopied] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [trainerName, setTrainerName] = useState("");
-  const [nameInput, setNameInput] = useState("");
+  const [firstInput, setFirstInput] = useState("");
+  const [lastInput, setLastInput] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   const load = async () => {
     let p = await getProfile();
@@ -6788,7 +6790,7 @@ function RolePanel() {
     }
 
     setProfile(p || null);
-    if (p) setNameInput(p.displayName || "");
+    if (p) { const [f, l] = splitName(p); setFirstInput(f); setLastInput(l); }
     if (p && (p.role === ROLES.HEAD_TRAINER || p.role === ROLES.SUB_TRAINER)) {
       try { setClients(await getMyClients()); } catch { /* ignore */ }
       try { setInviteCode(await ensureInviteCode()); } catch { /* ignore */ }
@@ -6843,11 +6845,12 @@ function RolePanel() {
   };
 
   const saveName = async () => {
-    const n = nameInput.trim();
-    if (isTrainer && !n) { setMsg("Trainers need a name."); return; }
+    const f = firstInput.trim();
+    const l = lastInput.trim();
+    if (isTrainer && (!f || !l)) { setMsg("Trainers need a first and last name."); return; }
     setSavingName(true); setMsg("");
     try {
-      await setDisplayName(n);
+      await setName(f, l);
       setMsg("Name saved.");
       await load();
     } catch (e) {
@@ -6860,6 +6863,7 @@ function RolePanel() {
     try {
       await leaveTrainer();
       setTrainerName("");
+      setConfirmLeave(false);
       setMsg("You've left your trainer. You can join another with a code below.");
       await load();
     } catch (e) {
@@ -6887,8 +6891,13 @@ function RolePanel() {
       </div>
       <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"0 0 16px" }}>
         <input
-          style={field} value={nameInput} placeholder="Your name"
-          onChange={(e) => setNameInput(e.target.value)}
+          style={field} value={firstInput} placeholder="First name"
+          onChange={(e) => setFirstInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && saveName()}
+        />
+        <input
+          style={field} value={lastInput} placeholder="Last name"
+          onChange={(e) => setLastInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && saveName()}
         />
         <button style={btn} onClick={saveName} disabled={savingName}>
@@ -6952,13 +6961,36 @@ function RolePanel() {
                   {trainerName || profile.assignedTrainerId}
                 </strong>
               </div>
-              <button
-                style={{ ...btn, background:"transparent", color:"var(--muted)",
-                  border:"1px solid rgba(255,255,255,.2)", marginTop:10 }}
-                onClick={leave} disabled={busy}
-              >
-                {busy ? "…" : "Leave trainer"}
-              </button>
+              {confirmLeave ? (
+                <div style={{ marginTop:10 }}>
+                  <div style={{ fontSize:".85rem", color:"var(--text)", marginBottom:8 }}>
+                    Leave this trainer? You can re-join later with their code.
+                  </div>
+                  <div style={{ display:"flex", gap:"8px" }}>
+                    <button
+                      style={{ ...btn, background:"#e5484d", color:"#fff" }}
+                      onClick={leave} disabled={busy}
+                    >
+                      {busy ? "…" : "Yes, leave"}
+                    </button>
+                    <button
+                      style={{ ...btn, background:"transparent", color:"var(--muted)",
+                        border:"1px solid rgba(255,255,255,.2)" }}
+                      onClick={() => setConfirmLeave(false)} disabled={busy}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  style={{ ...btn, background:"transparent", color:"var(--muted)",
+                    border:"1px solid rgba(255,255,255,.2)", marginTop:10 }}
+                  onClick={() => setConfirmLeave(true)} disabled={busy}
+                >
+                  Leave trainer
+                </button>
+              )}
             </>
           ) : (
             <>
