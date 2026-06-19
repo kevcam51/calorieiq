@@ -6757,7 +6757,7 @@ function clearInviteFromUrl() {
   } catch { /* ignore */ }
 }
 
-function RolePanel() {
+function RolePanel({ onOpenClientPlan } = {}) {
   const [profile, setProfile] = useState(undefined); // undefined = loading
   const [code, setCode] = useState("");
   const [clients, setClients] = useState([]);
@@ -7073,6 +7073,11 @@ function RolePanel() {
                       </div>
                     ) : (
                       <div style={{ display:"flex", gap:"8px", marginTop:6, flexWrap:"wrap" }}>
+                        {plan && onOpenClientPlan && (
+                          <button style={{ ...btnGhost, background:"var(--accent)", color:"#0b0b12",
+                            border:"none", fontWeight:700 }}
+                            onClick={() => onOpenClientPlan(c.uid)}>Open plan</button>
+                        )}
                         <button style={btnGhost} onClick={() => setLinkingFor(c.uid)}>
                           {plan ? "Re-link a different profile" : "Link a profile"}
                         </button>
@@ -7185,7 +7190,7 @@ function computeClientCalories(d) {
   return { tdee, target };
 }
 
-function TrainerDashboard({ profiles, loading, onSelect, onManageClients }) {
+function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan }) {
   const [details, setDetails] = useState({}); // id -> { tdee, target }
   const [lastLog, setLastLog] = useState({}); // id -> "YYYY-MM-DD"
   const [sort, setSort] = useState("attention");
@@ -7266,7 +7271,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients }) {
         <div className="tagline">Maintenance · Deficit · Cardio · Strength · Timeline</div>
       </div>
       <div className="container">
-        <RolePanel />
+        <RolePanel onOpenClientPlan={onOpenClientPlan} />
         <div style={{ display: "flex", gap: "8px", margin: "0 0 14px" }}>
           <button style={tabBtn(true)} disabled>Dashboard</button>
           <button style={tabBtn(false)} onClick={onManageClients}>All clients</button>
@@ -7385,7 +7390,7 @@ function ClientHome({ onOpenPlan }) {
 function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading,
   onCreateFolder, onRenameFolder, onDeleteFolder, onMoveProfile,
   confirmDeleteId, confirmFolderDel, onRecover, onExport, onImport,
-  onClipCopy, onClipPaste, showDashboardTab, onShowDashboard }) {
+  onClipCopy, onClipPaste, showDashboardTab, onShowDashboard, onOpenClientPlan }) {
 
   const [openFolders, setOpenFolders] = useState({});
   const [dragId, setDragId] = useState(null);
@@ -7451,7 +7456,7 @@ function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading
         <div className="tagline">Maintenance · Deficit · Cardio · Strength · Timeline</div>
       </div>
       <div className="container">
-        <RolePanel />
+        <RolePanel onOpenClientPlan={onOpenClientPlan} />
         {showDashboardTab && (
           <div style={{ display:"flex", gap:"8px", margin:"0 0 14px" }}>
             <button
@@ -7733,6 +7738,9 @@ export default function App() {
   const [navFrom, setNavFrom] = useState(null); // "dashboard" | "results" | null
   const [role, setRole] = useState(null); // this user's role (for the trainer home)
   const [homeTab, setHomeTab] = useState("dashboard"); // "dashboard" | "clients"
+  // When a trainer opens a LINKED client's plan, this holds that client's uid so
+  // edits save into the client's account ("caliq-self") instead of locally.
+  const [activeRemoteUid, setActiveRemoteUid] = useState(null);
 
   const goBack = () => {
     if (showDash && step === 5) {
@@ -7784,10 +7792,20 @@ export default function App() {
   const autoSave = (newData, newStep) => {
     if (!activeId) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    const remote = activeRemoteUid; // capture: are we editing a linked client's plan?
     saveTimer.current = setTimeout(async ()=>{
       try {
+        const payload = JSON.stringify({ data: newData||data, step: newStep??step });
+        if (remote) {
+          // Editing a linked client's plan — save straight into THEIR account.
+          // (No local index update; this profile doesn't live in our list.)
+          await setForUser(remote, "caliq-self", payload);
+          setSaving(true);
+          setTimeout(()=>setSaving(false), 1200);
+          return;
+        }
         const SL = ["Personal","Goal Weight","Activity","Cardio","Strength","Results"];
-        await window.storage.set(profileKey(activeId), JSON.stringify({ data: newData||data, step: newStep??step }));
+        await window.storage.set(profileKey(activeId), payload);
         const d = newData||data;
         const up = profiles.map(p => p.id===activeId ? {...p, name:fullName(d)||p.name, weight:d.weightLbs||"", goal:d.goalWeight||"", lastSaved:Date.now(), stepLabel:SL[newStep??step]||""} : p);
         setProfiles(up);
@@ -7825,7 +7843,32 @@ export default function App() {
         setShowDash((parsed.step || 0) >= 5);
       }
     } catch(e) { setData({...EMPTY_DATA}); setStep(0); }
+    setActiveRemoteUid(null); // a local (or own "self") profile, not a remote client's
     setActiveId(id);
+    setScreen("app");
+  };
+
+  // Trainer opens a LINKED client's plan (lives in the client's account as
+  // "caliq-self"); edits route back to the client's account via autoSave.
+  const openClientPlan = async (clientUid) => {
+    try {
+      const r = await getForUser(clientUid, "caliq-self");
+      if (r && r.value) {
+        const parsed = JSON.parse(r.value);
+        const d = parsed.data || {};
+        if (d.name && !d.firstName) {
+          const parts = d.name.trim().split(/\s+/);
+          d.firstName = parts[0] || ""; d.lastName = parts.slice(1).join(" ") || ""; delete d.name;
+        }
+        setData({...EMPTY_DATA, ...d, cardio:{...defaultCardio,...(d.cardio||{})}, strength:{...defaultStrength,...(d.strength||{})}});
+        setStep(parsed.step || 0);
+        setShowDash((parsed.step || 0) >= 5);
+      } else {
+        setData({...EMPTY_DATA}); setStep(0); setShowDash(false);
+      }
+    } catch(e) { setData({...EMPTY_DATA}); setStep(0); }
+    setActiveRemoteUid(clientUid);
+    setActiveId("self");
     setScreen("app");
   };
 
@@ -7837,6 +7880,7 @@ export default function App() {
     saveIndex(up);
     setData({...EMPTY_DATA});
     setStep(0);
+    setActiveRemoteUid(null);
     setActiveId(id);
     setScreen("app");
   };
@@ -7883,7 +7927,7 @@ export default function App() {
     saveIndex(up);
   };
 
-  const goToProfiles = () => { setScreen("profiles"); setActiveId(null); };
+  const goToProfiles = () => { setScreen("profiles"); setActiveId(null); setActiveRemoteUid(null); };
   const reset = () => { setStep(0); setData({...EMPTY_DATA}); autoSave({...EMPTY_DATA}, 0); };
   const update = (k,v) => setDataAndSave(p=>({...p,[k]:v}));
 
@@ -8136,6 +8180,7 @@ export default function App() {
       return <TrainerDashboard
         profiles={profiles} loading={loading}
         onSelect={selectProfile} onManageClients={()=>setHomeTab("clients")}
+        onOpenClientPlan={openClientPlan}
       />;
     }
     return <ProfileSelector
@@ -8147,6 +8192,7 @@ export default function App() {
       onRecover={recoverProfiles} onExport={exportAllData} onImport={importData}
       onClipCopy={clipboardExport} onClipPaste={clipboardImport}
       showDashboardTab={isTrainerHome} onShowDashboard={()=>setHomeTab("dashboard")}
+      onOpenClientPlan={openClientPlan}
     />;
   }
 

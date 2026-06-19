@@ -139,11 +139,17 @@ enabled (Blaze has no default spending cap).
   `profileKey("self")` === `caliq-self`) in the client's *own* storage — so the plan a trainer
   linked is the very same file the client opens and edits (one shared copy; created on the client's
   first save if none was linked). Header buttons relabel for clients ("My Home" / "← Home").
-  **Still to do in this thread:** let the trainer OPEN a linked client's `caliq-self` in the full
-  editor and save back to the client's account (cross-account save-routing branch — part C); an
-  explicit auto-create on join (today it's created on the client's first edit); and enriching
-  ClientHome with a plan summary. Assumption: one shared "self" plan per client (multiple plans per
-  client is a later roadmap item).
+  **Part C done:** the trainer can now OPEN a linked client's plan and edit it live. Each linked
+  client with a plan shows an **"Open plan"** button in the role panel; it calls `openClientPlan(uid)`,
+  which loads the client's `caliq-self` via `getForUser` into the normal editor and sets a new
+  `activeRemoteUid` state. `autoSave` branches on `activeRemoteUid`: when set, edits save via
+  `setForUser(uid, "caliq-self", …)` straight into the client's account (and skip the local index
+  update); when null, it's the existing local-profile behavior. `selectProfile`, `createProfile`,
+  and `goToProfiles` all reset `activeRemoteUid` to null so local editing is never misrouted. So the
+  trainer and client now edit one shared copy from both sides. **Still optional:** an explicit
+  auto-create of `caliq-self` on join (today it's created on first edit), and enriching ClientHome
+  with a plan summary. Assumption: one shared "self" plan per client (multiple plans per client is a
+  later roadmap item).
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 
