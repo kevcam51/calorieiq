@@ -109,6 +109,19 @@ enabled (Blaze has no default spending cap).
   unlinking, to prevent accidental leaves. Helpers added to `profile.js`: `setName`, `splitName`
   (and `splitName` falls back to splitting an older single `displayName`). Still owner
   self-writes — no `firestore.rules` change.
+- Session 7: **Trainer overview dashboard (Phase 1, non-Blaze).** Trainers now land on a new
+  **Dashboard** home tab: a per-client overview card showing weight → goal (with "lbs to go"),
+  the daily calorie target (computed with the SAME formula as the Results "Target calories" row),
+  last activity (most recent daily log), and a plan-status badge (complete / in progress / needs
+  setup), plus a sort (needs attention / last active / name) and a summary line. A two-tab toggle
+  (**Dashboard | All clients**) flips to the existing profile/folder manager, which is unchanged.
+  Built entirely on existing per-profile data + daily logs (`computeClientCalories` reuses the
+  in-file calc functions; one `storage.list("caliq-log-")` call gets last-active). New in App.jsx:
+  `computeClientCalories`, `TrainerDashboard`; App now reads the user's `role` to default trainers
+  into the dashboard. No data-model change, no `firestore.rules` change, no Blaze. The card shows
+  weight → goal with "N lbs to go" (larger/brighter text, `lbs` on every number), plus a **progress
+  bar** that fills using the client's *earliest weigh-in check-in* as the starting baseline — the
+  bar only appears once there's at least one weigh-in to measure against, so it's never misleading.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 
@@ -118,7 +131,15 @@ enabled (Blaze has no default spending cap).
   a more distinctive name/domain may replace it later. No code impact — the Firebase project ID
   stays `calorieiq-29762` regardless, so this is a UI-text + domain change whenever it happens.
 
-- Role-aware **Trainer and Client dashboards** (real UIs; current role panel is MVP scaffolding).
+- Role-aware dashboards: **Trainer overview shipped (Session 7).** Still to do: the **Client
+  Dashboard** (a client's own home view) and connecting a linked client *account* to a managed
+  nutrition *profile* (the "two kinds of client" gap — bigger, no Blaze, its own step).
+- **Consistency-based time-to-goal estimate** — as the trainer (or client) logs weight + body-fat
+  % over time, use the *actual* observed rate of change (not just the theoretical 1 lb/wk deficit
+  the app currently assumes) to project a realistic ETA to goal weight / goal BF%. Builds on the
+  existing check-in/daily-log data. Could feed a real progress bar on the dashboard card (Kevin:
+  progress bar is optional/aesthetic — only worth it if it improves the look; "lbs to go" is fine
+  on its own for now). No Blaze needed.
 - **Navigation side menu** — a hamburger (≡) menu in the top corner that opens a slide-out
   panel for editing your profile and moving around the app. Its own UI step (App.jsx is one
   large component, so navigation restructuring should be planned carefully). No Blaze needed.

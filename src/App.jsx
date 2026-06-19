@@ -7016,10 +7016,204 @@ function RolePanel() {
   );
 }
 
+// ─── Trainer overview dashboard (Session 7) ─────────────────────────────────
+// A role-aware home view for trainers: every client profile at a glance —
+// weight vs goal, daily calorie target, last activity, and plan status. Reads
+// existing per-profile data + daily logs only; no new data model, no Blaze.
+
+// Daily calorie target for a client, using the SAME formula as the Results
+// "Target calories" row (1 lb/wk deficit, avg exercise burn added, floored at
+// 1,200). Returns null if the profile is too incomplete to compute.
+function computeClientCalories(d) {
+  if (!d) return null;
+  const w = Number(d.weightLbs);
+  if (!w || !d.gender) return null;
+  const actObj = ACTIVITY_LEVELS.find((a) => a.id === d.activityLevel) || ACTIVITY_LEVELS[0];
+  const bmr = calcBMR(d.gender, w, Number(d.heightFt), Number(d.heightIn), Number(d.age));
+  if (!bmr || !isFinite(bmr)) return null;
+  const tdee = Math.round(bmr * actObj.multiplier);
+  const allStrEx = [REST_ST, ...STRENGTH_EXERCISES];
+  let cardio = 0, strength = 0;
+  DAYS.forEach((day) => {
+    (Array.isArray((d.cardio || {})[day]) ? d.cardio[day] : []).forEach((s) => {
+      const co = ALL_CARDIO.find((c) => c.id === s.type) || ALL_CARDIO[ALL_CARDIO.length - 1];
+      cardio += calcBurn(co.met, w, s.duration);
+    });
+    (Array.isArray((d.strength || {})[day]) ? d.strength[day] : []).forEach((s) => {
+      const ex = allStrEx.find((e) => e.id === s.type) || REST_ST;
+      strength += calcStrengthBurn(ex.met, w, s.duration);
+    });
+  });
+  const target = Math.max(1200, Math.round(tdee - 500 + cardio / 7 + strength / 7));
+  return { tdee, target };
+}
+
+function TrainerDashboard({ profiles, loading, onSelect, onManageClients }) {
+  const [details, setDetails] = useState({}); // id -> { tdee, target }
+  const [lastLog, setLastLog] = useState({}); // id -> "YYYY-MM-DD"
+  const [sort, setSort] = useState("attention");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Per-client calorie target (needs each client's full profile data).
+      const dmap = {};
+      await Promise.all(profiles.map(async (p) => {
+        try {
+          const r = await window.storage.get(`caliq-${p.id}`);
+          if (r && r.value) {
+            const d = (JSON.parse(r.value) || {}).data || {};
+            const c = computeClientCalories(d) || {};
+            // Progress baseline: earliest check-in that recorded a weight. The
+            // bar only fills once there's real tracking to measure against.
+            const weighIns = (d.checkIns || []).filter((x) => x.weight)
+              .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            const start = weighIns.length ? Number(weighIns[0].weight) : null;
+            const cur = Number(d.weightLbs), goal = Number(d.goalWeight);
+            let pct = null;
+            if (start && goal && cur && start > goal) {
+              pct = Math.max(0, Math.min(100, Math.round(((start - cur) / (start - goal)) * 100)));
+            }
+            dmap[p.id] = { target: c.target != null ? c.target : null, pct };
+          }
+        } catch (e) { /* ignore */ }
+      }));
+      if (!cancelled) setDetails(dmap);
+      // Most recent daily log per client — a single read of the kv index.
+      try {
+        const res = await window.storage.list("caliq-log-");
+        const latest = {};
+        (res.keys || []).forEach((k) => {
+          const rest = k.slice("caliq-log-".length); // "{id}-YYYY-MM-DD"
+          const date = rest.slice(-10);
+          const id = rest.slice(0, -11);
+          if (id && (!latest[id] || date > latest[id])) latest[id] = date;
+        });
+        if (!cancelled) setLastLog(latest);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [profiles]);
+
+  const statusOf = (p) => {
+    if (p.stepLabel === "Results") return { label: "Plan complete", color: "#39d98a" };
+    if (p.name || p.weight) return { label: "In progress", color: "#f0a020" };
+    return { label: "Needs setup", color: "var(--muted)" };
+  };
+  const logTs = (p) => (lastLog[p.id] ? new Date(lastLog[p.id] + "T00:00:00").getTime() : 0);
+  const lastActiveTs = (p) => Math.max(logTs(p), p.lastSaved || 0);
+  const daysSinceLog = (p) => {
+    if (!lastLog[p.id]) return null;
+    return Math.floor((Date.now() - logTs(p)) / 86400000);
+  };
+
+  const sorted = [...profiles].sort((a, b) => {
+    if (sort === "name") return (a.name || "").localeCompare(b.name || "");
+    if (sort === "recent") return lastActiveTs(b) - lastActiveTs(a);
+    return lastActiveTs(a) - lastActiveTs(b); // "attention": quietest first
+  });
+  const complete = profiles.filter((p) => p.stepLabel === "Results").length;
+  const activeWeek = profiles.filter((p) => Date.now() - lastActiveTs(p) < 7 * 86400000).length;
+
+  const tabBtn = (active) => ({
+    flex: 1, padding: "10px", fontSize: ".85rem", fontWeight: 700, borderRadius: "8px",
+    border: "1px solid var(--border,rgba(255,255,255,.12))", cursor: active ? "default" : "pointer",
+    background: active ? "var(--accent)" : "transparent", color: active ? "#0b0b12" : "var(--text)",
+  });
+
+  return (
+    <div className="prof-screen">
+      <style>{css}</style>
+      <div className="header">
+        <div className="logo">CALORIE<span>IQ</span></div>
+        <div className="tagline">Maintenance · Deficit · Cardio · Strength · Timeline</div>
+      </div>
+      <div className="container">
+        <RolePanel />
+        <div style={{ display: "flex", gap: "8px", margin: "0 0 14px" }}>
+          <button style={tabBtn(true)} disabled>Dashboard</button>
+          <button style={tabBtn(false)} onClick={onManageClients}>All clients</button>
+        </div>
+        <div className="card">
+          <div className="card-title">📊 Client Overview</div>
+          <div className="card-sub">
+            {loading ? "Loading…"
+              : `${profiles.length} client${profiles.length !== 1 ? "s" : ""} · ${complete} with a complete plan · ${activeWeek} active this week`}
+          </div>
+
+          {!loading && profiles.length > 0 && (
+            <div style={{ display: "flex", gap: "6px", margin: "12px 0 4px" }}>
+              {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
+                <button key={k} onClick={() => setSort(k)}
+                  style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
+                    border: "1px solid var(--border,rgba(255,255,255,.12))",
+                    background: sort === k ? "rgba(255,255,255,.1)" : "transparent", color: "var(--text)" }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {loading ? null : profiles.length === 0 ? (
+            <div style={{ color: "var(--muted)", fontSize: ".85rem", padding: "8px 0" }}>
+              No clients yet. Switch to “All clients” to add your first one.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
+              {sorted.map((p) => {
+                const st = statusOf(p);
+                const det = details[p.id];
+                const ds = daysSinceLog(p);
+                const w = Number(p.weight), g = Number(p.goal);
+                const toGo = (w && g) ? Math.round((w - g) * 10) / 10 : null;
+                const pct = det && det.pct != null ? det.pct : null;
+                return (
+                  <div key={p.id} onClick={() => onSelect(p.id)}
+                    style={{ cursor: "pointer", padding: "12px 14px", borderRadius: "10px",
+                      background: "rgba(255,255,255,.04)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{p.name || "Unnamed client"}</span>
+                      <span style={{ fontSize: ".72rem", color: st.color, fontWeight: 600 }}>{st.label}</span>
+                    </div>
+                    {/* Weight → goal: larger and brighter so it's easy to read */}
+                    <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
+                      ⚖️ {p.weight ? `${p.weight} lbs` : "—"}{p.goal ? ` → ${p.goal} lbs` : ""}
+                      {toGo !== null && toGo > 0
+                        ? ` · ${toGo} lbs to go`
+                        : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
+                    </div>
+                    {pct !== null && (
+                      <div style={{ margin: "8px 0 2px" }}>
+                        <div style={{ height: 7, borderRadius: 4, overflow: "hidden",
+                          background: "rgba(255,255,255,.1)" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, borderRadius: 4,
+                            background: "var(--accent)" }} />
+                        </div>
+                        <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 3 }}>
+                          {pct}% to goal
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem",
+                      color: "var(--muted)", marginTop: 8 }}>
+                      <span>🔥 {det && det.target != null ? `${det.target.toLocaleString()} cal/day` : "—"}</span>
+                      <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading,
   onCreateFolder, onRenameFolder, onDeleteFolder, onMoveProfile,
   confirmDeleteId, confirmFolderDel, onRecover, onExport, onImport,
-  onClipCopy, onClipPaste }) {
+  onClipCopy, onClipPaste, showDashboardTab, onShowDashboard }) {
 
   const [openFolders, setOpenFolders] = useState({});
   const [dragId, setDragId] = useState(null);
@@ -7086,6 +7280,22 @@ function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading
       </div>
       <div className="container">
         <RolePanel />
+        {showDashboardTab && (
+          <div style={{ display:"flex", gap:"8px", margin:"0 0 14px" }}>
+            <button
+              style={{ flex:1, padding:"10px", fontSize:".85rem", fontWeight:700, borderRadius:"8px",
+                border:"1px solid var(--border,rgba(255,255,255,.12))", cursor:"pointer",
+                background:"transparent", color:"var(--text)" }}
+              onClick={onShowDashboard}
+            >Dashboard</button>
+            <button
+              style={{ flex:1, padding:"10px", fontSize:".85rem", fontWeight:700, borderRadius:"8px",
+                border:"1px solid var(--border,rgba(255,255,255,.12))", cursor:"default",
+                background:"var(--accent)", color:"#0b0b12" }}
+              disabled
+            >All clients</button>
+          </div>
+        )}
         <div className="card">
           <div className="card-title">📂 Client Profiles</div>
           <div className="card-sub">
@@ -7349,6 +7559,8 @@ export default function App() {
   const [showDash, setShowDash] = useState(true);
   const [streak, setStreak] = useState(0);
   const [navFrom, setNavFrom] = useState(null); // "dashboard" | "results" | null
+  const [role, setRole] = useState(null); // this user's role (for the trainer home)
+  const [homeTab, setHomeTab] = useState("dashboard"); // "dashboard" | "clients"
 
   const goBack = () => {
     if (showDash && step === 5) {
@@ -7383,6 +7595,10 @@ export default function App() {
       try {
         const fResult = await window.storage.get(STORAGE_FOLDERS);
         if (fResult && fResult.value) setFolders(JSON.parse(fResult.value));
+      } catch(e) {}
+      try {
+        const prof = await getProfile();
+        if (prof && prof.role) setRole(prof.role);
       } catch(e) {}
       setLoading(false);
     })();
@@ -7737,15 +7953,25 @@ export default function App() {
   const LBLS = ["Personal","Goal Weight","Activity","Cardio","Strength","Results"];
   const STEP_ICONS = ["👤","🎯","🏃","🔥","💪","📊"];
 
-  if (screen === "profiles") return <ProfileSelector
-    profiles={profiles} folders={folders} loading={loading}
-    onSelect={selectProfile} onNew={createProfile} onDelete={deleteProfile}
-    onCreateFolder={createFolder} onRenameFolder={renameFolder}
-    onDeleteFolder={deleteFolder} onMoveProfile={moveProfileToFolder}
-    confirmDeleteId={confirmDeleteId} confirmFolderDel={confirmFolderDel}
-    onRecover={recoverProfiles} onExport={exportAllData} onImport={importData}
-    onClipCopy={clipboardExport} onClipPaste={clipboardImport}
-  />;
+  if (screen === "profiles") {
+    const isTrainerHome = role === ROLES.HEAD_TRAINER || role === ROLES.SUB_TRAINER;
+    if (isTrainerHome && homeTab === "dashboard") {
+      return <TrainerDashboard
+        profiles={profiles} loading={loading}
+        onSelect={selectProfile} onManageClients={()=>setHomeTab("clients")}
+      />;
+    }
+    return <ProfileSelector
+      profiles={profiles} folders={folders} loading={loading}
+      onSelect={selectProfile} onNew={createProfile} onDelete={deleteProfile}
+      onCreateFolder={createFolder} onRenameFolder={renameFolder}
+      onDeleteFolder={deleteFolder} onMoveProfile={moveProfileToFolder}
+      confirmDeleteId={confirmDeleteId} confirmFolderDel={confirmFolderDel}
+      onRecover={recoverProfiles} onExport={exportAllData} onImport={importData}
+      onClipCopy={clipboardExport} onClipPaste={clipboardImport}
+      showDashboardTab={isTrainerHome} onShowDashboard={()=>setHomeTab("dashboard")}
+    />;
+  }
 
   return (
     <>
