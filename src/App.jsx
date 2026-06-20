@@ -7752,7 +7752,83 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
 // "caliq-self"). This is their landing screen: the role panel (their trainer
 // link) plus a button to open/edit their plan in the normal editor. The plan a
 // trainer "links" to them is the very same caliq-self, so both edit one copy.
-function ClientHome({ onOpenPlan }) {
+function ClientHome({ onOpenPlan, meUid, meName, role }) {
+  // The client's plan lives in their own account as "caliq-self"; today's log is
+  // "caliq-log-self-{date}". The client is always on their own account (no remote
+  // routing), so we read/write their own window.storage directly.
+  const [planData, setPlanData] = useState(undefined); // undefined=loading, null=no plan
+  const [log, setLog] = useState({});                  // today's daily log
+  const [calDraft, setCalDraft] = useState("");
+  const [wtDraft, setWtDraft] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const logKey = `caliq-log-self-${todayKey}`;
+
+  const load = async () => {
+    try {
+      const r = await window.storage.get("caliq-self");
+      setPlanData(r && r.value ? ((JSON.parse(r.value) || {}).data || null) : null);
+    } catch { setPlanData(null); }
+    try {
+      const r = await window.storage.get(logKey);
+      setLog(r && r.value ? (JSON.parse(r.value) || {}) : {});
+    } catch { setLog({}); }
+  };
+  useEffect(() => { load(); }, []);
+
+  // Cooperative history (same shape App.appendHistory writes) so the trainer's
+  // activity feed reflects quick-logs done from this dashboard.
+  const appendHistory = async (action) => {
+    try {
+      const r = await window.storage.get("caliq-history-self");
+      const cur = r && r.value ? (JSON.parse(r.value) || []) : [];
+      const now = Date.now();
+      const ev = { id: `e${now}${Math.floor(Math.random() * 1000)}`,
+        uid: meUid, role, name: meName || "Me", action, ts: now };
+      await window.storage.set("caliq-history-self", JSON.stringify([ev, ...cur].slice(0, 250)));
+    } catch { /* ignore */ }
+  };
+
+  const writeLog = async (updated) => {
+    setLog(updated);
+    try { await window.storage.set(logKey, JSON.stringify(updated)); } catch { /* ignore */ }
+  };
+  const addCalories = async () => {
+    const v = Number(calDraft);
+    if (!v || v <= 0) { setCalDraft(""); return; }
+    await writeLog({ ...log, calories: (log.calories || 0) + v });
+    await appendHistory(`logged ${v} cal`);
+    setCalDraft(""); setMsg(`Added ${v} cal to today.`);
+  };
+  const logWeight = async () => {
+    const v = Number(wtDraft);
+    if (!v || v <= 0) { setWtDraft(""); return; }
+    await writeLog({ ...log, weight: v });
+    await appendHistory(`logged weight: ${v} lbs`);
+    setWtDraft(""); setMsg(`Logged today's weigh-in: ${v} lbs.`);
+  };
+
+  const cal = planData ? computeClientCalories(planData) : null;
+  const w = planData ? Number(planData.weightLbs) : 0;
+  const g = planData ? Number(planData.goalWeight) : 0;
+  const toGo = (w && g) ? Math.round((w - g) * 10) / 10 : null;
+  const consumed = log.calories || 0;
+  const target = cal ? cal.target : null;
+  const remaining = target != null ? target - consumed : null;
+  const firstName = (planData && planData.firstName) || (meName ? meName.split(" ")[0] : "");
+
+  const field = { padding: "10px 12px", fontSize: ".95rem", borderRadius: "8px",
+    border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.05)",
+    color: "var(--text)", flex: 1, minWidth: 0 };
+  const logBtn = { padding: "10px 16px", fontSize: ".88rem", fontWeight: 700, borderRadius: "8px",
+    border: "none", background: "var(--accent)", color: "#0b0b12", cursor: "pointer", whiteSpace: "nowrap" };
+  const openBtn = { marginTop: 12, width: "100%", padding: "12px 14px", fontSize: ".95rem",
+    fontWeight: 700, borderRadius: "10px", border: "none", background: "var(--accent)",
+    color: "#0b0b12", cursor: "pointer" };
+  const ghostOpen = { ...openBtn, background: "transparent", color: "var(--text)",
+    border: "1px solid var(--border,rgba(255,255,255,.2))" };
+
   return (
     <div className="prof-screen">
       <style>{css}</style>
@@ -7761,21 +7837,82 @@ function ClientHome({ onOpenPlan }) {
         <div className="tagline">Maintenance · Deficit · Cardio · Strength · Timeline</div>
       </div>
       <div className="container">
-        <RolePanel />
-        <div className="card">
-          <div className="card-title">📋 My Plan</div>
-          <div className="card-sub">
-            Your nutrition &amp; training plan. Open it to view your targets, log
-            your day, or make changes.
+        {firstName ? (
+          <div style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0 0 14px" }}>
+            Hi, {firstName} 👋
           </div>
-          <button
-            onClick={onOpenPlan}
-            style={{ marginTop:12, width:"100%", padding:"12px 14px", fontSize:".95rem",
-              fontWeight:700, borderRadius:"10px", border:"none", background:"var(--accent)",
-              color:"#0b0b12", cursor:"pointer" }}
-          >
-            Open my plan
-          </button>
+        ) : null}
+
+        {planData === undefined ? (
+          <div className="card"><div className="card-sub">Loading your plan…</div></div>
+        ) : planData === null || !w ? (
+          // No plan set up yet — friendly get-started prompt instead of empty cards.
+          <div className="card">
+            <div className="card-title">📋 Get started</div>
+            <div className="card-sub">
+              You don't have a plan set up yet. Open it to enter your details and
+              goals — or if your trainer linked one, it'll be waiting for you.
+            </div>
+            <button onClick={onOpenPlan} style={openBtn}>Set up my plan</button>
+          </div>
+        ) : (
+          <>
+            {/* Weight → goal */}
+            <div className="card">
+              <div className="card-title">🎯 Weight &amp; goal</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: "1.6rem", fontWeight: 800 }}>{w} lbs</span>
+                {g ? <span style={{ color: "var(--muted)" }}>→ {g} lbs</span> : null}
+              </div>
+              {toGo != null && toGo !== 0 && (
+                <div style={{ marginTop: 6, color: "var(--accent)", fontWeight: 700 }}>
+                  {Math.abs(toGo)} lbs to {toGo > 0 ? "lose" : "gain"}
+                </div>
+              )}
+              {log.weight ? (
+                <div style={{ marginTop: 6, fontSize: ".82rem", color: "var(--muted)" }}>
+                  Today's weigh-in: {log.weight} lbs
+                </div>
+              ) : null}
+            </div>
+
+            {/* Today's calories + quick-log */}
+            <div className="card">
+              <div className="card-title">🍽️ Today</div>
+              {target != null ? (
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "1.4rem", fontWeight: 800 }}>{consumed.toLocaleString()}</span>
+                  <span style={{ color: "var(--muted)" }}>/ {target.toLocaleString()} cal</span>
+                  <span style={{ marginLeft: "auto", fontWeight: 700,
+                    color: remaining >= 0 ? "#39d98a" : "#e5484d" }}>
+                    {remaining >= 0 ? `${remaining.toLocaleString()} left` : `${Math.abs(remaining).toLocaleString()} over`}
+                  </span>
+                </div>
+              ) : (
+                <div className="card-sub">Finish your plan to see a daily calorie target.</div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <input style={field} type="number" inputMode="numeric" placeholder="Add calories"
+                  value={calDraft} onChange={e => setCalDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addCalories(); }} />
+                <button style={logBtn} onClick={addCalories}>Log</button>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input style={field} type="number" inputMode="decimal" placeholder="Today's weight (lbs)"
+                  value={wtDraft} onChange={e => setWtDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") logWeight(); }} />
+                <button style={logBtn} onClick={logWeight}>Log</button>
+              </div>
+              {msg ? <div style={{ marginTop: 8, fontSize: ".82rem", color: "var(--muted)" }}>{msg}</div> : null}
+            </div>
+
+            <button onClick={onOpenPlan} style={ghostOpen}>Open my full plan</button>
+          </>
+        )}
+
+        <div style={{ marginTop: 16 }}>
+          <RolePanel />
         </div>
       </div>
     </div>
@@ -8812,7 +8949,8 @@ export default function App() {
     // A client manages just their own plan (stored in their account as
     // "caliq-self"), not a list of other people's profiles.
     if (role === ROLES.CLIENT) {
-      return <ClientHome onOpenPlan={() => selectProfile("self")} />;
+      return <ClientHome onOpenPlan={() => selectProfile("self")}
+        meUid={meUid} meName={meName} role={role} />;
     }
     const isTrainerHome = role === ROLES.HEAD_TRAINER || role === ROLES.SUB_TRAINER;
     if (isTrainerHome && homeTab === "dashboard") {
