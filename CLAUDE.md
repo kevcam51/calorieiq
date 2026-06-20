@@ -196,6 +196,15 @@ enabled (Blaze has no default spending cap).
   in the role panel's "Your clients" with Open plan / Copy to local / Unlink. **Deferred:** showing
   connected clients (live data) in the dashboard overview itself — currently the overview is local
   plans only. No `firestore.rules` change in this session.
+- Session 12: **Connected clients in the dashboard + local-plan rename.**
+  (1) The trainer **Dashboard** now has a **"🔗 Your Connected Clients"** card above the local plans:
+  it loads `getMyClients()` and reads each client's SHARED plan (`getForUser(uid, "caliq-self")`) plus
+  their logs (`listForUser(uid, "caliq-log-self-")`) to show **live** weight→goal, daily calorie
+  target, and last-active — tap a card to open their shared plan. So the overview reflects real
+  client data, not a stale local copy. (2) **Rename local plans:** a new `customName` field on the
+  profile index (helper `renameProfile`) with a **✎** control on both the dashboard local cards and
+  the All-clients `ProfileCard`; display is `customName || name`, and `autoSave` preserves it. Good
+  for naming sims/templates/backups. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 

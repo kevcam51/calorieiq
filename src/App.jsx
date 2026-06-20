@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setName, splitName, leaveTrainer } from "./profile.js";
-import { getForUser, setForUser, deleteForUser } from "./clientData.js";
+import { getForUser, setForUser, deleteForUser, listForUser } from "./clientData.js";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -7537,10 +7537,46 @@ function computeClientCalories(d) {
   return { tdee, target };
 }
 
-function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan, onLinked, onCopyToLocal }) {
+function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan, onLinked, onCopyToLocal, onRename }) {
   const [details, setDetails] = useState({}); // id -> { tdee, target }
   const [lastLog, setLastLog] = useState({}); // id -> "YYYY-MM-DD"
   const [sort, setSort] = useState("attention");
+  const [clients, setClients] = useState([]); // connected client accounts (live data)
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameDraft, setRenameDraft] = useState("");
+
+  // Load connected clients (real accounts) and read each one's SHARED plan
+  // (caliq-self in their account) so the overview shows live data, not a copy.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let cs = [];
+      try { cs = await getMyClients(); } catch (e) { /* ignore */ }
+      const rows = await Promise.all((cs || []).map(async (c) => {
+        let data = null, lastLogDate = null;
+        try {
+          const r = await getForUser(c.uid, "caliq-self");
+          if (r && r.value) data = (JSON.parse(r.value) || {}).data || {};
+        } catch (e) { /* not linked / no plan yet */ }
+        try {
+          const res = await listForUser(c.uid, "caliq-log-self-");
+          (res.keys || []).forEach((k) => {
+            const d = k.slice(-10);
+            if (!lastLogDate || d > lastLogDate) lastLogDate = d;
+          });
+        } catch (e) { /* ignore */ }
+        const cal = data ? computeClientCalories(data) : null;
+        const nm = data && (data.firstName || data.lastName)
+          ? `${data.firstName || ""} ${data.lastName || ""}`.trim()
+          : (c.displayName || c.email || "Client");
+        return { uid: c.uid, name: nm, hasPlan: !!data,
+          weight: data ? data.weightLbs : "", goal: data ? data.goalWeight : "",
+          target: cal ? cal.target : null, lastLogDate };
+      }));
+      if (!cancelled) setClients(rows);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -7623,6 +7659,54 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
           <button style={tabBtn(true)} disabled>Dashboard</button>
           <button style={tabBtn(false)} onClick={onManageClients}>All clients</button>
         </div>
+
+        {clients.length > 0 && (
+          <div className="card">
+            <div className="card-title">🔗 Your Connected Clients</div>
+            <div className="card-sub" style={{ marginBottom: 8 }}>
+              Live data from each client's shared plan. Tap a card to open it.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {clients.map((c) => {
+                const w = Number(c.weight), g = Number(c.goal);
+                const toGo = (w && g) ? Math.round((w - g) * 10) / 10 : null;
+                const ds = c.lastLogDate
+                  ? Math.floor((Date.now() - new Date(c.lastLogDate + "T00:00:00").getTime()) / 86400000)
+                  : null;
+                return (
+                  <div key={c.uid} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}
+                    style={{ cursor: "pointer", padding: "12px 14px", borderRadius: "10px",
+                      background: "rgba(255,255,255,.04)", border: "1px solid var(--accent)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{c.name}</span>
+                      <span style={{ fontSize: ".7rem", color: "var(--accent)", fontWeight: 700 }}>🔗 Shared</span>
+                    </div>
+                    {c.hasPlan ? (
+                      <>
+                        <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
+                          ⚖️ {c.weight ? `${c.weight} lbs` : "—"}{c.goal ? ` → ${c.goal} lbs` : ""}
+                          {toGo !== null && toGo > 0
+                            ? ` · ${toGo} lbs to go`
+                            : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem",
+                          color: "var(--muted)", marginTop: 8 }}>
+                          <span>🔥 {c.target != null ? `${c.target.toLocaleString()} cal/day` : "—"}</span>
+                          <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: ".82rem", color: "var(--muted)" }}>
+                        No plan linked yet — link one from "Your clients" above.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="card">
           <div className="card-title">📊 Local Plans Overview</div>
           <div className="card-sub" style={{ marginBottom:6 }}>
@@ -7664,10 +7748,32 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                   <div key={p.id} onClick={() => onSelect(p.id)}
                     style={{ cursor: "pointer", padding: "12px 14px", borderRadius: "10px",
                       background: "rgba(255,255,255,.04)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{p.name || "Unnamed client"}</span>
-                      <span style={{ fontSize: ".72rem", color: st.color, fontWeight: 600 }}>{st.label}</span>
-                    </div>
+                    {renamingId === p.id ? (
+                      <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: "6px", marginBottom: 8 }}>
+                        <input autoFocus value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { onRename && onRename(p.id, renameDraft); setRenamingId(null); } }}
+                          style={{ flex: 1, padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--border)",
+                            background: "var(--s2)", color: "var(--text)", fontSize: ".85rem" }} />
+                        <button onClick={() => { onRename && onRename(p.id, renameDraft); setRenamingId(null); }}
+                          style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: "var(--accent)",
+                            color: "#0b0b12", fontWeight: 700, fontSize: ".78rem", cursor: "pointer" }}>Save</button>
+                        <button onClick={() => setRenamingId(null)}
+                          style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--border)",
+                            background: "transparent", color: "var(--muted)", fontSize: ".78rem", cursor: "pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: ".95rem" }}>
+                          {p.customName || p.name || "Unnamed client"}
+                          {onRename && (
+                            <button onClick={(e) => { e.stopPropagation(); setRenameDraft(p.customName || p.name || ""); setRenamingId(p.id); }}
+                              title="Rename" style={{ border: "none", background: "transparent", color: "var(--muted)",
+                                cursor: "pointer", fontSize: ".85rem", marginLeft: 6 }}>✎</button>
+                          )}
+                        </span>
+                        <span style={{ fontSize: ".72rem", color: st.color, fontWeight: 600 }}>{st.label}</span>
+                      </div>
+                    )}
                     {/* Weight → goal: larger and brighter so it's easy to read */}
                     <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
                       ⚖️ {p.weight ? `${p.weight} lbs` : "—"}{p.goal ? ` → ${p.goal} lbs` : ""}
@@ -7741,9 +7847,11 @@ function ClientHome({ onOpenPlan }) {
 function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading,
   onCreateFolder, onRenameFolder, onDeleteFolder, onMoveProfile,
   confirmDeleteId, confirmFolderDel, onRecover, onExport, onImport,
-  onClipCopy, onClipPaste, showDashboardTab, onShowDashboard, onOpenClientPlan, onLinked, onCopyToLocal }) {
+  onClipCopy, onClipPaste, showDashboardTab, onShowDashboard, onOpenClientPlan, onLinked, onCopyToLocal, onRename }) {
 
   const [openFolders, setOpenFolders] = useState({});
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const [dragId, setDragId] = useState(null);
   const [dragOverFolder, setDragOverFolder] = useState(null);
   const [newFolderName, setNewFolderName] = useState("");
@@ -7776,28 +7884,45 @@ function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading
     if (dragId) { onMoveProfile(dragId, folderId); setDragId(null); setDragOverFolder(null); }
   };
 
-  const ProfileCard = ({ p }) => (
-    <div className={`prof-card${dragId===p.id?" drag-ghost":""}`}
-      draggable="true"
-      onDragStart={e=>onDragStart(e,p.id)}
-      onDragEnd={onDragEnd}
-      onClick={()=>onSelect(p.id)}>
-      <div className="prof-avatar">{(p.name||"?").slice(0,2).toUpperCase()}</div>
-      <div className="prof-info">
-        <div className="prof-name">{p.name || "Unnamed Client"}</div>
-        <div className="prof-meta">
-          {p.weight ? `${p.weight} lbs` : "—"}
-          {p.goal ? ` → ${p.goal} lbs` : ""}
-          {p.lastSaved ? ` · ${new Date(p.lastSaved).toLocaleDateString()}` : ""}
-          {p.stepLabel ? ` · ${p.stepLabel}` : ""}
+  const ProfileCard = ({ p }) => {
+    const displayName = p.customName || p.name || "Unnamed Client";
+    if (renamingId === p.id) {
+      return (
+        <div className="prof-card" onClick={e=>e.stopPropagation()}>
+          <input autoFocus className="folder-input" style={{ flex:1 }} value={renameDraft}
+            placeholder="Plan name" onChange={e=>setRenameDraft(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter"){ onRename && onRename(p.id, renameDraft); setRenamingId(null); } }} />
+          <button className="prof-new-btn" style={{ flex:"0 0 auto", minHeight:0, padding:"8px 12px", fontSize:".8rem" }}
+            onClick={()=>{ onRename && onRename(p.id, renameDraft); setRenamingId(null); }}>Save</button>
+          <button className="folder-act-btn" onClick={()=>setRenamingId(null)}>Cancel</button>
         </div>
+      );
+    }
+    return (
+      <div className={`prof-card${dragId===p.id?" drag-ghost":""}`}
+        draggable="true"
+        onDragStart={e=>onDragStart(e,p.id)}
+        onDragEnd={onDragEnd}
+        onClick={()=>onSelect(p.id)}>
+        <div className="prof-avatar">{(displayName||"?").slice(0,2).toUpperCase()}</div>
+        <div className="prof-info">
+          <div className="prof-name">{displayName}</div>
+          <div className="prof-meta">
+            {p.weight ? `${p.weight} lbs` : "—"}
+            {p.goal ? ` → ${p.goal} lbs` : ""}
+            {p.lastSaved ? ` · ${new Date(p.lastSaved).toLocaleDateString()}` : ""}
+            {p.stepLabel ? ` · ${p.stepLabel}` : ""}
+          </div>
+        </div>
+        <button className="prof-del" title="Rename"
+          onClick={e=>{e.stopPropagation(); setRenameDraft(displayName); setRenamingId(p.id);}}>✎</button>
+        <button className="prof-del"
+          style={confirmDeleteId===p.id?{background:"rgba(255,79,107,.15)",color:"var(--red)",borderRadius:"6px",padding:"2px 8px",fontSize:".68rem",border:"1px solid rgba(255,79,107,.3)"}:{}}
+          onClick={e=>{e.stopPropagation();onDelete(p.id,p.name)}}
+          title="Delete">{confirmDeleteId===p.id?"Confirm?":"✕"}</button>
       </div>
-      <button className="prof-del"
-        style={confirmDeleteId===p.id?{background:"rgba(255,79,107,.15)",color:"var(--red)",borderRadius:"6px",padding:"2px 8px",fontSize:".68rem",border:"1px solid rgba(255,79,107,.3)"}:{}}
-        onClick={e=>{e.stopPropagation();onDelete(p.id,p.name)}}
-        title="Delete">{confirmDeleteId===p.id?"Confirm?":"✕"}</button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="prof-screen">
@@ -8318,6 +8443,16 @@ export default function App() {
     return id;
   };
 
+  // Give a local plan a custom display name (kept separate from the plan's own
+  // first/last name, so renaming a sim/template/backup sticks).
+  const renameProfile = (id, customName) => {
+    setProfiles(prev => {
+      const up = prev.map(p => p.id === id ? { ...p, customName: (customName || "").trim() } : p);
+      saveIndex(up);
+      return up;
+    });
+  };
+
   const createProfile = (folderId) => {
     const id = `c${Date.now()}`;
     const np = { id, name:"", weight:"", goal:"", lastSaved:Date.now(), stepLabel:"Personal", folderId: folderId||null };
@@ -8748,6 +8883,7 @@ export default function App() {
         onSelect={selectProfile} onManageClients={()=>setHomeTab("clients")}
         onOpenClientPlan={openClientPlan}
         onLinked={removeLocalProfileById} onCopyToLocal={copyClientToLocal}
+        onRename={renameProfile}
       />;
     }
     return <ProfileSelector
@@ -8761,6 +8897,7 @@ export default function App() {
       showDashboardTab={isTrainerHome} onShowDashboard={()=>setHomeTab("dashboard")}
       onOpenClientPlan={openClientPlan}
       onLinked={removeLocalProfileById} onCopyToLocal={copyClientToLocal}
+      onRename={renameProfile}
     />;
   }
 
