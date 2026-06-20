@@ -163,6 +163,20 @@ enabled (Blaze has no default spending cap).
   behalf logging lands in the client's account (fixes a gap from Part C); the load effect now also
   depends on `activeRemoteUid`. **Forward-compatible with the food-library API (Blaze, later):** that
   API will simply auto-fill these same fields instead of typing them. No `firestore.rules` change.
+- Session 10: **Edit history / activity log (cooperative tier, non-Blaze).** Every meaningful
+  change to a plan is recorded as an append-only event — **who** (uid + role + name), **when**
+  (timestamp), **what** (plain-English action). Tracks BOTH logging actions (meals added/removed,
+  weight logged, calorie/water quick-adds) and plan-structure edits (goal weight, workouts, notes,
+  check-ins, etc., via a `describePlanChanges` diff run after each debounced save). Stored newest-
+  first under `caliq-history-{id}` (capped at 250), routed remote-aware like the daily log, so a
+  linked client's history lives in their account and both sides see the same feed. New: App state
+  `history`/`historyRef`/`lastSnapshotRef` + `meName`/`meUid`; helpers `appendHistory`,
+  `recordPlanEdits`, and module-level `describePlanChanges` + `timeAgo`; `selectProfile`/
+  `openClientPlan`/`createProfile` seed the diff baseline; the daily-log effect loads history. UI:
+  a collapsible **🕓 Recent Activity** feed (`ActivityFeed`) on the Daily Dashboard (name + role
+  badge + action + relative time). This is the *cooperative* tier (each side records its own
+  actions; not tamper-proof) — the hardened, server-stamped version comes with Blaze. No
+  `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared.
 
@@ -225,6 +239,9 @@ enabled (Blaze has no default spending cap).
 - **Navigation side menu** — a hamburger (≡) menu in the top corner that opens a slide-out
   panel for editing your profile and moving around the app. Its own UI step (App.jsx is one
   large component, so navigation restructuring should be planned carefully). No Blaze needed.
+  Candidate home for the **Recent Activity** feed (Kevin: the activity list will get long; for
+  now it's a compact tile showing the latest 3 with "View all" → scrollable; later it could move
+  into the side menu and/or get its own full-page view).
 - **Notification center** — notify a trainer when a client joins or leaves (and similar events).
   Deferred until Blaze/Cloud Functions: a client safely creating a notification on the trainer's
   side needs server-side logic (client-side writes would require opening up the rules unsafely).

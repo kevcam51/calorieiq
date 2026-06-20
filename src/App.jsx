@@ -5833,9 +5833,63 @@ function MealLog({ meals, onAddMeal, onRemoveMeal }) {
   );
 }
 
+// ─── Recent activity feed (Session 10) ──────────────────────────────────────
+// A collapsible who-changed-what log for the plan. Cooperative tier (each side
+// records its own actions); a tamper-proof version arrives with Blaze.
+function ActivityFeed({ history }) {
+  const [showAll, setShowAll] = useState(false);
+  const list = history || [];
+  const shown = showAll ? list : list.slice(0, 3); // keep the tile short by default
+
+  const row = (ev) => (
+    <div key={ev.id} style={{ display:"flex", gap:"8px", fontSize:".8rem", alignItems:"baseline" }}>
+      <span style={{ fontWeight:700 }}>{ev.name}</span>
+      <span style={{ fontSize:".64rem", color:"var(--muted)", border:"1px solid var(--border)",
+        borderRadius:"4px", padding:"0 4px" }}>
+        {ev.role === ROLES.CLIENT ? "client" : "trainer"}
+      </span>
+      <span style={{ flex:1 }}>{ev.action}</span>
+      <span style={{ color:"var(--muted)", fontSize:".7rem", whiteSpace:"nowrap" }}>{timeAgo(ev.ts)}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ padding:"12px 14px", background:"var(--s2)", borderRadius:"8px",
+      border:"1px solid var(--border)", marginBottom:"6px" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div className="sec-title" style={{ marginTop:0, marginBottom:0 }}>🕓 Recent Activity</div>
+        {list.length > 0 && (
+          <span style={{ fontSize:".72rem", color:"var(--muted)" }}>
+            {list.length} change{list.length!==1?"s":""}
+          </span>
+        )}
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ fontSize:".8rem", color:"var(--muted)", marginTop:"8px" }}>
+          No activity yet. Logging food, weight, or editing the plan will show up here.
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:"7px", marginTop:"10px",
+          maxHeight: showAll ? "260px" : "none", overflowY: showAll ? "auto" : "visible" }}>
+          {shown.map(row)}
+        </div>
+      )}
+
+      {list.length > 3 && (
+        <button onClick={() => setShowAll((s) => !s)}
+          style={{ marginTop:"8px", border:"none", background:"transparent", color:"var(--accent)",
+            cursor:"pointer", fontSize:".76rem", fontWeight:600, padding:"2px 0" }}>
+          {showAll ? "Show less" : `View all ${list.length} →`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPerDay,
   onOpenPlan, onOpenResults, onEditWorkouts, onLogUpdate, dailyLog, streak,
-  onUpdateCardio, onUpdateStrength, onAddMeal, onRemoveMeal }) {
+  onUpdateCardio, onUpdateStrength, onAddMeal, onRemoveMeal, history }) {
 
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [expandedStat, setExpandedStat] = useState(null);
@@ -6330,6 +6384,8 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
           + Add Strength
         </button>
       </div>
+
+      <ActivityFeed history={history} />
 
       {/* Shareable progress card — tappable */}
       <div className="share-card" style={{cursor:"pointer",borderColor:expandedSnap?"var(--green)":"var(--accent)"}} onClick={()=>setExpandedSnap(v=>!v)}>
@@ -7886,6 +7942,42 @@ const STORAGE_INDEX = "caliq-index";
 const STORAGE_FOLDERS = "caliq-folders";
 const profileKey = (id) => `caliq-${id}`;
 
+// ─── Edit history helpers (Session 10) ──────────────────────────────────────
+// Short "x ago" label for an event timestamp.
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24); if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+// Describe meaningful plan-structure changes between two data snapshots, as a
+// list of plain-English phrases (e.g. "changed goal weight to 160"). Coarse on
+// purpose (one phrase per area) so the history stays readable.
+function describePlanChanges(prev, next) {
+  const p = prev || {}, n = next || {};
+  const out = [];
+  const scalar = [
+    ["goalWeight", "goal weight"], ["weightLbs", "weight"], ["age", "age"],
+    ["heightFt", "height (ft)"], ["heightIn", "height (in)"], ["gender", "gender"],
+    ["activityLevel", "activity level"], ["bodyFat", "body fat %"], ["goalBodyFat", "goal body fat %"],
+    ["firstName", "first name"], ["lastName", "last name"],
+  ];
+  scalar.forEach(([k, label]) => {
+    const a = p[k] == null ? "" : String(p[k]);
+    const b = n[k] == null ? "" : String(n[k]);
+    if (a !== b) out.push(b === "" ? `cleared ${label}` : `changed ${label} to ${b}`);
+  });
+  if (JSON.stringify(p.cardio || {}) !== JSON.stringify(n.cardio || {})) out.push("edited the cardio plan");
+  if (JSON.stringify(p.strength || {}) !== JSON.stringify(n.strength || {})) out.push("edited the strength plan");
+  if ((p.trainerNotes || "") !== (n.trainerNotes || "")) out.push("updated trainer notes");
+  if (JSON.stringify(p.customExercises || []) !== JSON.stringify(n.customExercises || [])) out.push("edited custom exercises");
+  if ((n.checkIns || []).length > (p.checkIns || []).length) out.push("added a check-in");
+  return out;
+}
+
 export default function App() {
   const [screen, setScreen] = useState("profiles");
   const [profiles, setProfiles] = useState([]);
@@ -7904,6 +7996,12 @@ export default function App() {
   // When a trainer opens a LINKED client's plan, this holds that client's uid so
   // edits save into the client's account ("caliq-self") instead of locally.
   const [activeRemoteUid, setActiveRemoteUid] = useState(null);
+  // Edit history (who-changed-what) for the active plan.
+  const [history, setHistory] = useState([]);
+  const historyRef = useRef([]);              // mirror of history (avoids stale closures)
+  const lastSnapshotRef = useRef(null);       // last data we diffed plan-edits against
+  const [meName, setMeName] = useState("");   // current user's display name
+  const [meUid, setMeUid] = useState("");     // current user's uid
 
   const goBack = () => {
     if (showDash && step === 5) {
@@ -7941,7 +8039,11 @@ export default function App() {
       } catch(e) {}
       try {
         const prof = await getProfile();
-        if (prof && prof.role) setRole(prof.role);
+        if (prof) {
+          if (prof.role) setRole(prof.role);
+          setMeName(prof.displayName || prof.email || "Someone");
+          setMeUid(prof.uid || "");
+        }
       } catch(e) {}
       setLoading(false);
     })();
@@ -7963,6 +8065,7 @@ export default function App() {
           // Editing a linked client's plan — save straight into THEIR account.
           // (No local index update; this profile doesn't live in our list.)
           await setForUser(remote, "caliq-self", payload);
+          recordPlanEdits(newData||data);
           setSaving(true);
           setTimeout(()=>setSaving(false), 1200);
           return;
@@ -7973,10 +8076,21 @@ export default function App() {
         const up = profiles.map(p => p.id===activeId ? {...p, name:fullName(d)||p.name, weight:d.weightLbs||"", goal:d.goalWeight||"", lastSaved:Date.now(), stepLabel:SL[newStep??step]||""} : p);
         setProfiles(up);
         await saveIndex(up);
+        recordPlanEdits(newData||data);
         setSaving(true);
         setTimeout(()=>setSaving(false), 1200);
       } catch(e) {}
     }, 600);
+  };
+
+  // After a save settles, record any meaningful plan-structure changes (goal,
+  // workouts, notes, …) in the history. Diffs against the last saved snapshot.
+  const recordPlanEdits = (nextData) => {
+    const prevSnap = lastSnapshotRef.current;
+    lastSnapshotRef.current = nextData;
+    if (prevSnap == null) return; // first load — nothing to compare yet
+    const changes = describePlanChanges(prevSnap, nextData);
+    if (changes.length) appendHistory(changes);
   };
 
   const setDataAndSave = (updater) => {
@@ -7989,6 +8103,8 @@ export default function App() {
   const setStepAndSave = (s) => { setStep(s); autoSave(data, s); };
 
   const selectProfile = async (id) => {
+    let merged = {...EMPTY_DATA};
+    let stp = 0;
     try {
       const result = await window.storage.get(profileKey(id));
       if (result && result.value) {
@@ -8001,11 +8117,14 @@ export default function App() {
           d.lastName = parts.slice(1).join(" ") || "";
           delete d.name;
         }
-        setData({...EMPTY_DATA, ...d, cardio:{...defaultCardio,...(d.cardio||{})}, strength:{...defaultStrength,...(d.strength||{})}});
-        setStep(parsed.step || 0);
-        setShowDash((parsed.step || 0) >= 5);
+        merged = {...EMPTY_DATA, ...d, cardio:{...defaultCardio,...(d.cardio||{})}, strength:{...defaultStrength,...(d.strength||{})}};
+        stp = parsed.step || 0;
       }
-    } catch(e) { setData({...EMPTY_DATA}); setStep(0); }
+    } catch(e) { merged = {...EMPTY_DATA}; stp = 0; }
+    setData(merged);
+    setStep(stp);
+    setShowDash(stp >= 5);
+    lastSnapshotRef.current = merged; // baseline for plan-edit history diffs
     setActiveRemoteUid(null); // a local (or own "self") profile, not a remote client's
     setActiveId(id);
     setScreen("app");
@@ -8023,13 +8142,15 @@ export default function App() {
           const parts = d.name.trim().split(/\s+/);
           d.firstName = parts[0] || ""; d.lastName = parts.slice(1).join(" ") || ""; delete d.name;
         }
-        setData({...EMPTY_DATA, ...d, cardio:{...defaultCardio,...(d.cardio||{})}, strength:{...defaultStrength,...(d.strength||{})}});
+        const merged = {...EMPTY_DATA, ...d, cardio:{...defaultCardio,...(d.cardio||{})}, strength:{...defaultStrength,...(d.strength||{})}};
+        setData(merged);
+        lastSnapshotRef.current = merged;
         setStep(parsed.step || 0);
         setShowDash((parsed.step || 0) >= 5);
       } else {
-        setData({...EMPTY_DATA}); setStep(0); setShowDash(false);
+        setData({...EMPTY_DATA}); lastSnapshotRef.current = {...EMPTY_DATA}; setStep(0); setShowDash(false);
       }
-    } catch(e) { setData({...EMPTY_DATA}); setStep(0); }
+    } catch(e) { setData({...EMPTY_DATA}); lastSnapshotRef.current = {...EMPTY_DATA}; setStep(0); }
     setActiveRemoteUid(clientUid);
     setActiveId("self");
     setScreen("app");
@@ -8042,6 +8163,7 @@ export default function App() {
     setProfiles(up);
     saveIndex(up);
     setData({...EMPTY_DATA});
+    lastSnapshotRef.current = {...EMPTY_DATA};
     setStep(0);
     setActiveRemoteUid(null);
     setActiveId(id);
@@ -8289,10 +8411,30 @@ export default function App() {
     logWrite(`caliq-log-${activeId}-${todayKey}`, JSON.stringify(logObj));
   };
 
+  // Append one or more events to the active plan's edit history. Stored with the
+  // plan (remote-aware), newest-first, capped so it can't grow without bound.
+  const appendHistory = (actions) => {
+    if (!activeId || !actions || actions.length === 0) return;
+    const now = Date.now();
+    const evs = actions.map((a, i) => ({
+      id: `e${now}${i}${Math.floor(Math.random()*1000)}`,
+      uid: meUid, role, name: meName || "Someone", action: a, ts: now,
+    }));
+    const next = [...evs, ...historyRef.current].slice(0, 250);
+    historyRef.current = next;
+    setHistory(next);
+    logWrite(`caliq-history-${activeId}`, JSON.stringify(next));
+  };
+
   const onLogUpdate = (field, value) => {
+    const prev = dailyLog[field] || 0;
     const updated = {...dailyLog, [field]: value};
     setDailyLog(updated);
     persistLog(updated);
+    // Record meaningful logging actions in the history.
+    if (field === "weight" && value > 0 && value !== prev) appendHistory([`logged weight: ${value} lbs`]);
+    else if (field === "calories" && value > prev) appendHistory([`logged ${value - prev} cal`]);
+    else if (field === "water" && value > prev) appendHistory([`logged ${value - prev} oz water`]);
     // Update streak: if calories logged > 0, count as active day
     if (field === "calories" && value > 0) setStreak(s => Math.max(s, 1));
   };
@@ -8313,6 +8455,7 @@ export default function App() {
     };
     setDailyLog(updated);
     persistLog(updated);
+    appendHistory([`added ${m.type || "a food"}${m.name ? `: ${m.name}` : ""} (${m.calories} cal)`]);
     if (m.calories > 0) setStreak(s => Math.max(s, 1));
   };
 
@@ -8331,6 +8474,7 @@ export default function App() {
     };
     setDailyLog(updated);
     persistLog(updated);
+    appendHistory([`removed ${m.name || "a food"}${m.type ? ` from ${m.type}` : ""}`]);
   };
 
   // Load daily log when the active plan changes (own profile or a linked client)
@@ -8352,6 +8496,12 @@ export default function App() {
         break;
       }
       setStreak(s);
+      // Load this plan's edit history
+      const hv = await logRead(`caliq-history-${activeId}`);
+      let hist = [];
+      if (hv) { try { hist = JSON.parse(hv); } catch(e) {} }
+      historyRef.current = hist;
+      setHistory(hist);
     })();
   }, [activeId, activeRemoteUid]);
 
@@ -8462,7 +8612,7 @@ export default function App() {
               onOpenPlan={()=>{setNavFrom("dashboard");setStepAndSave(0);}} onOpenResults={()=>{setNavFrom("dashboard");setShowDash(false);}}
               onEditWorkouts={()=>{setNavFrom("dashboard");setStepAndSave(3);}}
               onLogUpdate={onLogUpdate} dailyLog={dailyLog} streak={streak}
-              onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal}
+              onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal} history={history}
               onUpdateCardio={(day,idx,field,val)=>setDataAndSave(p=>{
                 if (field==="_replace") return {...p, cardio:{...p.cardio,[day]:val}};
                 const sessions = Array.isArray(p.cardio[day]) ? [...p.cardio[day]] : [];
