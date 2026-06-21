@@ -101,12 +101,9 @@ export default function AuthGate({ children }) {
     if (needsProfile) {
       return <RoleChooser user={user} onDone={() => setNeedsProfile(false)} />;
     }
-    return (
-      <>
-        <SignOutButton />
-        {children}
-      </>
-    );
+    // Sign-out now lives in the app's side menu (the hamburger ≡), so no
+    // floating button here once the user is in.
+    return <>{children}</>;
   }
 
   const submit = async () => {

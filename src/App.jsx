@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setName, splitName, leaveTrainer } from "./profile.js";
 import { getForUser, setForUser, deleteForUser, listForUser } from "./clientData.js";
+import { auth } from "./firebase.js";
+import { signOut } from "firebase/auth";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -9786,6 +9788,91 @@ function describePlanChanges(prev, next) {
   return out;
 }
 
+// ─── Navigation side menu (Session 23) ───────────────────────────────────────
+// A hamburger (≡) opens a slide-out drawer with app navigation, inline name
+// editing, and sign-out. Rendered globally by App so it's on every screen.
+const ROLE_LABEL = { client: "Client", head_trainer: "Trainer", sub_trainer: "Trainer", admin: "Admin" };
+function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, onHome, onDashboard, onClients, onNameSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (open) {
+      const parts = (meName || "").trim().split(/\s+/);
+      setFirst(parts[0] || ""); setLast(parts.slice(1).join(" ") || ""); setEditing(false);
+    }
+  }, [open, meName]);
+
+  const saveName = async () => {
+    setBusy(true);
+    try { await setName(first.trim(), last.trim()); if (onNameSaved) onNameSaved(`${first.trim()} ${last.trim()}`.trim()); setEditing(false); }
+    catch (e) { /* ignore */ }
+    finally { setBusy(false); }
+  };
+  const go = (fn) => { onClose(); if (fn) fn(); };
+
+  const item = { display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+    padding: "13px 16px", borderRadius: 10, border: "none", background: "transparent", color: "var(--text)",
+    cursor: "pointer", fontFamily: "inherit", fontSize: ".95rem", fontWeight: 600 };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 1400,
+        opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition: "opacity .25s" }} />
+      {/* Drawer */}
+      <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: "min(82vw, 320px)", zIndex: 1401,
+        background: "var(--surface,#16162a)", borderRight: "1px solid var(--border)", boxShadow: "var(--shadow-md)",
+        transform: open ? "translateX(0)" : "translateX(-100%)", transition: "transform .28s ease",
+        display: "flex", flexDirection: "column", padding: "16px 12px",
+        paddingTop: "calc(16px + env(safe-area-inset-top,0px))" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 12px" }}>
+          <div className="logo" style={{ fontSize: "1.4rem" }}>CALORIE<span>IQ</span></div>
+          <button onClick={onClose} style={{ ...item, width: "auto", padding: "6px 10px", fontSize: "1.1rem" }}>✕</button>
+        </div>
+
+        {/* Identity + name edit */}
+        <div style={{ padding: "12px 14px", borderRadius: 12, background: "var(--s2)", marginBottom: 12 }}>
+          {editing ? (
+            <div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <input value={first} onChange={(e) => setFirst(e.target.value)} placeholder="First"
+                  style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: ".85rem" }} />
+                <input value={last} onChange={(e) => setLast(e.target.value)} placeholder="Last"
+                  style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: ".85rem" }} />
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={saveName} disabled={busy} style={{ padding: "7px 12px", borderRadius: 7, border: "none", background: "var(--accent)", color: "#0b0b12", fontWeight: 700, fontSize: ".8rem", cursor: "pointer" }}>{busy ? "…" : "Save"}</button>
+                <button onClick={() => setEditing(false)} style={{ padding: "7px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: ".8rem", cursor: "pointer" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: ".95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meName || "Set your name"}</div>
+                <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>
+                  <span style={{ color: "var(--accent)", fontWeight: 700 }}>{ROLE_LABEL[role] || "Member"}</span>
+                  {meEmail ? ` · ${meEmail}` : ""}
+                </div>
+              </div>
+              <button onClick={() => setEditing(true)} title="Edit name" style={{ border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: "1rem", padding: 6 }}>✎</button>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <button style={item} onClick={() => go(onHome)}>🏠 <span>Home</span></button>
+        {isTrainer && <button style={item} onClick={() => go(onDashboard)}>📊 <span>Dashboard</span></button>}
+        {isTrainer && <button style={item} onClick={() => go(onClients)}>👥 <span>All clients</span></button>}
+
+        <div style={{ flex: 1 }} />
+        <button style={{ ...item, color: "#e5484d" }} onClick={() => signOut(auth)}>🚪 <span>Sign out</span></button>
+      </div>
+    </>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState("profiles");
   const [profiles, setProfiles] = useState([]);
@@ -9810,6 +9897,8 @@ export default function App() {
   const lastSnapshotRef = useRef(null);       // last data we diffed plan-edits against
   const [meName, setMeName] = useState("");   // current user's display name
   const [meUid, setMeUid] = useState("");     // current user's uid
+  const [meEmail, setMeEmail] = useState(""); // current user's email (for the menu)
+  const [menuOpen, setMenuOpen] = useState(false); // side menu (Session 23)
 
   const goBack = () => {
     if (showDash && step === 5) {
@@ -9859,6 +9948,7 @@ export default function App() {
           if (prof.role) setRole(prof.role);
           setMeName(prof.displayName || prof.email || "Someone");
           setMeUid(prof.uid || "");
+          setMeEmail(prof.email || "");
         }
       } catch(e) {}
       setLoading(false);
@@ -10468,16 +10558,34 @@ export default function App() {
   const LBLS = ["Personal","Goal Weight","Activity","Cardio","Strength","Results"];
   const STEP_ICONS = ["👤","🎯","🏃","🔥","💪","📊"];
 
+  // Global navigation chrome (hamburger + slide-out menu), shown on every screen.
+  const isTrainerHome = role === ROLES.HEAD_TRAINER || role === ROLES.SUB_TRAINER;
+  const chrome = (
+    <>
+      <button onClick={() => setMenuOpen(true)} aria-label="Open menu"
+        style={{ position: "fixed", top: "calc(10px + env(safe-area-inset-top,0px))", left: 10, zIndex: 1390,
+          width: 40, height: 40, borderRadius: 10, border: "1px solid var(--border,#2e2e4a)",
+          background: "var(--surface,#16162a)", color: "var(--text,#f2f2ff)", cursor: "pointer", fontSize: "1.3rem", lineHeight: 1 }}>
+        ≡
+      </button>
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} meName={meName} meEmail={meEmail}
+        isTrainer={isTrainerHome}
+        onHome={() => { if (isTrainerHome) setHomeTab("dashboard"); goToProfiles(); }}
+        onDashboard={() => { setHomeTab("dashboard"); goToProfiles(); }}
+        onClients={() => { setHomeTab("clients"); goToProfiles(); }}
+        onNameSaved={(n) => setMeName(n)} />
+    </>
+  );
+
   if (screen === "profiles") {
     // A client manages just their own plan (stored in their account as
     // "caliq-self"), not a list of other people's profiles.
     if (role === ROLES.CLIENT) {
-      return <ClientHome onOpenPlan={() => selectProfile("self")}
-        meUid={meUid} meName={meName} role={role} />;
+      return <>{chrome}<ClientHome onOpenPlan={() => selectProfile("self")}
+        meUid={meUid} meName={meName} role={role} /></>;
     }
-    const isTrainerHome = role === ROLES.HEAD_TRAINER || role === ROLES.SUB_TRAINER;
     if (isTrainerHome && homeTab === "dashboard") {
-      return <TrainerDashboard
+      return <>{chrome}<TrainerDashboard
         profiles={profiles} loading={loading}
         onSelect={selectProfile} onManageClients={()=>setHomeTab("clients")}
         onOpenClientPlan={openClientPlan}
@@ -10488,9 +10596,9 @@ export default function App() {
         onConvertSimulation={convertSimulation}
         onDeletePlan={removeLocalProfileById}
         meUid={meUid} meName={meName} meRole={role}
-      />;
+      /></>;
     }
-    return <ProfileSelector
+    return <>{chrome}<ProfileSelector
       profiles={profiles} folders={folders} loading={loading}
       onSelect={selectProfile} onNew={createProfile} onDelete={deleteProfile}
       onCreateFolder={createFolder} onRenameFolder={renameFolder}
@@ -10502,11 +10610,12 @@ export default function App() {
       onOpenClientPlan={openClientPlan}
       onLinked={removeLocalProfileById} onCopyToLocal={copyClientToLocal}
       onRename={renameProfile}
-    />;
+    /></>;
   }
 
   return (
     <>
+      {chrome}
       <style>{css}</style>
       {saving && <div className="prof-save-badge">✓ Saved</div>}
       <div className="app">

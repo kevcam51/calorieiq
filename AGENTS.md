@@ -382,6 +382,19 @@ enabled (Blaze has no default spending cap).
   overwrite since each rebuilds the full entry from current `data` — fine for normal tapping. No
   `firestore.rules` change. **Roadmap note:** this builds the broader calendar the Session-16 highlighted-
   date check-in picker hinted at; daily/weekly/monthly are all shipped here.
+- Session 23: **Navigation side menu (non-Blaze).** A hamburger (**≡**, fixed top-left) on every screen
+  opens a slide-out **`SideMenu`** drawer (left, with a dimming backdrop, .28s transform). Contents: the
+  CALORIEIQ brand + ✕, an **identity card** (name · role badge · email) with inline **name editing**
+  (first/last → the existing `setName` from profile.js; updates `meName`), role-aware **navigation**
+  (🏠 Home, and for trainers 📊 Dashboard + 👥 All clients — each calls `goToProfiles`/`setHomeTab` and
+  closes the menu), and **🚪 Sign out** (`signOut(auth)`). **Architecture:** to put it on every screen,
+  App computes a `chrome` element (hamburger + `<SideMenu>`) once and injects `{chrome}` into all four
+  return paths (ClientHome / TrainerDashboard / ProfileSelector / main app) — `isTrainerHome` was hoisted
+  out of the profiles branch for this. New App state `menuOpen` + `meEmail` (set alongside meName/meUid).
+  **AuthGate** no longer renders its floating white "Sign out" button for the signed-in app (it clashed
+  with the dark theme); sign-out now lives only in the menu (the button still shows on the login / role-
+  chooser screens). New imports in App: `auth` (./firebase) + `signOut` (firebase/auth). Verified:
+  hamburger on all screens, nav works + closes, name edit pre-fills/saves. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
