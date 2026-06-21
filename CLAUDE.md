@@ -326,10 +326,13 @@ enabled (Blaze has no default spending cap).
   motivation tool). **A simulation is just a local plan flagged `isSimulation: true`** on its index
   entry — it reuses the entire wizard + the existing projection engine; no new storage namespace, no
   Blaze. `createProfile(folderId, {isSimulation})` sets the flag; `autoSave`'s `{...p}` index rebuild
-  preserves it. **Separation:** `TrainerDashboard` splits `profiles` into `realPlans` vs `sims` — the
-  "Local Plans Overview" counts/lists real plans only, and a new purple-themed **"🧪 Simulations"** card
-  (with **"+ New Simulation"**) lists sandboxes; `ProfileSelector` (All-clients) also filters sims out
-  so they never appear among real clients. **Editor banner:** when the open plan is a sim (`activeIsSim`
+  preserves it. **Merged listing (per Kevin):** since a simulation IS just a flagged local plan, the
+  dashboard shows ONE **"📋 Local Plans"** card listing both, with **filter chips (All / Plans / 🧪 Sims)**,
+  the existing sort chips, **🧪 SANDBOX** tags + purple tint on simulation cards, **"+ Plan"** and
+  **"+ 🧪 Simulation"** create buttons, and a **Delete** action (inline confirm, via
+  `removeLocalProfileById`) on every card. `ProfileSelector` (All-clients) still filters sims out.
+  **Connected Clients** got the same sort chips (needs-attention / last-active / name; shown when 2+
+  clients) since those are the real people to track. **Editor banner:** when the open plan is a sim (`activeIsSim`
   computed from the index in App, passed to `Results`), a "🧪 Simulation — sandbox projection, not a
   real client plan" banner shows above the wizard/Results. **Sales summary:** new `SimulationSummary`
   card at the top of a simulation's Results — a before→after projection ("220 → 190 · Lose 30 lbs in

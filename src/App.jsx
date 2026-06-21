@@ -7795,10 +7795,13 @@ function computeClientCalories(d) {
   return { tdee, target };
 }
 
-function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan, onLinked, onCopyToLocal, onRename, onNewSimulation, onConvertSimulation, meUid, meName, meRole }) {
+function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan, onLinked, onCopyToLocal, onRename, onNewPlan, onNewSimulation, onConvertSimulation, onDeletePlan, meUid, meName, meRole }) {
   const [details, setDetails] = useState({}); // id -> { tdee, target }
   const [lastLog, setLastLog] = useState({}); // id -> "YYYY-MM-DD"
   const [sort, setSort] = useState("attention");
+  const [clientSort, setClientSort] = useState("attention"); // sort for connected clients
+  const [planFilter, setPlanFilter] = useState("all");       // all | plans | sims (merged local list)
+  const [confirmDelFor, setConfirmDelFor] = useState(null);  // local-plan id awaiting delete confirm
   const [clients, setClients] = useState([]); // connected client accounts (live data)
   const [renamingId, setRenamingId] = useState(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -7971,14 +7974,25 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
     return Math.floor((Date.now() - logTs(p)) / 86400000);
   };
 
-  // Simulations are sandbox plans kept separate from real client plans.
+  // Connected-client sort (real clients to keep track of).
+  const clientActiveTs = (c) => (c.lastLogDate ? new Date(c.lastLogDate + "T00:00:00").getTime() : 0);
+  const sortedClients = [...clients].sort((a, b) => {
+    if (clientSort === "name") return (a.name || "").localeCompare(b.name || "");
+    if (clientSort === "recent") return clientActiveTs(b) - clientActiveTs(a);
+    return clientActiveTs(a) - clientActiveTs(b); // "attention": quietest first
+  });
+
+  // Merged local plans: regular plans + simulations in one sortable, filterable
+  // list (a simulation is just a local plan with isSimulation:true).
   const realPlans = profiles.filter((p) => !p.isSimulation);
   const sims = profiles.filter((p) => p.isSimulation);
-  const sorted = [...realPlans].sort((a, b) => {
+  const sorted = [...profiles].sort((a, b) => {
     if (sort === "name") return (a.name || "").localeCompare(b.name || "");
     if (sort === "recent") return lastActiveTs(b) - lastActiveTs(a);
     return lastActiveTs(a) - lastActiveTs(b); // "attention": quietest first
   });
+  const filteredLocal = sorted.filter((p) =>
+    planFilter === "plans" ? !p.isSimulation : planFilter === "sims" ? p.isSimulation : true);
   const complete = realPlans.filter((p) => p.stepLabel === "Results").length;
   const activeWeek = realPlans.filter((p) => Date.now() - lastActiveTs(p) < 7 * 86400000).length;
 
@@ -8008,8 +8022,20 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
             <div className="card-sub" style={{ marginBottom: 8 }}>
               Live data from each client's shared plan. Tap a card to open it.
             </div>
+            {clients.length > 1 && (
+              <div style={{ display: "flex", gap: "6px", margin: "0 0 12px" }}>
+                {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
+                  <button key={k} onClick={() => setClientSort(k)}
+                    style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
+                      border: "1px solid var(--border,rgba(255,255,255,.12))",
+                      background: clientSort === k ? "rgba(255,255,255,.1)" : "transparent", color: "var(--text)" }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {clients.map((c) => {
+              {sortedClients.map((c) => {
                 const w = Number(c.weight), g = Number(c.goal);
                 const toGo = (w && g) ? Math.round((w - g) * 10) / 10 : null;
                 const ds = c.lastLogDate
@@ -8197,36 +8223,67 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
         )}
 
         <div className="card">
-          <div className="card-title">📊 Local Plans Overview</div>
-          <div className="card-sub" style={{ marginBottom:6 }}>
-            📄 Local plans (not connected to a client login). Your connected clients are under
-            “Your clients” above — open those for the shared plan.
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <div className="card-title" style={{ marginBottom: 0 }}>📋 Local Plans</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={onNewPlan}
+                style={{ padding: "8px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 8, cursor: "pointer",
+                  border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)", whiteSpace: "nowrap" }}>
+                + Plan
+              </button>
+              <button onClick={onNewSimulation}
+                style={{ padding: "8px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 8, cursor: "pointer",
+                  border: "none", background: "var(--purple)", color: "#0b0b12", whiteSpace: "nowrap" }}>
+                + 🧪 Simulation
+              </button>
+            </div>
+          </div>
+          <div className="card-sub" style={{ marginTop: 6, marginBottom: 6 }}>
+            📄 Plans not connected to a client login — templates, backups, and 🧪 simulations (sandbox
+            what-if projections). Connected clients are under “Your clients” above.
           </div>
           <div className="card-sub">
             {loading ? "Loading…"
-              : `${realPlans.length} local plan${realPlans.length !== 1 ? "s" : ""} · ${complete} complete · ${activeWeek} active this week`}
+              : `${realPlans.length} plan${realPlans.length !== 1 ? "s" : ""} · ${sims.length} simulation${sims.length !== 1 ? "s" : ""} · ${complete} complete`}
           </div>
 
-          {!loading && realPlans.length > 0 && (
-            <div style={{ display: "flex", gap: "6px", margin: "12px 0 4px" }}>
-              {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
-                <button key={k} onClick={() => setSort(k)}
-                  style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
-                    border: "1px solid var(--border,rgba(255,255,255,.12))",
-                    background: sort === k ? "rgba(255,255,255,.1)" : "transparent", color: "var(--text)" }}>
-                  {lbl}
-                </button>
-              ))}
-            </div>
+          {!loading && profiles.length > 0 && (
+            <>
+              {/* Filter: all / plans / simulations */}
+              <div style={{ display: "flex", gap: "6px", margin: "12px 0 6px" }}>
+                {[["all", `All (${profiles.length})`], ["plans", `Plans (${realPlans.length})`], ["sims", `🧪 Sims (${sims.length})`]].map(([k, lbl]) => (
+                  <button key={k} onClick={() => setPlanFilter(k)}
+                    style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
+                      border: "1px solid " + (planFilter === k ? "var(--purple)" : "var(--border,rgba(255,255,255,.12))"),
+                      background: planFilter === k ? "rgba(181,123,255,.12)" : "transparent", color: "var(--text)" }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              {/* Sort */}
+              <div style={{ display: "flex", gap: "6px", margin: "0 0 4px" }}>
+                {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
+                  <button key={k} onClick={() => setSort(k)}
+                    style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
+                      border: "1px solid var(--border,rgba(255,255,255,.12))",
+                      background: sort === k ? "rgba(255,255,255,.1)" : "transparent", color: "var(--text)" }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
-          {loading ? null : realPlans.length === 0 ? (
+          {loading ? null : profiles.length === 0 ? (
             <div style={{ color: "var(--muted)", fontSize: ".85rem", padding: "8px 0" }}>
-              No clients yet. Switch to “All clients” to add your first one.
+              No local plans yet — tap “+ Plan” to make one, or “+ 🧪 Simulation” for a what-if projection.
             </div>
+          ) : filteredLocal.length === 0 ? (
+            <div style={{ color: "var(--muted)", fontSize: ".85rem", padding: "8px 0" }}>Nothing in this filter.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
-              {sorted.map((p) => {
+              {filteredLocal.map((p) => {
+                const sim = !!p.isSimulation;
                 const st = statusOf(p);
                 const det = details[p.id];
                 const ds = daysSinceLog(p);
@@ -8236,7 +8293,8 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                 return (
                   <div key={p.id} onClick={() => onSelect(p.id)}
                     style={{ cursor: "pointer", padding: "12px 14px", borderRadius: "10px",
-                      background: "rgba(255,255,255,.04)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
+                      background: sim ? "rgba(181,123,255,.06)" : "rgba(255,255,255,.04)",
+                      border: "1px solid " + (sim ? "rgba(181,123,255,.35)" : "var(--border,rgba(255,255,255,.12))") }}>
                     {renamingId === p.id ? (
                       <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: "6px", marginBottom: 8 }}>
                         <input autoFocus value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
@@ -8253,14 +8311,16 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                     ) : (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <span style={{ fontWeight: 700, fontSize: ".95rem" }}>
-                          {p.customName || p.name || "Unnamed client"}
+                          {p.customName || p.name || (sim ? "Untitled simulation" : "Unnamed client")}
                           {onRename && (
                             <button onClick={(e) => { e.stopPropagation(); setRenameDraft(p.customName || p.name || ""); setRenamingId(p.id); }}
                               title="Rename" style={{ border: "none", background: "transparent", color: "var(--muted)",
                                 cursor: "pointer", fontSize: ".85rem", marginLeft: 6 }}>✎</button>
                           )}
                         </span>
-                        <span style={{ fontSize: ".72rem", color: st.color, fontWeight: 600 }}>{st.label}</span>
+                        {sim
+                          ? <span style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--purple)" }}>🧪 SANDBOX</span>
+                          : <span style={{ fontSize: ".72rem", color: st.color, fontWeight: 600 }}>{st.label}</span>}
                       </div>
                     )}
                     {/* Weight → goal: larger and brighter so it's easy to read */}
@@ -8270,71 +8330,24 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                         ? ` · ${toGo} lbs to go`
                         : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
                     </div>
-                    {pct !== null && (
+                    {/* Progress + activity meta — only for real plans (sims aren't tracked) */}
+                    {!sim && pct !== null && (
                       <div style={{ margin: "8px 0 2px" }}>
-                        <div style={{ height: 7, borderRadius: 4, overflow: "hidden",
-                          background: "rgba(255,255,255,.1)" }}>
-                          <div style={{ height: "100%", width: `${pct}%`, borderRadius: 4,
-                            background: "var(--accent)" }} />
+                        <div style={{ height: 7, borderRadius: 4, overflow: "hidden", background: "rgba(255,255,255,.1)" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, borderRadius: 4, background: "var(--accent)" }} />
                         </div>
-                        <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 3 }}>
-                          {pct}% to goal
-                        </div>
+                        <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 3 }}>{pct}% to goal</div>
                       </div>
                     )}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem",
-                      color: "var(--muted)", marginTop: 8 }}>
-                      <span>🔥 {det && det.target != null ? `${det.target.toLocaleString()} cal/day` : "—"}</span>
-                      <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Simulations — sandbox what-if plans (Session 20) */}
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <div className="card-title" style={{ marginBottom: 0 }}>🧪 Simulations</div>
-            <button onClick={onNewSimulation}
-              style={{ padding: "8px 12px", fontSize: ".78rem", fontWeight: 700, borderRadius: 8, cursor: "pointer",
-                border: "none", background: "var(--purple)", color: "#0b0b12", whiteSpace: "nowrap" }}>
-              + New Simulation
-            </button>
-          </div>
-          <div className="card-sub" style={{ marginTop: 6 }}>
-            Sandbox what-if plans — build a program and show the projected results. Not a real client
-            plan; convert one to a client plan when you're ready.
-          </div>
-          {sims.length === 0 ? (
-            <div style={{ color: "var(--muted)", fontSize: ".85rem", padding: "6px 0" }}>
-              No simulations yet — tap “+ New Simulation” to build a what-if program.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
-              {sims.map((p) => {
-                const det = details[p.id];
-                const w = Number(p.weight), g = Number(p.goal);
-                const toGo = (w && g) ? Math.round((w - g) * 10) / 10 : null;
-                return (
-                  <div key={p.id} onClick={() => onSelect(p.id)}
-                    style={{ cursor: "pointer", padding: "12px 14px", borderRadius: "10px",
-                      background: "rgba(181,123,255,.06)", border: "1px solid rgba(181,123,255,.35)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{p.customName || p.name || "Untitled simulation"}</span>
-                      <span style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--purple)" }}>🧪 SANDBOX</span>
-                    </div>
-                    <div style={{ fontSize: ".9rem", color: "var(--text)" }}>
-                      ⚖️ {p.weight ? `${p.weight} lbs` : "—"}{p.goal ? ` → ${p.goal} lbs` : ""}
-                      {toGo !== null && toGo > 0 ? ` · ${toGo} lbs to go` : ""}
-                    </div>
+                    {!sim && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem", color: "var(--muted)", marginTop: 8 }}>
+                        <span>🔥 {det && det.target != null ? `${det.target.toLocaleString()} cal/day` : "—"}</span>
+                        <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
+                      </div>
+                    )}
+                    {/* Actions: convert (sims) + delete (all) */}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }} onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => onSelect(p.id)}
-                        style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 6, cursor: "pointer",
-                          border: "none", background: "var(--purple)", color: "#0b0b12" }}>Open</button>
-                      {convertSimFor === p.id ? (
+                      {sim && (convertSimFor === p.id ? (
                         <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                           <button onClick={() => { onConvertSimulation(p.id); setConvertSimFor(null); }}
                             style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 6, cursor: "pointer",
@@ -8349,6 +8362,20 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                             border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)" }}>
                           Convert to client plan →
                         </button>
+                      ))}
+                      {confirmDelFor === p.id ? (
+                        <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                          <button onClick={() => { onDeletePlan && onDeletePlan(p.id); setConfirmDelFor(null); }}
+                            style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 6, cursor: "pointer",
+                              border: "none", background: "#e5484d", color: "#fff" }}>Confirm delete</button>
+                          <button onClick={() => setConfirmDelFor(null)}
+                            style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 600, borderRadius: 6, cursor: "pointer",
+                              border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)" }}>Cancel</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmDelFor(p.id)}
+                          style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 600, borderRadius: 6, cursor: "pointer",
+                            border: "1px solid rgba(229,72,77,.4)", background: "transparent", color: "#e5484d" }}>Delete</button>
                       )}
                     </div>
                   </div>
@@ -9877,8 +9904,10 @@ export default function App() {
         onOpenClientPlan={openClientPlan}
         onLinked={removeLocalProfileById} onCopyToLocal={copyClientToLocal}
         onRename={renameProfile}
+        onNewPlan={()=>createProfile(null)}
         onNewSimulation={()=>createProfile(null,{isSimulation:true})}
         onConvertSimulation={convertSimulation}
+        onDeletePlan={removeLocalProfileById}
         meUid={meUid} meName={meName} meRole={role}
       />;
     }
