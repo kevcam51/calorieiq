@@ -7632,6 +7632,87 @@ async function readRequestsFor(uid, getForUser) {
   catch { return []; }
 }
 
+// Quick-action popup the client gets when they tap "Do it now" on a trainer
+// request. For loggable types (weigh-in / food / workout) it captures the value
+// inline, auto-marks the request done, and closes with a ✓ — so the client never
+// leaves the home screen. For types that need the full editor (enter info / a
+// custom ask) it offers an "Open my plan" jump instead. (Session 19)
+function QuickActionModal({ request, onWeighIn, onLogFood, onLogWorkout, onOpenPlan, onMarkDone, onClose }) {
+  const [val, setVal] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const type = request.type;
+  const isLoggable = type === "weigh_in" || type === "log_food" || type === "log_workout";
+
+  const finish = async (ok) => {
+    if (!ok) { setBusy(false); return; }
+    await onMarkDone();
+    setBusy(false); setDone(true);
+    setTimeout(onClose, 1000);
+  };
+  const run = async (fn) => { setBusy(true); const ok = await fn(); await finish(ok); };
+
+  const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 1000,
+    display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
+  const sheet = { background: "var(--bg,#0d0d18)", borderRadius: 14, padding: 18, width: "100%",
+    maxWidth: 440, border: "1px solid var(--border,rgba(255,255,255,.12))" };
+  const input = { width: "100%", boxSizing: "border-box", borderRadius: 8, fontSize: "1.1rem",
+    border: "1px solid var(--border,rgba(255,255,255,.2))", background: "var(--surface,#16162a)",
+    color: "var(--text)", padding: "12px 14px", fontFamily: "inherit", textAlign: "center" };
+  const primary = { padding: "11px 14px", fontSize: ".92rem", fontWeight: 700, borderRadius: 9,
+    border: "none", background: "var(--accent)", color: "#0b0b12", cursor: "pointer", flex: 1 };
+  const ghost = { padding: "11px 14px", fontSize: ".88rem", fontWeight: 600, borderRadius: 9,
+    border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
+    color: "var(--text)", cursor: "pointer" };
+
+  const meta = {
+    weigh_in:    { icon: "⚖️", title: "Log today's weight", label: "Today's weight (lbs)", ph: "e.g. 182", cta: "Log weight",  numeric: true,  fn: () => onWeighIn(val) },
+    log_food:    { icon: "🍽️", title: "Log today's food",   label: "Calories eaten today",  ph: "e.g. 650", cta: "Add calories", numeric: true,  fn: () => onLogFood(val) },
+    log_workout: { icon: "🏋️", title: "Record your workout", label: "Add a note (optional)", ph: "e.g. Push day — felt strong", cta: "Mark workout done", numeric: false, fn: () => onLogWorkout(val) },
+  }[type];
+
+  return (
+    <div style={overlay} onClick={onClose}>
+      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+        {done ? (
+          <div style={{ textAlign: "center", padding: "18px 0" }}>
+            <div style={{ fontSize: "2.2rem" }}>✅</div>
+            <div style={{ fontSize: "1.05rem", fontWeight: 800, marginTop: 6 }}>Done!</div>
+          </div>
+        ) : isLoggable ? (
+          <>
+            <div style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: 4 }}>{meta.icon} {meta.title}</div>
+            <div style={{ fontSize: ".82rem", color: "var(--muted)", marginBottom: 14 }}>{request.prompt}</div>
+            <label style={{ fontSize: ".72rem", color: "var(--muted-light)", textTransform: "uppercase", letterSpacing: ".5px" }}>{meta.label}</label>
+            <input autoFocus type={meta.numeric ? "number" : "text"} inputMode={meta.numeric ? "decimal" : "text"}
+              value={val} placeholder={meta.ph} style={{ ...input, margin: "6px 0 16px" }}
+              onChange={(e) => setVal(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !busy) run(meta.fn); }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button style={{ ...primary, opacity: busy || (meta.numeric && !(Number(val) > 0)) ? .55 : 1 }}
+                disabled={busy || (meta.numeric && !(Number(val) > 0))}
+                onClick={() => run(meta.fn)}>{busy ? "Saving…" : meta.cta}</button>
+              <button style={ghost} disabled={busy} onClick={onClose}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          // enter_info / custom — needs the full editor, so offer a jump there.
+          <>
+            <div style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: 4 }}>📝 {request.prompt}</div>
+            <div style={{ fontSize: ".82rem", color: "var(--muted)", marginBottom: 16 }}>
+              Open your plan to take care of this, then come back.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button style={primary} onClick={() => { onMarkDone(); onOpenPlan(); }}>Open my plan →</button>
+              <button style={ghost} onClick={onClose}>Close</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Trainer overview dashboard (Session 7) ─────────────────────────────────
 // A role-aware home view for trainers: every client profile at a glance —
 // weight vs goal, daily calorie target, last activity, and plan status. Reads
@@ -8181,6 +8262,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   const [msg, setMsg] = useState("");              // calorie-log message
   const [wtMsg, setWtMsg] = useState("");          // weight-log message
   const [requests, setRequests] = useState([]);    // trainer → client requests (Session 19)
+  const [quickReq, setQuickReq] = useState(null);  // request being completed in the quick-action popup
   // The full plan wrapper ({data, step, …}) kept in memory so weight logging
   // appends to the latest in-memory copy (no Firestore round-trip per log, which
   // would race and drop points when logging quickly).
@@ -8237,20 +8319,21 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   };
   // Add (sign +1) or remove (sign -1) calories from today's running total,
   // clamped so it can't go below zero.
-  const adjustCalories = async (sign) => {
-    const v = Number(calDraft);
-    if (!v || v <= 0) { setCalDraft(""); return; }
+  const adjustCalories = async (sign, explicitVal) => {
+    const v = Number(explicitVal != null ? explicitVal : calDraft);
+    if (!v || v <= 0) { setCalDraft(""); return false; }
     const next = Math.max(0, (log.calories || 0) + sign * v);
     await writeLog({ ...log, calories: next });
     await appendHistory(sign > 0 ? `logged ${v} cal` : `removed ${v} cal`);
     setCalDraft(""); setMsg(sign > 0 ? `Added ${v} cal to today.` : `Removed ${v} cal from today.`);
+    return true;
   };
   // Log today's weight: records it in the daily log AND updates the plan's
   // current weight (so the card, "lbs to go", and calorie target all reflect it).
   // The first weigh-in captures a starting baseline so we can show total change.
-  const logWeight = async () => {
-    const v = Number(wtDraft);
-    if (!v || v <= 0) { setWtDraft(""); return; }
+  const logWeight = async (explicitVal) => {
+    const v = Number(explicitVal != null ? explicitVal : wtDraft);
+    if (!v || v <= 0) { setWtDraft(""); return false; }
     await writeLog({ ...log, weight: v });
     try {
       // Work from the in-memory plan (updated synchronously before the async
@@ -8275,6 +8358,32 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
     } catch { /* ignore */ }
     await appendHistory(`logged weight: ${v} lbs`);
     setWtDraft(""); setWtMsg(`Logged today's weight: ${v} lbs.`);
+    return true;
+  };
+
+  // Mark today as a workout day (records workedOut=true on today's check-in,
+  // creating one if needed). Used by the "Record a workout" quick action.
+  const markWorkoutToday = async (note) => {
+    try {
+      const obj = planWrapRef.current
+        ? JSON.parse(JSON.stringify(planWrapRef.current)) : { data: {}, step: 0 };
+      const d = obj.data || (obj.data = {});
+      if (!Array.isArray(d.checkIns)) d.checkIns = [];
+      const existing = d.checkIns.find(c => c.date === todayKey);
+      if (existing) {
+        existing.workedOut = true;
+        if (note) existing.notes = note;
+      } else {
+        d.checkIns.push({ date: todayKey, timestamp: new Date(todayKey + "T12:00:00").getTime(),
+          weight: null, calories: null, hitTarget: null, workedOut: true, mood: null,
+          notes: note || "", bodyFat: null, loggedBy: "client", isFuturePlan: false });
+      }
+      planWrapRef.current = obj;
+      setPlanData(d);
+      await window.storage.set("caliq-self", JSON.stringify(obj));
+    } catch { return false; }
+    await appendHistory(note ? `recorded a workout: "${note}"` : `recorded a workout`);
+    return true;
   };
 
   // Delete a single weigh-in (by its timestamp). Re-points current weight to the
@@ -8389,7 +8498,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
                       {tmpl ? `${tmpl.icon} ` : "📝 "}{r.prompt}
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button onClick={onOpenPlan}
+                      <button onClick={() => setQuickReq(r)}
                         style={{ padding: "7px 12px", fontSize: ".8rem", fontWeight: 700, borderRadius: 7,
                           border: "none", background: "var(--accent)", color: "#0b0b12", cursor: "pointer" }}>
                         Do it now →
@@ -8570,6 +8679,17 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
         <WeightChartModal checkIns={(planData && planData.checkIns) || []} goalWeight={g} currentWeight={w}
           rangeLow={rLo} rangeHigh={rHi} startWeight={start}
           onDelete={deleteWeighIn} onClose={() => setShowChart(false)} />
+      )}
+
+      {/* Quick-action popup for completing a trainer request (Session 19). */}
+      {quickReq && (
+        <QuickActionModal request={quickReq}
+          onWeighIn={(v) => logWeight(v)}
+          onLogFood={(v) => adjustCalories(1, v)}
+          onLogWorkout={(note) => markWorkoutToday(note)}
+          onOpenPlan={onOpenPlan}
+          onMarkDone={() => markRequestDone(quickReq.id)}
+          onClose={() => setQuickReq(null)} />
       )}
     </div>
   );

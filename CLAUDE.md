@@ -309,8 +309,15 @@ enabled (Blaze has no default spending cap).
   list. New props `meUid`/`meName`/`meRole` passed to `TrainerDashboard`; new module-level
   `REQUEST_TEMPLATES`, `REQUEST_KEY`, `readRequestsFor`. **Client side** (`ClientHome`): open requests
   render as task cards at the very TOP of the home (above the plan, so "enter your info" works before a
-  plan exists) — each with **"Do it now →"** (opens their plan) and **"✓ Mark done"** (sets status=done,
-  writes back to their own `caliq-requests`, logs to history). The reverse direction (client → trainer)
+  plan exists) — each with **"Do it now →"** and **"✓ Mark done"** (sets status=done, writes back to
+  their own `caliq-requests`, logs to history). **"Do it now" opens a type-specific quick-action popup**
+  (`QuickActionModal`) so the client completes the task without leaving home: **weigh-in** → weight
+  input (reuses `logWeight`), **log food** → calories input (reuses `adjustCalories`), **record
+  workout** → optional note that sets `workedOut=true` on today's check-in (new `markWorkoutToday`
+  helper); each auto-marks the request done, shows a ✓, and auto-closes after ~1s. **Enter-info /
+  custom** requests need the full editor, so their popup offers an "Open my plan →" jump instead.
+  (`logWeight`/`adjustCalories` were refactored to accept an optional explicit value and return a
+  success boolean.) The reverse direction (client → trainer)
   needs server-side writes and waits for **Blaze**. Verified end-to-end with a second test account
   (`client.uitest@calorieiq-test.com`, "Casey Client", auto-linked to the test trainer via the invite
   link): send → receive → mark done → trainer sees completed. No `firestore.rules` change.
