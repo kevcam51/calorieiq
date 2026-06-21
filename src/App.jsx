@@ -8435,37 +8435,42 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                   <div key={c.uid}
                     style={{ padding: "12px 14px", borderRadius: "10px",
                       background: "rgba(255,255,255,.04)", border: "1px solid var(--accent)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{c.name}</span>
-                      <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        {openReqs.length > 0 && (
-                          <span style={{ fontSize: ".68rem", fontWeight: 700, color: "#0b0b12",
-                            background: "var(--accent)", borderRadius: 10, padding: "2px 8px" }}>
-                            📬 {openReqs.length} open
-                          </span>
-                        )}
-                        <span style={{ fontSize: ".7rem", color: "var(--accent)", fontWeight: 700 }}>🔗 Shared</span>
-                      </span>
-                    </div>
-                    {c.hasPlan ? (
-                      <>
-                        <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
-                          ⚖️ {c.weight ? `${c.weight} lbs` : "—"}{c.goal ? ` → ${c.goal} lbs` : ""}
-                          {toGo !== null && toGo > 0
-                            ? ` · ${toGo} lbs to go`
-                            : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
-                        </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem",
-                          color: "var(--muted)", marginTop: 8 }}>
-                          <span>🔥 {c.target != null ? `${c.target.toLocaleString()} cal/day` : "—"}</span>
-                          <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: ".82rem", color: "var(--muted)" }}>
-                        No plan linked yet — use "Link a profile" below.
+                    {/* Tapping the card body opens the client's active plan (buttons below stay separate). */}
+                    <div onClick={() => { if (c.hasPlan && onOpenClientPlan) onOpenClientPlan(c.uid); }}
+                      style={{ cursor: c.hasPlan ? "pointer" : "default" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{c.name}</span>
+                        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          {openReqs.length > 0 && (
+                            <span style={{ fontSize: ".68rem", fontWeight: 700, color: "#0b0b12",
+                              background: "var(--accent)", borderRadius: 10, padding: "2px 8px" }}>
+                              📬 {openReqs.length} open
+                            </span>
+                          )}
+                          <span style={{ fontSize: ".7rem", color: "var(--accent)", fontWeight: 700 }}>🔗 Shared</span>
+                        </span>
                       </div>
-                    )}
+                      {c.hasPlan ? (
+                        <>
+                          <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
+                            ⚖️ {c.weight ? `${c.weight} lbs` : "—"}{c.goal ? ` → ${c.goal} lbs` : ""}
+                            {toGo !== null && toGo > 0
+                              ? ` · ${toGo} lbs to go`
+                              : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem",
+                            color: "var(--muted)", marginTop: 8 }}>
+                            <span>🔥 {c.target != null ? `${c.target.toLocaleString()} cal/day` : "—"}</span>
+                            <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
+                          </div>
+                          <div style={{ fontSize: ".72rem", color: "var(--accent)", marginTop: 8 }}>Tap to open plan →</div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: ".82rem", color: "var(--muted)" }}>
+                          No plan linked yet — use "Link a profile" below.
+                        </div>
+                      )}
+                    </div>
 
                     {/* Management: link / open / copy / unlink */}
                     {confirmUnlink === c.uid ? (
