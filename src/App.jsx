@@ -1319,6 +1319,13 @@ body{
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
 
+/* Page-level transition — replays whenever its keyed wrapper remounts on navigation. */
+.page-transition{animation:fadeUp .28s ease both}
+@media (prefers-reduced-motion:reduce){
+  .page-transition,.dash{animation:none}
+  html{scroll-behavior:auto}
+}
+
 /* ── Client Profiles ── */
 .profiles-btn{
   display:inline-flex;align-items:center;gap:6px;
@@ -7789,7 +7796,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   });
 
   return (
-    <div className="prof-screen">
+    <div className="prof-screen page-transition">
       <style>{css}</style>
       <div className="header">
         <div className="logo">CALORIE<span>IQ</span></div>
@@ -8192,7 +8199,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   const miniBtnActive = { background: "var(--accent)", color: "#0b0b12", border: "none" };
 
   return (
-    <div className="prof-screen">
+    <div className="prof-screen page-transition">
       <style>{css}</style>
       <div className="header">
         <div className="logo">CALORIE<span>IQ</span></div>
@@ -8459,7 +8466,7 @@ function ProfileSelector({ profiles, folders, onSelect, onNew, onDelete, loading
   };
 
   return (
-    <div className="prof-screen">
+    <div className="prof-screen page-transition">
       <style>{css}</style>
       <div className="header">
         <div className="logo">CALORIE<span>IQ</span></div>
@@ -9469,12 +9476,15 @@ export default function App() {
                 : showDash ? "📊 Daily Dashboard" : "✅ Your Personalized Plan"
               }
             </div>
-            <div className="steps-bar">
-              {LBLS.slice(0,-1).map((_,i)=>(
-                <div key={i} className={`step-dot${i===step?" active":i<step?" done":""}`}/>
-              ))}
-            </div>
+            {step < LBLS.length - 1 && (
+              <div className="steps-bar">
+                {LBLS.slice(0,-1).map((_,i)=>(
+                  <div key={i} className={`step-dot${i===step?" active":i<step?" done":""}`}/>
+                ))}
+              </div>
+            )}
           </div>
+          <div className="page-transition" key={step===5 ? (showDash ? "v-dash" : "v-results") : "v-step"+step}>
           {step===0 && <StepPersonal   data={data} onChange={update} onNext={()=>setStepAndSave(1)}/>}
           {step===1 && <StepGoalWeight data={data} onChange={update} onBack={()=>setStepAndSave(0)} onNext={()=>setStepAndSave(2)}/>}
           {step===2 && <StepActivity   data={data} onChange={update} onBack={()=>setStepAndSave(1)} onNext={()=>setStepAndSave(3)}/>}
@@ -9541,6 +9551,7 @@ export default function App() {
               return {...p, strength:{...p.strength,[day]:sessions}};
             })}
           /></>}
+          </div>
         </div>
       </div>
     </>
