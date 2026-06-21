@@ -441,7 +441,7 @@ body{
   box-shadow:0 4px 18px rgba(232,255,79,.3);
 }
 .btn-p:active{transform:scale(.97);box-shadow:none}
-.btn-p:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+.btn-p:disabled{background:var(--s2);color:var(--muted);border:1.5px solid var(--border);opacity:1;cursor:not-allowed;box-shadow:none}
 .btn-g{
   background:var(--s2);color:var(--muted-light);
   border:1.5px solid var(--border);
@@ -1502,7 +1502,7 @@ body{
   transition:all .15s;
 }
 .checkin-submit:active{transform:scale(.97)}
-.checkin-submit:disabled{opacity:.3;cursor:not-allowed}
+.checkin-submit:disabled{background:var(--s2);color:var(--muted);opacity:1;cursor:not-allowed}
 
 /* ── Streak & Badges ── */
 .streak-bar{
@@ -3145,14 +3145,6 @@ function Results({ data, onReset, onEdit, onUpdateCardio, onUpdateStrength, onSa
                     </button>
                   </div>
                 )}
-                <div className="drc-row">
-                  {targets.map(t=>(
-                    <div className="drc-cell" key={t.label}>
-                      <div className="drc-cell-lbl">{t.goalLabel}</div>
-                      <div className={`drc-cell-val ${t.cls}`}>{floor(tdee-t.cut).toLocaleString()}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
             );
           })}
