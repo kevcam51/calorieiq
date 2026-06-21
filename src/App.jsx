@@ -6660,6 +6660,74 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
 
 // ─── Daily Check-In ───────────────────────────────────────────────────────────
 
+// Month calendar for the check-in date picker. Dates that already have a
+// check-in are highlighted (green) with a dot; the selected date is filled and
+// today is outlined. Tapping a day selects it (which pre-fills the form).
+function CheckInCalendar({ checkIns, selected, onSelect }) {
+  const recorded = new Set((checkIns || []).filter(c => c.date).map(c => c.date));
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const sel = selected || todayStr;
+  const selDate = new Date(sel + "T12:00:00");
+  const [view, setView] = useState({ y: selDate.getFullYear(), m: selDate.getMonth() });
+
+  const first = new Date(view.y, view.m, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
+  const monthLabel = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const prevM = () => setView(v => v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 });
+  const nextM = () => setView(v => v.m === 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m: v.m + 1 });
+  const fmt = (d) => `${view.y}-${String(view.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const navBtn = { background: "transparent", border: "1px solid var(--border)", color: "var(--text)",
+    borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: "1rem", lineHeight: 1 };
+
+  return (
+    <div style={{ background: "var(--s2)", border: "1px solid var(--border)", borderRadius: 10, padding: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <button type="button" style={navBtn} onClick={prevM}>‹</button>
+        <div style={{ fontWeight: 700, fontSize: ".9rem" }}>{monthLabel}</div>
+        <button type="button" style={navBtn} onClick={nextM}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 4 }}>
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+          <div key={i} style={{ textAlign: "center", fontSize: ".62rem", color: "var(--muted)", fontWeight: 600 }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
+        {cells.map((d, i) => {
+          if (d == null) return <div key={i} />;
+          const ds = fmt(d);
+          const isSel = ds === sel;
+          const isToday = ds === todayStr;
+          const has = recorded.has(ds);
+          return (
+            <button key={i} type="button" onClick={() => onSelect(ds)}
+              style={{ position: "relative", height: 34, borderRadius: 7, cursor: "pointer",
+                fontSize: ".78rem", fontWeight: isSel ? 800 : 500,
+                border: isToday && !isSel ? "1px solid var(--accent)" : "1px solid transparent",
+                background: isSel ? "var(--accent)" : has ? "rgba(79,255,176,.16)" : "transparent",
+                color: isSel ? "#0b0b12" : "var(--text)" }}>
+              {d}
+              {has && !isSel && (
+                <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)",
+                  width: 4, height: 4, borderRadius: "50%", background: "var(--green)" }} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: ".66rem", color: "var(--muted)" }}>
+        <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--green)", marginRight: 4, verticalAlign: "middle" }} />logged</span>
+        <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, border: "1px solid var(--accent)", marginRight: 4, verticalAlign: "middle" }} />today</span>
+      </div>
+    </div>
+  );
+}
+
 function DailyCheckIn({ data, onSaveCheckIn }) {
   const [checkDate, setCheckDate] = useState(new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState(data.weightLbs || "");
@@ -6728,11 +6796,10 @@ function DailyCheckIn({ data, onSaveCheckIn }) {
         </div>
       </div>
 
-      {/* Date picker */}
+      {/* Date picker — calendar with logged dates highlighted */}
       <div className="checkin-field" style={{marginBottom:"12px"}}>
         <label>Date {isPast && "📌 past entry"} {isFuture && "📌 future plan"}</label>
-        <input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)}
-          style={{width:"100%",padding:"10px 12px",borderRadius:"8px",border:`1.5px solid ${isFuture?"var(--purple)":isPast?"var(--yellow)":"var(--border)"}`,background:"var(--s2)",color:"var(--text)",fontFamily:"inherit",fontSize:".88rem",outline:"none"}} />
+        <CheckInCalendar checkIns={data.checkIns} selected={checkDate} onSelect={setCheckDate} />
       </div>
       {existingForDate && (
         <div style={{fontSize:".78rem",color:"var(--green)",marginBottom:"10px",padding:"8px 10px",background:"rgba(79,255,176,.06)",borderRadius:"8px",border:"1px solid rgba(79,255,176,.15)"}}>

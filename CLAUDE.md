@@ -255,6 +255,12 @@ enabled (Blaze has no default spending cap).
   Kevin, to stop clutter). (3) **Bug fix:** `.mood-btn` (the check-in Yes/No/Rest-Day buttons) had no
   `color`, so the text fell back to the browser's dark default and was invisible on the dark theme —
   added `color:var(--text)`. No `firestore.rules` change.
+- Session 16: **Check-in calendar with highlighted logged dates (non-Blaze).** The check-in date
+  picker (`DailyCheckIn`) replaced the native `<input type="date">` with a custom month calendar
+  (`CheckInCalendar`): dates that already have a check-in are **highlighted green with a dot**, today
+  is outlined, the selected date is filled, and ‹ › navigate months (any past/future date reachable).
+  Tapping a day selects it — which, via the Session-15 pre-fill, loads any existing entry for editing.
+  Pure UI; reads `data.checkIns`. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
@@ -322,9 +328,9 @@ enabled (Blaze has no default spending cap).
   reinforcing why following the program matters. Needs the ability to **edit/log on past dates**
   (the daily log is already keyed by date `caliq-log-{id}-{YYYY-MM-DD}`, so back-dated logging is a
   natural extension). No Blaze needed for the manual version. Likely a big UI step; plan carefully.
-  **Kevin's refinement:** the check-in flow should open a **calendar date-picker** where dates that
-  already have a check-in are **highlighted**, so you can see at a glance which days are logged (and
-  jump to one to edit it). This pairs with the now one-entry-per-date model (Session 15).
+  **Kevin's refinement (the highlighted-date check-in picker is now BUILT — Session 16):** the
+  broader full calendar (daily/weekly/monthly toggle, back-dated food + workout logging) is still
+  roadmap.
 - **"Simulation" tab (Kevin's idea).** A separate mode where a trainer (or client) builds/simulates
   a complete workout + nutrition program and sees an **estimated results projection** — saved
   **separately from the client's real plan** (a sandbox, not their active program). Use cases:
