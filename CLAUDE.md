@@ -342,6 +342,28 @@ enabled (Blaze has no default spending cap).
   guarded by an inline confirm. Verified end-to-end (create → wizard → projection → convert). No
   `firestore.rules` change. **Note:** `AGENTS.md` (OpenAI Codex's project-guide file, created when Kevin
   installed Codex) is kept as a synced copy of this CLAUDE.md so Codex and Claude share context.
+- Session 21: **Multiple plans per client (non-Blaze, trainer + client both manage).** A connected
+  client account can now hold several plans (cut/maintain/bulk phases, drafts, templates) with one
+  marked **active**; the active plan drives the client's home + the trainer's overview. **Key insight:**
+  the storage was already plan-id-keyed — a plan's data/log/history live at `caliq-{id}` /
+  `caliq-log-{id}-{date}` / `caliq-history-{id}`, and the original single plan is just id **"self"** — so
+  multiple plans only needed a **manifest** + UI, not a storage rewrite. New manifest per client account:
+  `caliq-plans = { active, plans:[{id,name,createdAt}] }` (module helpers `readPlansManifest`/
+  `writePlansManifest` take a get/set pair so the SAME code works for the client via `window.storage`
+  and the trainer via `getForUser`/`setForUser`; `normalizePlans` synthesizes a default `{active:"self",
+  plans:[{id:"self",name:"Main plan"}]}` so **existing single-plan clients migrate transparently** — no
+  data touched). New key helpers `planDataKey`/`planLogPrefix`/`planHistoryKey`. **Client side**
+  (`ClientHome`): a plan switcher chip ("🗂️ Main plan · N plans") that lists plans (switch / rename /
+  delete / **+ New plan**); all the hardcoded `"self"` keys were generalized to `activePlanId`
+  (load/logWeight/adjustCalories/markWorkoutToday/deleteWeighIn/appendHistory + the quick-action
+  popups). **Trainer side** (`TrainerDashboard`): each connected-client card got a **🗂️ Plans** manager
+  — list with the active (●) marked, **Make active**, **Open** (per plan), rename, delete, and **+ New
+  plan** (writes into the client's account via the manifest helpers; `loadClients` now reads each
+  client's active plan + plans list). **App:** `openClientPlan(clientUid, planId)` opens a specific (or
+  the active) plan and sets `activeId` to the plan id; `autoSave`'s remote write, `copyClientToLocal`,
+  `linkPlan`, and `unlinkPlan` all generalized from `"caliq-self"` to the active plan's key (so per-plan
+  logs/history route correctly for the trainer too). Verified end-to-end: back-compat load, trainer
+  create/switch/active, client switch with fully separate per-plan data. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date

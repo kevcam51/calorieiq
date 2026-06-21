@@ -7682,6 +7682,38 @@ async function readRequestsFor(uid, getForUser) {
   catch { return []; }
 }
 
+// ─── Multiple plans per client (Session 21) ──────────────────────────────────
+// A client account can hold several plans, with one marked active. Each plan's
+// data + logs + history are keyed by its plan id (the original single plan is id
+// "self"), so the existing storage layout already supports it — we just add a
+// manifest that lists the plans and which is active.
+//   caliq-plans = { active: "self", plans: [{ id, name, createdAt }] }
+// The get/set functions are passed in so the SAME helpers work for the client
+// (window.storage on their own account) and the trainer (getForUser/setForUser
+// on the client's account).
+const PLANS_KEY = "caliq-plans";
+const planDataKey    = (id) => `caliq-${id}`;            // caliq-self, caliq-p1700…
+const planLogPrefix  = (id) => `caliq-log-${id}-`;       // + YYYY-MM-DD
+const planHistoryKey = (id) => `caliq-history-${id}`;
+
+// Normalize a manifest, always returning at least the default "self" plan and a
+// valid active id. Back-compat: clients with no manifest get one synthesized.
+function normalizePlans(m) {
+  if (!m || !Array.isArray(m.plans) || m.plans.length === 0) {
+    m = { active: "self", plans: [{ id: "self", name: "Main plan", createdAt: 0 }] };
+  }
+  if (!m.plans.some((p) => p.id === m.active)) m.active = m.plans[0].id;
+  return m;
+}
+async function readPlansManifest(getFn) {
+  let m = null;
+  try { const r = await getFn(PLANS_KEY); m = r && r.value ? JSON.parse(r.value) : null; } catch { /* ignore */ }
+  return normalizePlans(m);
+}
+async function writePlansManifest(setFn, m) {
+  try { await setFn(PLANS_KEY, JSON.stringify(normalizePlans(m))); } catch { /* ignore */ }
+}
+
 // Quick-action popup the client gets when they tap "Do it now" on a trainer
 // request. For loggable types (weigh-in / food / workout) it captures the value
 // inline, auto-marks the request done, and closes with a ✓ — so the client never
@@ -7818,6 +7850,10 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   const [reqBusy, setReqBusy] = useState(false);
   const [showDoneFor, setShowDoneFor] = useState(null); // clientUid whose done-list is expanded
   const [convertSimFor, setConvertSimFor] = useState(null); // sim id awaiting convert confirm
+  const [plansForClient, setPlansForClient] = useState(null);     // clientUid whose plans panel is open
+  const [cpRenaming, setCpRenaming] = useState(null);             // {uid, planId} being renamed
+  const [cpDraft, setCpDraft] = useState("");                     // client-plan rename draft
+  const [cpDelFor, setCpDelFor] = useState(null);                 // {uid, planId} awaiting delete confirm
 
   // Load connected clients (real accounts) and read each one's SHARED plan
   // (caliq-self in their account) so the overview shows live data, not a copy.
@@ -7826,12 +7862,15 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
     try { cs = await getMyClients(); } catch (e) { /* ignore */ }
     const rows = await Promise.all((cs || []).map(async (c) => {
       let data = null, lastLogDate = null;
+      // A client may have several plans — show the ACTIVE one in the overview.
+      const manifest = await readPlansManifest((k) => getForUser(c.uid, k));
+      const activeId = manifest.active;
       try {
-        const r = await getForUser(c.uid, "caliq-self");
+        const r = await getForUser(c.uid, planDataKey(activeId));
         if (r && r.value) data = (JSON.parse(r.value) || {}).data || {};
       } catch (e) { /* not linked / no plan yet */ }
       try {
-        const res = await listForUser(c.uid, "caliq-log-self-");
+        const res = await listForUser(c.uid, planLogPrefix(activeId));
         (res.keys || []).forEach((k) => {
           const d = k.slice(-10);
           if (!lastLogDate || d > lastLogDate) lastLogDate = d;
@@ -7844,7 +7883,8 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
         : (c.displayName || c.email || "Client");
       return { uid: c.uid, name: nm, hasPlan: !!data,
         weight: data ? data.weightLbs : "", goal: data ? data.goalWeight : "",
-        target: cal ? cal.target : null, lastLogDate, requests };
+        target: cal ? cal.target : null, lastLogDate, requests,
+        plans: manifest.plans, activePlanId: activeId };
     }));
     setClients(rows);
   };
@@ -7857,7 +7897,8 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
     try {
       let payload = JSON.stringify({ data: {}, step: 0 });
       try { const r = await window.storage.get(profileKey(localId)); if (r && r.value) payload = r.value; } catch {}
-      await setForUser(clientUid, "caliq-self", payload);
+      const m = await readPlansManifest(clientGet(clientUid));
+      await setForUser(clientUid, planDataKey(m.active), payload);
       if (onLinked) await onLinked(localId);
       setCMsg("Plan linked — it now lives in the client's account (local copy removed).");
       setLinkingFor(null); setPendingLink(null);
@@ -7875,7 +7916,8 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
     setLinkBusy(true); setCMsg("");
     try {
       if (onCopyToLocal) await onCopyToLocal(clientUid); // keep a local backup
-      await deleteForUser(clientUid, "caliq-self");
+      const m = await readPlansManifest(clientGet(clientUid));
+      await deleteForUser(clientUid, planDataKey(m.active));
       setCMsg("Unlinked. A local copy was saved to your files.");
       setConfirmUnlink(null);
       await loadClients();
@@ -7918,6 +7960,41 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
       await loadClients();
     } catch { /* ignore */ }
     finally { setReqBusy(false); }
+  };
+
+  // Multiple plans per client (Session 21) — the trainer manages a client's plan
+  // list (in the client's account) via the shared manifest helpers.
+  const clientGet = (uid) => (k) => getForUser(uid, k);
+  const clientSet = (uid) => (k, v) => setForUser(uid, k, v);
+  const setActiveClientPlan = async (clientUid, planId) => {
+    const m = await readPlansManifest(clientGet(clientUid));
+    await writePlansManifest(clientSet(clientUid), { ...m, active: planId });
+    await loadClients();
+  };
+  const newClientPlan = async (clientUid) => {
+    const m = await readPlansManifest(clientGet(clientUid));
+    const id = `p${Date.now()}`;
+    const next = { active: id, plans: [...m.plans, { id, name: `Plan ${m.plans.length + 1}`, createdAt: Date.now() }] };
+    await writePlansManifest(clientSet(clientUid), next);
+    await setForUser(clientUid, planDataKey(id), JSON.stringify({ data: {}, step: 0 }));
+    await loadClients();
+    if (onOpenClientPlan) onOpenClientPlan(clientUid, id); // jump straight into the new plan
+  };
+  const renameClientPlan = async (clientUid, planId, name) => {
+    const m = await readPlansManifest(clientGet(clientUid));
+    await writePlansManifest(clientSet(clientUid),
+      { ...m, plans: m.plans.map((p) => p.id === planId ? { ...p, name: name || p.name } : p) });
+    await loadClients();
+  };
+  const deleteClientPlan = async (clientUid, planId) => {
+    const m = await readPlansManifest(clientGet(clientUid));
+    if (m.plans.length <= 1 || planId === "self") return;
+    const remaining = m.plans.filter((p) => p.id !== planId);
+    const nextActive = m.active === planId ? remaining[0].id : m.active;
+    await writePlansManifest(clientSet(clientUid), { active: nextActive, plans: remaining });
+    try { await deleteForUser(clientUid, planDataKey(planId)); } catch { /* ignore */ }
+    try { await deleteForUser(clientUid, planHistoryKey(planId)); } catch { /* ignore */ }
+    await loadClients();
   };
 
   useEffect(() => {
@@ -8136,6 +8213,9 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                         {c.hasPlan && (
                           <button style={mBtn} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}>Open plan</button>
                         )}
+                        <button style={mBtn} onClick={() => setPlansForClient(plansForClient === c.uid ? null : c.uid)}>
+                          🗂️ Plans{(c.plans && c.plans.length > 1) ? ` (${c.plans.length})` : ""}
+                        </button>
                         <button style={mBtn} onClick={() => setLinkingFor(c.uid)}>
                           {c.hasPlan ? "Re-link a different plan" : "Link a profile"}
                         </button>
@@ -8180,6 +8260,61 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                           </button>
                           <button style={mBtn} disabled={reqBusy} onClick={() => { setComposingFor(null); setReqDraft(""); }}>Cancel</button>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Plans manager (Session 21) — switch active, open, rename, delete, add. */}
+                    {plansForClient === c.uid && (
+                      <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8,
+                        background: "rgba(255,255,255,.03)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
+                        <div style={{ fontSize: ".74rem", color: "var(--muted)", marginBottom: 8 }}>
+                          {c.name}'s plans — ● is active (what the client sees on their home).
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                          {(c.plans || []).map((p) => {
+                            const isActive = p.id === c.activePlanId;
+                            const renaming = cpRenaming && cpRenaming.uid === c.uid && cpRenaming.planId === p.id;
+                            const delConfirm = cpDelFor && cpDelFor.uid === c.uid && cpDelFor.planId === p.id;
+                            return (
+                              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px",
+                                borderRadius: 7, background: isActive ? "rgba(232,255,79,.08)" : "rgba(255,255,255,.03)" }}>
+                                {renaming ? (
+                                  <>
+                                    <input autoFocus value={cpDraft} onChange={(e) => setCpDraft(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") { renameClientPlan(c.uid, p.id, cpDraft.trim()); setCpRenaming(null); } }}
+                                      style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)",
+                                        background: "var(--s2)", color: "var(--text)", fontSize: ".82rem" }} />
+                                    <button style={mPrimary} onClick={() => { renameClientPlan(c.uid, p.id, cpDraft.trim()); setCpRenaming(null); }}>Save</button>
+                                  </>
+                                ) : delConfirm ? (
+                                  <>
+                                    <span style={{ flex: 1, fontSize: ".82rem", color: "var(--text)" }}>Delete “{p.name}”?</span>
+                                    <button style={{ ...mPrimary, background: "#e5484d", color: "#fff" }} onClick={() => { deleteClientPlan(c.uid, p.id); setCpDelFor(null); }}>Delete</button>
+                                    <button style={mBtn} onClick={() => setCpDelFor(null)}>Cancel</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span style={{ flex: 1, fontSize: ".85rem", fontWeight: isActive ? 700 : 400, color: "var(--text)" }}>
+                                      {isActive ? "● " : "○ "}{p.name}
+                                    </span>
+                                    {!isActive && (
+                                      <button style={mBtn} onClick={() => setActiveClientPlan(c.uid, p.id)}>Make active</button>
+                                    )}
+                                    <button style={mBtn} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid, p.id)}>Open</button>
+                                    <button onClick={() => { setCpDraft(p.name); setCpRenaming({ uid: c.uid, planId: p.id }); }} title="Rename"
+                                      style={{ border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: ".85rem" }}>✎</button>
+                                    {p.id !== "self" && (c.plans || []).length > 1 && (
+                                      <button onClick={() => setCpDelFor({ uid: c.uid, planId: p.id })} title="Delete"
+                                        style={{ border: "none", background: "transparent", color: "#e5484d", cursor: "pointer", fontSize: ".85rem" }}>✕</button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <button style={{ ...mBtn, marginTop: 8, borderStyle: "dashed", color: "var(--accent)" }}
+                          onClick={() => newClientPlan(c.uid)}>+ New plan for {c.name}</button>
                       </div>
                     )}
 
@@ -8408,31 +8543,81 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   const [wtMsg, setWtMsg] = useState("");          // weight-log message
   const [requests, setRequests] = useState([]);    // trainer → client requests (Session 19)
   const [quickReq, setQuickReq] = useState(null);  // request being completed in the quick-action popup
+  // Multiple plans (Session 21): the client can hold several plans with one
+  // active. Each plan's data/log/history is keyed by its id (default "self").
+  const [plans, setPlans] = useState([{ id: "self", name: "Main plan", createdAt: 0 }]);
+  const [activePlanId, setActivePlanId] = useState("self");
+  const [showPlans, setShowPlans] = useState(false); // plan switcher open
+  const [renamingPlanId, setRenamingPlanId] = useState(null);
+  const [planNameDraft, setPlanNameDraft] = useState("");
   // The full plan wrapper ({data, step, …}) kept in memory so weight logging
   // appends to the latest in-memory copy (no Firestore round-trip per log, which
   // would race and drop points when logging quickly).
   const planWrapRef = useRef(null);
 
   const todayKey = new Date().toISOString().slice(0, 10);
-  const logKey = `caliq-log-self-${todayKey}`;
+  const logKey = planLogPrefix(activePlanId) + todayKey;
+  const get = (k) => window.storage.get(k);
+  const set = (k, v) => window.storage.set(k, v);
 
-  const load = async () => {
+  // Load the manifest, resolve the active plan, then read that plan's data, log,
+  // and the account-level request list. Pass a planId to switch plans.
+  const load = async (planId) => {
+    const m = await readPlansManifest(get);
+    const active = planId || m.active;
+    setPlans(m.plans);
+    setActivePlanId(active);
     try {
-      const r = await window.storage.get("caliq-self");
+      const r = await get(planDataKey(active));
       const obj = r && r.value ? (JSON.parse(r.value) || {}) : null;
       planWrapRef.current = obj;
       setPlanData(obj ? (obj.data || null) : null);
     } catch { planWrapRef.current = null; setPlanData(null); }
     try {
-      const r = await window.storage.get(logKey);
+      const r = await get(planLogPrefix(active) + todayKey);
       setLog(r && r.value ? (JSON.parse(r.value) || {}) : {});
     } catch { setLog({}); }
     try {
-      const r = await window.storage.get(REQUEST_KEY);
+      const r = await get(REQUEST_KEY);
       setRequests(r && r.value ? (JSON.parse(r.value) || []) : []);
     } catch { setRequests([]); }
   };
   useEffect(() => { load(); }, []);
+
+  // Switch the active plan (persists the choice in the manifest) and reload.
+  const switchPlan = async (id) => {
+    const m = await readPlansManifest(get);
+    await writePlansManifest(set, { ...m, active: id });
+    setShowPlans(false);
+    await load(id);
+  };
+  // Create a new (empty) plan and make it active.
+  const createPlan = async (name) => {
+    const m = await readPlansManifest(get);
+    const id = `p${Date.now()}`;
+    const next = { active: id, plans: [...m.plans, { id, name: name || `Plan ${m.plans.length + 1}`, createdAt: Date.now() }] };
+    await writePlansManifest(set, next);
+    await set(planDataKey(id), JSON.stringify({ data: {}, step: 0 }));
+    await appendHistory(`created a new plan: "${name || `Plan ${m.plans.length + 1}`}"`);
+    await load(id);
+  };
+  // Rename a plan in the manifest.
+  const renamePlan = async (id, name) => {
+    const m = await readPlansManifest(get);
+    await writePlansManifest(set, { ...m, plans: m.plans.map((p) => p.id === id ? { ...p, name: name || p.name } : p) });
+    setPlans((prev) => prev.map((p) => p.id === id ? { ...p, name: name || p.name } : p));
+  };
+  // Delete a plan (and its data/history). Can't delete the last one or "self".
+  const deletePlan = async (id) => {
+    const m = await readPlansManifest(get);
+    if (m.plans.length <= 1 || id === "self") return;
+    const remaining = m.plans.filter((p) => p.id !== id);
+    const nextActive = m.active === id ? remaining[0].id : m.active;
+    await writePlansManifest(set, { active: nextActive, plans: remaining });
+    try { await window.storage.delete(planDataKey(id)); } catch { /* ignore */ }
+    try { await window.storage.delete(planHistoryKey(id)); } catch { /* ignore */ }
+    await load(nextActive);
+  };
 
   // Mark a request done (the client completed it). Updates status in their own
   // caliq-requests and notes it in history so the trainer's feed reflects it.
@@ -8449,12 +8634,13 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   // activity feed reflects quick-logs done from this dashboard.
   const appendHistory = async (action) => {
     try {
-      const r = await window.storage.get("caliq-history-self");
+      const hk = planHistoryKey(activePlanId);
+      const r = await window.storage.get(hk);
       const cur = r && r.value ? (JSON.parse(r.value) || []) : [];
       const now = Date.now();
       const ev = { id: `e${now}${Math.floor(Math.random() * 1000)}`,
         uid: meUid, role, name: meName || "Me", action, ts: now };
-      await window.storage.set("caliq-history-self", JSON.stringify([ev, ...cur].slice(0, 250)));
+      await window.storage.set(hk, JSON.stringify([ev, ...cur].slice(0, 250)));
     } catch { /* ignore */ }
   };
 
@@ -8499,7 +8685,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
         bodyFat: null, loggedBy: "client", isFuturePlan: false });
       planWrapRef.current = obj;   // update memory FIRST so the next log is consistent
       setPlanData(d);
-      await window.storage.set("caliq-self", JSON.stringify(obj));
+      await window.storage.set(planDataKey(activePlanId), JSON.stringify(obj));
     } catch { /* ignore */ }
     await appendHistory(`logged weight: ${v} lbs`);
     setWtDraft(""); setWtMsg(`Logged today's weight: ${v} lbs.`);
@@ -8525,7 +8711,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
       }
       planWrapRef.current = obj;
       setPlanData(d);
-      await window.storage.set("caliq-self", JSON.stringify(obj));
+      await window.storage.set(planDataKey(activePlanId), JSON.stringify(obj));
     } catch { return false; }
     await appendHistory(note ? `recorded a workout: "${note}"` : `recorded a workout`);
     return true;
@@ -8545,7 +8731,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
       else if (d.startWeightLbs) d.weightLbs = d.startWeightLbs;
       planWrapRef.current = obj;
       setPlanData(d);
-      await window.storage.set("caliq-self", JSON.stringify(obj));
+      await window.storage.set(planDataKey(activePlanId), JSON.stringify(obj));
       await appendHistory(`deleted a weigh-in${removed && removed.weight ? `: ${removed.weight} lbs` : ""}`);
     } catch { /* ignore */ }
   };
@@ -8618,13 +8804,69 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
           <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>
             {firstName ? `Hi, ${firstName} 👋` : ""}
           </div>
-          <button onClick={load} title="Reload the latest from your plan"
+          <button onClick={() => load()} title="Reload the latest from your plan"
             style={{ padding: "6px 10px", fontSize: ".78rem", fontWeight: 600, borderRadius: "8px",
               border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
               color: "var(--muted)", cursor: "pointer", whiteSpace: "nowrap" }}>
             ↻ Refresh
           </button>
         </div>
+
+        {/* Plan switcher (Session 21) — pick the active plan, or make a new one. */}
+        {planData !== undefined && (planData || plans.length > 1) && (
+          <div style={{ marginBottom: 14 }}>
+            <button onClick={() => setShowPlans((s) => !s)}
+              style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                border: "1px solid var(--border,rgba(255,255,255,.2))", background: "var(--surface,#16162a)", color: "var(--text)" }}>
+              <span style={{ fontWeight: 600, fontSize: ".9rem" }}>
+                🗂️ {(plans.find((p) => p.id === activePlanId) || {}).name || "Main plan"}
+                {plans.length > 1 ? <span style={{ color: "var(--muted)", fontWeight: 400 }}> · {plans.length} plans</span> : ""}
+              </span>
+              <span style={{ color: "var(--muted)" }}>{showPlans ? "▴" : "▾"}</span>
+            </button>
+            {showPlans && (
+              <div style={{ marginTop: 6, padding: 8, borderRadius: 10, display: "flex", flexDirection: "column", gap: 4,
+                border: "1px solid var(--border,rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)" }}>
+                {plans.map((p) => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: 7,
+                    background: p.id === activePlanId ? "rgba(232,255,79,.08)" : "transparent" }}>
+                    {renamingPlanId === p.id ? (
+                      <>
+                        <input autoFocus value={planNameDraft} onChange={(e) => setPlanNameDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { renamePlan(p.id, planNameDraft.trim()); setRenamingPlanId(null); } }}
+                          style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)",
+                            background: "var(--s2)", color: "var(--text)", fontSize: ".85rem" }} />
+                        <button onClick={() => { renamePlan(p.id, planNameDraft.trim()); setRenamingPlanId(null); }}
+                          style={{ border: "none", background: "var(--accent)", color: "#0b0b12", fontWeight: 700,
+                            borderRadius: 6, padding: "5px 9px", fontSize: ".76rem", cursor: "pointer" }}>Save</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => switchPlan(p.id)}
+                          style={{ flex: 1, textAlign: "left", border: "none", background: "transparent", cursor: "pointer",
+                            color: "var(--text)", fontSize: ".88rem", fontWeight: p.id === activePlanId ? 700 : 400 }}>
+                          {p.id === activePlanId ? "● " : "○ "}{p.name}
+                        </button>
+                        <button onClick={() => { setPlanNameDraft(p.name); setRenamingPlanId(p.id); }} title="Rename"
+                          style={{ border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: ".85rem" }}>✎</button>
+                        {p.id !== "self" && plans.length > 1 && (
+                          <button onClick={() => deletePlan(p.id)} title="Delete plan"
+                            style={{ border: "none", background: "transparent", color: "#e5484d", cursor: "pointer", fontSize: ".85rem" }}>✕</button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => createPlan()}
+                  style={{ marginTop: 4, padding: "8px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: ".82rem",
+                    border: "1px dashed var(--border,rgba(255,255,255,.25))", background: "transparent", color: "var(--accent)" }}>
+                  + New plan
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Trainer requests — actionable to-dos at the very top (Session 19). */}
         {requests.filter((r) => r.status !== "done").length > 0 && (
@@ -9327,7 +9569,7 @@ export default function App() {
         if (remote) {
           // Editing a linked client's plan — save straight into THEIR account.
           // (No local index update; this profile doesn't live in our list.)
-          await setForUser(remote, "caliq-self", payload);
+          await setForUser(remote, planDataKey(activeId), payload);
           recordPlanEdits(newData||data);
           setSaving(true);
           setTimeout(()=>setSaving(false), 1200);
@@ -9393,11 +9635,14 @@ export default function App() {
     setScreen("app");
   };
 
-  // Trainer opens a LINKED client's plan (lives in the client's account as
-  // "caliq-self"); edits route back to the client's account via autoSave.
-  const openClientPlan = async (clientUid) => {
+  // Trainer opens a LINKED client's plan; edits route back to the client's
+  // account via autoSave. A client may have several plans — open the given
+  // planId, or the active one from their manifest (default "self"). (Session 21)
+  const openClientPlan = async (clientUid, planId) => {
+    let pid = planId;
+    if (!pid) { const m = await readPlansManifest((k) => getForUser(clientUid, k)); pid = m.active; }
     try {
-      const r = await getForUser(clientUid, "caliq-self");
+      const r = await getForUser(clientUid, planDataKey(pid));
       if (r && r.value) {
         const parsed = JSON.parse(r.value);
         const d = parsed.data || {};
@@ -9417,7 +9662,7 @@ export default function App() {
     setStep(5);
     setShowDash(true);
     setActiveRemoteUid(clientUid);
-    setActiveId("self");
+    setActiveId(pid);
     setScreen("app");
   };
 
@@ -9435,7 +9680,8 @@ export default function App() {
   const copyClientToLocal = async (clientUid) => {
     let parsed = { data: {}, step: 0 };
     try {
-      const r = await getForUser(clientUid, "caliq-self");
+      const m = await readPlansManifest((k) => getForUser(clientUid, k));
+      const r = await getForUser(clientUid, planDataKey(m.active));
       if (r && r.value) parsed = JSON.parse(r.value);
     } catch(e) {}
     const d = parsed.data || {};
