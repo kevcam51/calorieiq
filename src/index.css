@@ -1,1 +1,16 @@
+/* Tailwind CSS v4 — careful, incremental adoption.
+ *
+ * We import the theme + utilities layers but DELIBERATELY skip Tailwind's
+ * "preflight" base reset. The existing ~7,500-line App.jsx is styled entirely
+ * by its own <style> blocks + inline styles; preflight's global reset
+ * (box-sizing, margin/heading/button resets) could shift those. Omitting it
+ * means Tailwind adds ZERO impact to existing screens — utilities only emit CSS
+ * for classes actually used in markup, and @theme tokens are inert until
+ * referenced. New components (themes / showcase) use utilities explicitly.
+ * Enable preflight later (add the preflight import) when we fully migrate.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 body { margin: 0; padding: 0; }
