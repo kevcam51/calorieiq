@@ -239,21 +239,22 @@ body{
   padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));
 }
 
-/* ── Header — cleaner, more premium ── */
+/* ── Header — slim top bar (hamburger sits at the left; logo centered) ── */
 .header{
-  padding:22px 16px 18px;
+  padding:13px 52px;
   text-align:center;
   background:linear-gradient(180deg,rgba(232,255,79,.04) 0%,transparent 100%);
   border-bottom:1px solid var(--border);
-  margin-bottom:24px;
+  margin-bottom:18px;
 }
 .logo{
   font-family:'Bebas Neue',sans-serif;
-  font-size:2.2rem;letter-spacing:5px;
+  font-size:1.5rem;letter-spacing:4px;
   color:var(--accent);line-height:1;
 }
 .logo span{color:var(--text)}
 .tagline{
+  display:none;
   color:var(--muted);font-size:.65rem;
   letter-spacing:2px;text-transform:uppercase;
   margin-top:5px;
@@ -7872,37 +7873,10 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
       )}
 
       {isTrainer ? (
-        <>
-          <div className="card-sub">
-            Share your invite code with clients so they can link to you.
-          </div>
-          <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"4px 0 14px" }}>
-            <code style={{ ...field, fontFamily:"monospace", display:"inline-block",
-              letterSpacing:"1px", fontSize:"1rem" }}>
-              {inviteCode ? formatInviteCode(inviteCode) : "…"}
-            </code>
-            <button style={btn} onClick={copyCode} disabled={!inviteCode}>
-              {copied ? "Copied!" : "Copy code"}
-            </button>
-          </div>
-          <div className="card-sub" style={{ marginBottom:6 }}>
-            Or send a one-click invite link — new clients who open it are linked to
-            you automatically.
-          </div>
-          <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"4px 0 14px" }}>
-            <code style={{ ...field, fontFamily:"monospace", display:"inline-block",
-              fontSize:".78rem", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-              {shareLink || "…"}
-            </code>
-            <button style={btn} onClick={copyLink} disabled={!shareLink}>
-              Copy link
-            </button>
-          </div>
-          <div className="card-sub" style={{ color:"var(--muted)", fontSize:".8rem" }}>
-            Your connected clients (link / open / manage) are on the Dashboard, under
-            “🔗 Your Connected Clients.”
-          </div>
-        </>
+        <div className="card-sub" style={{ marginBottom:0 }}>
+          📨 Invite codes &amp; links now live in the <strong style={{ color:"var(--text)" }}>≡ menu → Invite clients</strong>.
+          Your connected clients (link / open / manage) are on the Dashboard.
+        </div>
       ) : (
         <>
           {profile.assignedTrainerId ? (
@@ -9797,10 +9771,14 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, onHome, onD
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [busy, setBusy] = useState(false);
+  const [invite, setInvite] = useState("");      // trainer invite code
+  const [showInvite, setShowInvite] = useState(false);
+  const [copied, setCopied] = useState("");       // "code" | "link" | ""
   useEffect(() => {
     if (open) {
       const parts = (meName || "").trim().split(/\s+/);
       setFirst(parts[0] || ""); setLast(parts.slice(1).join(" ") || ""); setEditing(false);
+      if (isTrainer && !invite) { ensureInviteCode().then((c) => setInvite(c || "")).catch(() => {}); }
     }
   }, [open, meName]);
 
@@ -9811,6 +9789,8 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, onHome, onD
     finally { setBusy(false); }
   };
   const go = (fn) => { onClose(); if (fn) fn(); };
+  const shareLink = invite ? `${window.location.origin}/?invite=${invite}` : "";
+  const copy = async (which, text) => { try { await navigator.clipboard.writeText(text); setCopied(which); setTimeout(() => setCopied(""), 1500); } catch { /* ignore */ } };
 
   const item = { display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
     padding: "13px 16px", borderRadius: 10, border: "none", background: "transparent", color: "var(--text)",
@@ -9865,6 +9845,30 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, onHome, onD
         <button style={item} onClick={() => go(onHome)}>🏠 <span>Home</span></button>
         {isTrainer && <button style={item} onClick={() => go(onDashboard)}>📊 <span>Dashboard</span></button>}
         {isTrainer && <button style={item} onClick={() => go(onClients)}>👥 <span>All clients</span></button>}
+
+        {/* Invite clients (trainer) — moved here off the home screen */}
+        {isTrainer && (
+          <>
+            <button style={item} onClick={() => setShowInvite((v) => !v)}>
+              📨 <span>Invite clients</span>
+              <span style={{ marginLeft: "auto", color: "var(--muted)" }}>{showInvite ? "▾" : "▸"}</span>
+            </button>
+            {showInvite && (
+              <div style={{ padding: "4px 16px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: ".74rem", color: "var(--muted)" }}>Your invite code — clients enter it to link to you.</div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <code style={{ flex: 1, padding: "8px 10px", borderRadius: 7, background: "var(--s2)", border: "1px solid var(--border)",
+                    fontFamily: "monospace", letterSpacing: "1px", fontSize: ".95rem" }}>{invite ? formatInviteCode(invite) : "…"}</code>
+                  <button onClick={() => copy("code", formatInviteCode(invite))} disabled={!invite}
+                    style={{ padding: "8px 10px", borderRadius: 7, border: "none", background: "var(--accent)", color: "#0b0b12", fontWeight: 700, fontSize: ".76rem", cursor: "pointer" }}>{copied === "code" ? "✓" : "Copy"}</button>
+                </div>
+                <div style={{ fontSize: ".74rem", color: "var(--muted)" }}>Or send a one-click link — new clients auto-link to you.</div>
+                <button onClick={() => copy("link", shareLink)} disabled={!shareLink}
+                  style={{ padding: "9px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontWeight: 600, fontSize: ".82rem", cursor: "pointer" }}>{copied === "link" ? "✓ Link copied" : "🔗 Copy invite link"}</button>
+              </div>
+            )}
+          </>
+        )}
 
         <div style={{ flex: 1 }} />
         <button style={{ ...item, color: "#e5484d" }} onClick={() => signOut(auth)}>🚪 <span>Sign out</span></button>
