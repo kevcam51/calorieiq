@@ -2810,7 +2810,10 @@ function Results({ data, isSimulation, onReset, onEdit, onUpdateCardio, onUpdate
   const [openResultDay, setOpenResultDay] = useState(null);
   const [showWeightModal, setShowWeightModal] = useState(false); // Pro Tracking chart popup
   const { gender, age, weightLbs, heightFt, heightIn, activityLevel, firstName, cardio } = data;
-  const actObj = ACTIVITY_LEVELS.find(a=>a.id===activityLevel);
+  // Fall back to the first activity level when a plan is incomplete (no activity
+  // set yet) so Results never crashes on a half-built plan. Matches the guarded
+  // lookups elsewhere (computeClientCalories, App's computedTdee).
+  const actObj = ACTIVITY_LEVELS.find(a=>a.id===activityLevel) || ACTIVITY_LEVELS[0];
   const bmr    = calcBMR(gender, Number(weightLbs), Number(heightFt), Number(heightIn), Number(age));
   const tdee   = Math.round(bmr * actObj.multiplier);
   const floor  = n => Math.max(n, 1200);
