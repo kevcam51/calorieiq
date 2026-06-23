@@ -17,7 +17,13 @@ unified platform that complements and eventually replaces these.
 
 ## Tech stack
 
-- **Vite + React (JSX).** Main UI is a single large component in `src/App.jsx` (~7,500 lines).
+- **Vite + React (JSX).** Main UI is a single large component in `src/App.jsx` (~7,500 lines),
+  styled by its own injected `<style>` block + inline styles.
+- **Tailwind CSS v4** (`@tailwindcss/vite`) is installed for **new** components (preflight is
+  intentionally OFF so existing screens are untouched). Design tokens live in `src/index.css`
+  (`@theme`) + `src/themes.css` (swappable `[data-theme]` looks). See Session 25 below.
+- **Brand:** Smooth Training = **black + cyan `#08DCE0`** (sampled from the logo). The app's
+  accent was recolored from the old lime `#e8ff4f` to this cyan.
 - **Firebase**: Authentication (Email/Password, Google, Anonymous enabled) + Cloud Firestore.
 - **Hosting**: Vercel. Pushing to `main` on GitHub (kevcam51/calorieiq) auto-deploys.
 - Firebase project ID: `calorieiq-29762`. Firestore is in `nam5` (multi-region), Production mode.
@@ -416,6 +422,28 @@ enabled (Blaze has no default spending cap).
   of undefined (reading 'multiplier')" and blanked the screen — now falls back to `ACTIVITY_LEVELS[0]`
   (matching `computeClientCalories` / App's `computedTdee`). This was a pre-existing latent bug exposed
   by multi-plan + tap-to-open (a client's active plan can be an empty one). No `firestore.rules` change.
+- Session 25: **Tailwind v4 adoption + theming + brand recolor (per `CalorieIQ-Tailwind-Design-Brief.md`).**
+  **Part 1 — Tailwind v4 (careful, additive):** installed `tailwindcss` + `@tailwindcss/vite` (4.3.1);
+  added the Vite plugin; `src/index.css` imports Tailwind's theme + utilities layers but **deliberately
+  excludes preflight** (the global reset) so the existing inline-styled app is untouched (utilities only
+  emit for classes used in markup; `@theme` tokens are inert until referenced). Imported once in
+  `main.jsx`. Tailwind is for **new** components only — no wholesale rewrite. **Part 2 — theme system +
+  showcase:** `index.css` `@theme` defines semantic tokens (`--color-bg/surface/surface2/border/fg/muted/
+  primary/primaryfg/accent/success/warn/danger`, `--font-sans/display`, `--radius-card`) → Tailwind
+  utilities (`bg-surface`, `text-primary`, `font-display`, `rounded-card`, …). `src/themes.css` holds
+  swappable looks as `[data-theme]` blocks that override the token names **directly** (an indirection var
+  resolves at `:root` and won't re-skin per subtree — important gotcha). Four themes built: Clean/Minimal,
+  Bold/Energetic, Warm/Friendly, **Dark/Pro**. `src/Showcase.jsx` is a **dev-only** style showcase + live
+  theme switcher (palette, buttons, inputs, cards, progress ring + stat tiles, mini dashboard); reached at
+  **`/?showcase=1`** (main.jsx renders it INSTEAD of the app for that URL — fully isolated, no login).
+  **Part 3 — brand direction chosen:** Kevin picked **Dark/Pro**, tuned to the **Smooth Training** brand
+  (black + cyan `#08DCE0`, sampled from `Second Logo Option Banner.png`): near-black surfaces (`#060809`,
+  not pure black for depth), cyan primary with near-black text on it (high-contrast CTAs), sky-blue accent,
+  green/amber/red kept semantic. **Live-app recolor (quick win):** swapped the app's lime accent
+  (`#e8ff4f` / `rgba(232,255,79,…)`) → brand cyan (`#08dce0` / `rgba(8,220,224,…)`) throughout `App.jsx`
+  (~88 refs) — color-only, no functionality/layout change, so the whole live app is now on-brand cyan.
+  **Deferred (Option 3, later):** gradually rebuild real screens in Tailwind + the brand theme, screen by
+  screen, only when already working in that area (never break working UI). No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date

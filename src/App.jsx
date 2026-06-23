@@ -187,8 +187,8 @@ const css = `
   --border-light:#383858;
 
   /* Brand colors */
-  --accent:#e8ff4f;
-  --accent-dim:rgba(232,255,79,.12);
+  --accent:#08dce0;
+  --accent-dim:rgba(8,220,224,.12);
   --orange:#ff6b35;
   --green:#4fffb0;
   --yellow:#ffcc44;
@@ -243,7 +243,7 @@ body{
 .header{
   padding:13px 52px;
   text-align:center;
-  background:linear-gradient(180deg,rgba(232,255,79,.04) 0%,transparent 100%);
+  background:linear-gradient(180deg,rgba(8,220,224,.04) 0%,transparent 100%);
   border-bottom:1px solid var(--border);
   margin-bottom:18px;
 }
@@ -288,7 +288,7 @@ body{
 }
 .step-dot.active{
   background:var(--accent);
-  box-shadow:0 0 10px rgba(232,255,79,.5);
+  box-shadow:0 0 10px rgba(8,220,224,.5);
 }
 .step-dot.done{background:var(--accent);opacity:.3}
 
@@ -313,12 +313,12 @@ body{
 
 /* ── Welcome banner ── */
 .welcome-banner{
-  background:linear-gradient(135deg,rgba(232,255,79,.07),rgba(79,255,176,.04));
-  border:1px solid rgba(232,255,79,.22);
+  background:linear-gradient(135deg,rgba(8,220,224,.07),rgba(79,255,176,.04));
+  border:1px solid rgba(8,220,224,.22);
   border-radius:var(--radius-lg);
   padding:18px;margin-bottom:16px;
   display:flex;align-items:flex-start;gap:14px;
-  box-shadow:0 0 0 1px rgba(232,255,79,.05);
+  box-shadow:0 0 0 1px rgba(8,220,224,.05);
 }
 .wb-emoji{font-size:2.2rem;flex-shrink:0;line-height:1;margin-top:2px}
 .wb-title{
@@ -353,7 +353,7 @@ body{
 }
 .field input:focus,.field select:focus{
   border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(232,255,79,.1);
+  box-shadow:0 0 0 3px rgba(8,220,224,.1);
 }
 .field input::placeholder{color:var(--muted);opacity:.7}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -384,8 +384,8 @@ body{
 }
 .gbtn.active{
   border-color:var(--accent);color:var(--accent);
-  background:rgba(232,255,79,.08);
-  box-shadow:0 0 0 1px rgba(232,255,79,.2);
+  background:rgba(8,220,224,.08);
+  box-shadow:0 0 0 1px rgba(8,220,224,.2);
 }
 .gbtn:active{transform:scale(.97)}
 
@@ -405,14 +405,14 @@ body{
 .abtn .ad{font-size:.76rem;color:var(--muted);line-height:1.4}
 .abtn.active{
   border-color:var(--accent);
-  background:rgba(232,255,79,.06);
-  box-shadow:0 0 0 1px rgba(232,255,79,.15);
+  background:rgba(8,220,224,.06);
+  box-shadow:0 0 0 1px rgba(8,220,224,.15);
 }
 .abtn.active .al{color:var(--accent)}
 .abtn-check{
   margin-left:auto;color:var(--accent);
   font-size:1.2rem;flex-shrink:0;
-  background:rgba(232,255,79,.15);
+  background:rgba(8,220,224,.15);
   width:28px;height:28px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
 }
@@ -441,7 +441,7 @@ body{
 }
 .btn-p{
   background:var(--accent);color:#0b0b12;font-weight:700;
-  box-shadow:0 4px 18px rgba(232,255,79,.3);
+  box-shadow:0 4px 18px rgba(8,220,224,.3);
 }
 .btn-p:active{transform:scale(.97);box-shadow:none}
 .btn-p:disabled{background:var(--s2);color:var(--muted);border:1.5px solid var(--border);opacity:1;cursor:not-allowed;box-shadow:none}
@@ -483,7 +483,7 @@ body{
 .hero::before{
   content:'';position:absolute;top:-60px;right:-60px;
   width:160px;height:160px;border-radius:50%;
-  background:radial-gradient(circle,rgba(232,255,79,.06) 0%,transparent 70%);
+  background:radial-gradient(circle,rgba(8,220,224,.06) 0%,transparent 70%);
   pointer-events:none;
 }
 .hero-lbl{font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
@@ -524,7 +524,7 @@ body{
 }
 .day-result-card.drc-open{
   border-color:var(--accent);
-  box-shadow:0 0 0 1px rgba(232,255,79,.15);
+  box-shadow:0 0 0 1px rgba(8,220,224,.15);
 }
 .day-result-card.drc-open .drc-header::after{opacity:0}
 .drc-header{
@@ -540,8 +540,8 @@ body{
 .drc-chevron.open{transform:rotate(180deg);color:var(--accent)}
 .drc-edit-body{
   padding:14px 16px;
-  border-top:1px solid rgba(232,255,79,.12);
-  background:rgba(232,255,79,.02);
+  border-top:1px solid rgba(8,220,224,.12);
+  background:rgba(8,220,224,.02);
   animation:fadeUp .18s ease both;
 }
 .drc-edit-body .field{margin-bottom:10px}
@@ -576,7 +576,7 @@ body{
 
 /* ── Cardio summary pill ── */
 .csumm{
-  background:rgba(232,255,79,.03);border:1px solid rgba(232,255,79,.12);
+  background:rgba(8,220,224,.03);border:1px solid rgba(8,220,224,.12);
   border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;
   display:flex;gap:12px;align-items:flex-start;
 }
@@ -634,7 +634,7 @@ body{
 .ms-pace{font-size:.79rem;color:var(--muted)}
 .ms-loss{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.5px}
 .ms-wt{font-size:.72rem;color:var(--muted);margin-top:1px}
-.ms-card-goal{border-color:rgba(232,255,79,.3);background:rgba(232,255,79,.025)}
+.ms-card-goal{border-color:rgba(8,220,224,.3);background:rgba(8,220,224,.025)}
 .ms-card-goal .ms-card-header{color:var(--accent)}
 .prog-bar-bg{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px}
 .prog-bar-fill{height:100%;border-radius:3px;transition:width .5s}
@@ -737,10 +737,10 @@ body{
   font-family:'DM Sans',sans-serif;line-height:1;
   -webkit-tap-highlight-color:transparent;user-select:none;
 }
-.info-icon:hover,.info-icon.active{background:rgba(232,255,79,.16);border-color:var(--accent);color:var(--accent)}
+.info-icon:hover,.info-icon.active{background:rgba(8,220,224,.16);border-color:var(--accent);color:var(--accent)}
 .info-panel{
   padding:13px 14px;
-  background:rgba(232,255,79,.04);border-top:1px solid rgba(232,255,79,.1);
+  background:rgba(8,220,224,.04);border-top:1px solid rgba(8,220,224,.1);
   font-size:.8rem;color:var(--muted);line-height:1.6;
   animation:fadeUp .18s ease both;
 }
@@ -794,7 +794,7 @@ body{
   transition:all .15s;backdrop-filter:blur(6px);
   -webkit-tap-highlight-color:transparent;
 }
-.chart-overlay-arrow:hover:not(:disabled){background:rgba(232,255,79,.14);border-color:var(--accent);color:var(--accent)}
+.chart-overlay-arrow:hover:not(:disabled){background:rgba(8,220,224,.14);border-color:var(--accent);color:var(--accent)}
 .chart-overlay-arrow:disabled{opacity:.1;cursor:not-allowed;pointer-events:none}
 .pace-selector{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .pace-sel-btn{
@@ -822,7 +822,7 @@ body{
 
 /* ── Explainer box ── */
 .explainer-box{
-  background:rgba(232,255,79,.025);border:1px solid rgba(232,255,79,.1);
+  background:rgba(8,220,224,.025);border:1px solid rgba(8,220,224,.1);
   border-radius:var(--radius-sm);padding:17px;margin-bottom:14px;
 }
 .exp-title{font-weight:700;font-size:.92rem;margin-bottom:9px;color:var(--text)}
@@ -869,13 +869,13 @@ body{
 /* ── Quick fill ── */
 .quick-fill-toggle{
   width:100%;padding:13px 15px;border-radius:10px;
-  border:1.5px dashed rgba(232,255,79,.25);background:rgba(232,255,79,.025);
+  border:1.5px dashed rgba(8,220,224,.25);background:rgba(8,220,224,.025);
   color:var(--accent);cursor:pointer;font-family:inherit;
   font-size:.84rem;font-weight:600;text-align:left;
   margin-bottom:14px;transition:all .2s;
   -webkit-tap-highlight-color:transparent;
 }
-.quick-fill-toggle:hover{border-color:var(--accent);background:rgba(232,255,79,.05)}
+.quick-fill-toggle:hover{border-color:var(--accent);background:rgba(8,220,224,.05)}
 .quick-fill-panel{
   background:var(--s2);border:1px solid var(--border);
   border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;
@@ -1020,7 +1020,7 @@ body{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius-sm);margin-bottom:9px;overflow:hidden;transition:border-color .15s;
 }
-.micro-row.micro-open{border-color:rgba(232,255,79,.28)}
+.micro-row.micro-open{border-color:rgba(8,220,224,.28)}
 .micro-header{
   display:flex;align-items:center;gap:11px;padding:13px 15px;
   cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s;
@@ -1032,7 +1032,7 @@ body{
 .micro-amount{font-size:.74rem;color:var(--orange);margin-top:2px}
 .micro-chevron{color:var(--muted);font-size:.65rem;transition:transform .2s;flex-shrink:0}
 .micro-chevron.open{transform:rotate(180deg);color:var(--accent)}
-.micro-detail{padding:13px 15px 15px;border-top:1px solid var(--border);background:rgba(232,255,79,.02)}
+.micro-detail{padding:13px 15px 15px;border-top:1px solid var(--border);background:rgba(8,220,224,.02)}
 .micro-why{font-size:.81rem;color:var(--muted);line-height:1.6;margin-bottom:11px}
 .micro-foods-label{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;margin-bottom:7px}
 .micro-foods{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
@@ -1043,7 +1043,7 @@ body{
 }
 .micro-tip{
   font-size:.77rem;color:var(--muted);line-height:1.55;
-  padding:9px 11px;background:rgba(232,255,79,.04);
+  padding:9px 11px;background:rgba(8,220,224,.04);
   border-radius:var(--radius-sm);border-left:3px solid var(--accent);
 }
 @media(min-width:640px){.macro-grid{grid-template-columns:repeat(4,1fr)}}
@@ -1097,7 +1097,7 @@ body{
 .sc-cardio-note{font-size:.65rem;color:var(--green);margin-top:5px;text-align:center}
 .sc-offset{font-size:.79rem;color:var(--green);line-height:1.4;margin-top:4px}
 .surplus-takeaway{
-  background:rgba(232,255,79,.04);border:1px solid rgba(232,255,79,.12);
+  background:rgba(8,220,224,.04);border:1px solid rgba(8,220,224,.12);
   border-radius:var(--radius-sm);padding:15px 16px;margin-bottom:14px;
   display:flex;gap:13px;align-items:flex-start;
 }
@@ -1232,8 +1232,8 @@ body{
 
 /* ── Results summary ── */
 .results-summary-banner{
-  background:linear-gradient(135deg,rgba(232,255,79,.07),rgba(255,107,53,.04));
-  border:1px solid rgba(232,255,79,.18);border-radius:var(--radius-lg);
+  background:linear-gradient(135deg,rgba(8,220,224,.07),rgba(255,107,53,.04));
+  border:1px solid rgba(8,220,224,.18);border-radius:var(--radius-lg);
   padding:18px;margin-bottom:20px;
   display:grid;grid-template-columns:1fr 1fr;gap:10px;
 }
@@ -1261,8 +1261,8 @@ body{
 .dash-greeting{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--text);text-align:center;margin-bottom:18px}
 .dash-streak{
   display:flex;align-items:center;justify-content:center;gap:8px;
-  background:linear-gradient(135deg,rgba(232,255,79,.08),rgba(255,107,53,.04));
-  border:1px solid rgba(232,255,79,.2);border-radius:var(--radius-lg);
+  background:linear-gradient(135deg,rgba(8,220,224,.08),rgba(255,107,53,.04));
+  border:1px solid rgba(8,220,224,.2);border-radius:var(--radius-lg);
   padding:14px;margin-bottom:18px;text-align:center;
 }
 .dash-streak-num{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--accent);line-height:1}
@@ -1309,7 +1309,7 @@ body{
 .dash-nav-btn:hover{border-color:var(--accent);color:var(--accent)}
 .share-card{
   background:linear-gradient(135deg,var(--surface),var(--s2));
-  border:1.5px solid rgba(232,255,79,.2);border-radius:var(--radius-lg);
+  border:1.5px solid rgba(8,220,224,.2);border-radius:var(--radius-lg);
   padding:24px 20px;text-align:center;margin-top:16px;
 }
 .share-card-name{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent);margin-bottom:4px}
@@ -1361,8 +1361,8 @@ body{
   margin-bottom:8px;cursor:pointer;transition:all .15s;
   -webkit-tap-highlight-color:transparent;
 }
-.profile-card:hover{border-color:var(--accent);background:rgba(232,255,79,.03)}
-.profile-card.pc-active{border-color:var(--accent);background:rgba(232,255,79,.06)}
+.profile-card:hover{border-color:var(--accent);background:rgba(8,220,224,.03)}
+.profile-card.pc-active{border-color:var(--accent);background:rgba(8,220,224,.06)}
 .pc-avatar{
   width:40px;height:40px;border-radius:50%;
   background:var(--s3);border:1px solid var(--border);
@@ -1378,7 +1378,7 @@ body{
   background:var(--accent-dim);color:var(--accent);cursor:pointer;
   font-family:inherit;font-size:.75rem;font-weight:600;transition:all .15s;
 }
-.pc-load-btn:hover{background:rgba(232,255,79,.15)}
+.pc-load-btn:hover{background:rgba(8,220,224,.15)}
 .pc-del-btn{
   padding:6px 10px;border-radius:8px;border:1.5px solid rgba(255,79,107,.25);
   background:rgba(255,79,107,.05);color:var(--red);cursor:pointer;
@@ -1403,7 +1403,7 @@ body{
   font-size:.84rem;font-weight:600;transition:all .15s;
   display:flex;align-items:center;justify-content:center;gap:6px;
 }
-.save-bar-btn:hover{background:rgba(232,255,79,.15)}
+.save-bar-btn:hover{background:rgba(8,220,224,.15)}
 .save-bar-btn:active{transform:scale(.97)}
 .save-bar-new{
   flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:10px;
@@ -1419,7 +1419,7 @@ body{
   border-radius:var(--radius-sm);overflow:hidden;
   transition:border-color .2s;
 }
-.folder-section.drag-over{border-color:var(--accent);box-shadow:0 0 12px rgba(232,255,79,.15)}
+.folder-section.drag-over{border-color:var(--accent);box-shadow:0 0 12px rgba(8,220,224,.15)}
 .folder-header{
   display:flex;align-items:center;gap:10px;
   padding:14px 16px;background:var(--s2);
@@ -1451,11 +1451,11 @@ body{
 }
 .folder-new-btn{
   flex:1;min-height:40px;border-radius:10px;
-  border:1.5px dashed rgba(232,255,79,.25);background:rgba(232,255,79,.025);
+  border:1.5px dashed rgba(8,220,224,.25);background:rgba(8,220,224,.025);
   color:var(--accent);cursor:pointer;font-family:inherit;
   font-size:.8rem;font-weight:600;transition:all .15s;
 }
-.folder-new-btn:hover{border-color:var(--accent);background:rgba(232,255,79,.06)}
+.folder-new-btn:hover{border-color:var(--accent);background:rgba(8,220,224,.06)}
 .folder-input{
   width:100%;padding:10px 14px;border-radius:8px;
   border:1.5px solid var(--accent);background:var(--s2);
@@ -1479,7 +1479,7 @@ body{
 
 /* ── Daily Check-In ── */
 .checkin-card{
-  background:linear-gradient(135deg,rgba(79,255,176,.05),rgba(232,255,79,.03));
+  background:linear-gradient(135deg,rgba(79,255,176,.05),rgba(8,220,224,.03));
   border:1.5px solid rgba(79,255,176,.2);border-radius:var(--radius-lg);
   padding:18px;margin-bottom:16px;
 }
@@ -1511,7 +1511,7 @@ body{
 .streak-bar{
   display:flex;align-items:center;gap:10px;
   padding:12px 16px;border-radius:var(--radius-sm);
-  background:rgba(232,255,79,.04);border:1px solid rgba(232,255,79,.12);
+  background:rgba(8,220,224,.04);border:1px solid rgba(8,220,224,.12);
   margin-bottom:14px;
 }
 .streak-fire{font-size:1.4rem}
@@ -1535,7 +1535,7 @@ body{
 }
 .share-card::before{
   content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;
-  border-radius:50%;background:radial-gradient(circle,rgba(232,255,79,.08) 0%,transparent 70%);
+  border-radius:50%;background:radial-gradient(circle,rgba(8,220,224,.08) 0%,transparent 70%);
 }
 .share-card-brand{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:var(--accent);opacity:.6;margin-bottom:8px}
 .share-card-name{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--text);margin-bottom:4px}
@@ -1570,7 +1570,7 @@ body{
   transition:all .15s;-webkit-tap-highlight-color:transparent;
 }
 .prof-card:active{transform:scale(.98)}
-.prof-card:hover{border-color:var(--accent);background:rgba(232,255,79,.03)}
+.prof-card:hover{border-color:var(--accent);background:rgba(8,220,224,.03)}
 .prof-avatar{
   width:44px;height:44px;border-radius:50%;
   background:var(--accent-dim);border:2px solid var(--accent);
@@ -1590,12 +1590,12 @@ body{
 .prof-del:hover{background:rgba(255,79,107,.12);border-color:var(--red)}
 .prof-new-btn{
   width:100%;min-height:56px;border-radius:var(--radius-sm);
-  border:2px dashed rgba(232,255,79,.3);background:rgba(232,255,79,.02);
+  border:2px dashed rgba(8,220,224,.3);background:rgba(8,220,224,.02);
   color:var(--accent);cursor:pointer;font-family:'Bebas Neue',sans-serif;
   font-size:1.1rem;letter-spacing:2px;transition:all .15s;
   display:flex;align-items:center;justify-content:center;gap:10px;
 }
-.prof-new-btn:hover{border-color:var(--accent);background:rgba(232,255,79,.06)}
+.prof-new-btn:hover{border-color:var(--accent);background:rgba(8,220,224,.06)}
 .prof-new-btn:active{transform:scale(.98)}
 .prof-save-badge{
   position:fixed;top:12px;right:12px;
@@ -1690,7 +1690,7 @@ function SearchableSelect({ exercises, groups, value, onChange, placeholder }) {
               style={{
                 padding:"10px 14px", cursor:"pointer", borderBottom:"1px solid var(--border)",
                 display:"flex", gap:"8px", alignItems:"center",
-                background: ex.id === value ? "rgba(232,255,79,.06)" : "transparent",
+                background: ex.id === value ? "rgba(8,220,224,.06)" : "transparent",
               }}
             >
               <span style={{fontSize:"1rem"}}>{ex.icon}</span>
@@ -2088,7 +2088,7 @@ function StepActivity({ data, onChange, onBack, onNext }) {
                 style={{marginLeft:"4px",flexShrink:0}}>i</button>
             </div>
             {activeInfo===a.id && (
-              <div onClick={e=>e.stopPropagation()} style={{padding:"12px 14px",marginBottom:"8px",background:"rgba(232,255,79,.06)",border:"1.5px solid rgba(232,255,79,.2)",borderRadius:"8px",fontSize:".82rem",color:"var(--text-secondary)",lineHeight:1.7,animation:"fadeUp .15s ease both"}}>
+              <div onClick={e=>e.stopPropagation()} style={{padding:"12px 14px",marginBottom:"8px",background:"rgba(8,220,224,.06)",border:"1.5px solid rgba(8,220,224,.2)",borderRadius:"8px",fontSize:".82rem",color:"var(--text-secondary)",lineHeight:1.7,animation:"fadeUp .15s ease both"}}>
                 {ACTIVITY_DETAILS[a.id]}
               </div>
             )}
@@ -3407,7 +3407,7 @@ function Results({ data, isSimulation, onReset, onEdit, onUpdateCardio, onUpdate
                     </div>
                   );
                 })}
-                <div style={{fontSize:".76rem",color:"var(--muted)",lineHeight:1.5,marginTop:"8px",padding:"10px 12px",background:"rgba(232,255,79,.03)",borderRadius:"8px",borderLeft:"3px solid var(--accent)"}}>
+                <div style={{fontSize:".76rem",color:"var(--muted)",lineHeight:1.5,marginTop:"8px",padding:"10px 12px",background:"rgba(8,220,224,.03)",borderRadius:"8px",borderLeft:"3px solid var(--accent)"}}>
                   💡 <strong style={{color:"var(--text)"}}>Fat Burn vs. Total Burn:</strong> Zone 2 burns the highest <em>percentage</em> of calories from fat (~60–70%). But higher zones burn more <em>total</em> calories per minute. For fat loss, Zone 2 for longer sessions (45–60 min) or Zone 4–5 intervals (HIIT) are both effective — pick what you'll stick with consistently.
                 </div>
               </>
@@ -3728,7 +3728,7 @@ function StrengthTab({ data, tdee, weightLbs, gender, age, name,
     });
   }).length;
 
-  const rawColor = { "Horizontal Push":"#ff6b9d","Horizontal Pull":"#4fc3f7","Vertical Push":"#b57bff","Vertical Pull":"#4fffb0","Lower Push":"#ffcc44","Lower Pull":"#ff6b35","Carry":"#ff9444","Core":"#9090c0","Total Body":"#e8ff4f" };
+  const rawColor = { "Horizontal Push":"#ff6b9d","Horizontal Pull":"#4fc3f7","Vertical Push":"#b57bff","Vertical Pull":"#4fffb0","Lower Push":"#ffcc44","Lower Pull":"#ff6b35","Carry":"#ff9444","Core":"#9090c0","Total Body":"#08dce0" };
 
   return (
     <div className="fu">
@@ -3933,7 +3933,7 @@ function StrengthTab({ data, tdee, weightLbs, gender, age, name,
 
       {/* Combined total with cardio */}
       {totalCardio > 0 && activeStrDays > 0 && (
-        <div className="csumm" style={{borderColor:"rgba(232,255,79,.2)",background:"rgba(232,255,79,.03)"}}>
+        <div className="csumm" style={{borderColor:"rgba(8,220,224,.2)",background:"rgba(8,220,224,.03)"}}>
           <div className="cs-icon">⚡</div>
           <div>
             <div className="cs-title">Combined Weekly Burn</div>
@@ -4195,7 +4195,7 @@ function MuscleTab({ tdee, totalBurn, avgBurnPerDay, activeDays, weightLbs, gend
 
       {/* Tile explanations */}
       {muscleInfo && (
-        <div style={{padding:"14px 16px",background:"rgba(232,255,79,.04)",border:"1.5px solid rgba(232,255,79,.18)",borderRadius:"var(--radius-sm)",marginBottom:"14px",fontSize:".82rem",color:"var(--text-secondary)",lineHeight:1.7,animation:"fadeUp .15s ease both"}}
+        <div style={{padding:"14px 16px",background:"rgba(8,220,224,.04)",border:"1.5px solid rgba(8,220,224,.18)",borderRadius:"var(--radius-sm)",marginBottom:"14px",fontSize:".82rem",color:"var(--text-secondary)",lineHeight:1.7,animation:"fadeUp .15s ease both"}}
           onClick={()=>setMuscleInfo(null)}>
           {muscleInfo === "freq" && (<>
             <strong style={{color:"var(--accent)",display:"block",marginBottom:"6px"}}>📅 Frequency Factor — How Often You Train</strong>
@@ -5145,7 +5145,7 @@ function NutrientsTab({ weightLbs, gender, age, tdee, totalBurn, name, targets, 
                   <span style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:".9rem",color:cat.color,minWidth:"32px"}}>{cat.id==="protein"?f.f+"g":cat.id==="carbs"?f.c+"g":f.f+"g"}</span>
                 </div>
               ))}
-              <div style={{marginTop:"10px",fontSize:".75rem",color:"var(--muted)",lineHeight:1.5,padding:"8px 10px",background:"rgba(232,255,79,.04)",borderRadius:"8px",borderLeft:"3px solid "+cat.color}}>
+              <div style={{marginTop:"10px",fontSize:".75rem",color:"var(--muted)",lineHeight:1.5,padding:"8px 10px",background:"rgba(8,220,224,.04)",borderRadius:"8px",borderLeft:"3px solid "+cat.color}}>
                 💡 {cat.id==="protein"
                   ? `Aim for 25–40g protein per meal across 3–5 meals to maximize muscle protein synthesis. Spread evenly — don't back-load all ${proteinG}g into dinner.`
                   : cat.id==="carbs"
@@ -5186,7 +5186,7 @@ function NutrientsTab({ weightLbs, gender, age, tdee, totalBurn, name, targets, 
                   </div>
                   <div className="micro-tip">💡 {m.tip}</div>
                   {m.personalNote && (
-                    <div style={{marginTop:"8px",padding:"9px 11px",background:"rgba(232,255,79,.06)",border:"1px solid rgba(232,255,79,.15)",borderRadius:"var(--radius-sm)",fontSize:".77rem",color:"var(--accent)",lineHeight:1.55}}>
+                    <div style={{marginTop:"8px",padding:"9px 11px",background:"rgba(8,220,224,.06)",border:"1px solid rgba(8,220,224,.15)",borderRadius:"var(--radius-sm)",fontSize:".77rem",color:"var(--accent)",lineHeight:1.55}}>
                       {m.personalNote}
                     </div>
                   )}
@@ -5314,7 +5314,7 @@ function WeightChart({ current, goal, paces, totalBurn, maxWeeks, compliance=1, 
       {yLabels.map(({wt,y},i)=>(
         <g key={i}>
           <line x1={PAD.left} y1={PAD.top+y} x2={PAD.left+chartW} y2={PAD.top+y}
-            stroke={i===0?"rgba(232,255,79,.25)":"rgba(255,255,255,.07)"} strokeWidth="1"/>
+            stroke={i===0?"rgba(8,220,224,.25)":"rgba(255,255,255,.07)"} strokeWidth="1"/>
           {/* BRIGHT, large Y labels */}
           <text x={PAD.left-14} y={PAD.top+y+5} textAnchor="end"
             fill="#ffffff" fontSize="13.5" fontWeight="700" fontFamily="DM Sans,sans-serif"
@@ -5329,11 +5329,11 @@ function WeightChart({ current, goal, paces, totalBurn, maxWeeks, compliance=1, 
       </text>
 
       {/* Goal band */}
-      <rect x={PAD.left} y={PAD.top+goalY-2} width={chartW} height={3} fill="rgba(232,255,79,.55)" rx="1.5"/>
-      <rect x={PAD.left} y={PAD.top+goalY} width={chartW} height={chartH-goalY} fill="rgba(232,255,79,.023)"/>
-      <rect x={PAD.left+chartW+6} y={PAD.top+goalY-12} width={60} height={22} rx="6" fill="rgba(232,255,79,.2)"/>
+      <rect x={PAD.left} y={PAD.top+goalY-2} width={chartW} height={3} fill="rgba(8,220,224,.55)" rx="1.5"/>
+      <rect x={PAD.left} y={PAD.top+goalY} width={chartW} height={chartH-goalY} fill="rgba(8,220,224,.023)"/>
+      <rect x={PAD.left+chartW+6} y={PAD.top+goalY-12} width={60} height={22} rx="6" fill="rgba(8,220,224,.2)"/>
       <text x={PAD.left+chartW+36} y={PAD.top+goalY+4} textAnchor="middle"
-        fill="#e8ff4f" fontSize="11.5" fontWeight="700" fontFamily="DM Sans,sans-serif">{goal} lbs</text>
+        fill="#08dce0" fontSize="11.5" fontWeight="700" fontFamily="DM Sans,sans-serif">{goal} lbs</text>
 
       {/* Area fills */}
       {scenarios.filter(s=>!s.dash).flatMap(s=>
@@ -5666,7 +5666,7 @@ function TimelineTab({ data, tdee, totalBurn }) {
               </div>
               {vals.map((v,i)=>(
                 <div key={i} className="cpt-col" style={{
-                  color: parseFloat(v) <= goal ? "#e8ff4f" : rc(paces[i]),
+                  color: parseFloat(v) <= goal ? "#08dce0" : rc(paces[i]),
                   fontWeight: allAtGoal ? "700" : "600"
                 }}>
                   {parseFloat(v) <= goal ? `${goal} ✓` : `${v} lbs`}
@@ -5674,7 +5674,7 @@ function TimelineTab({ data, tdee, totalBurn }) {
               ))}
               {hasCardio && (
                 <div className="cpt-col" style={{
-                  color: parseFloat(cardioVal) <= goal ? "#e8ff4f" : "var(--orange)",
+                  color: parseFloat(cardioVal) <= goal ? "#08dce0" : "var(--orange)",
                   fontWeight: allAtGoal ? "700" : "600"
                 }}>
                   {parseFloat(cardioVal) <= goal ? `${goal} ✓` : `${cardioVal} lbs`}
@@ -6231,7 +6231,7 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
               <button key={i} onClick={() => { setSel(k); setView("day"); }}
                 style={{ aspectRatio: "1", borderRadius: 8, cursor: "pointer", padding: 2,
                   border: isToday ? "1px solid var(--accent)" : "1px solid var(--border)",
-                  background: k === sel ? "rgba(232,255,79,.12)" : "var(--surface)", color: "var(--text)",
+                  background: k === sel ? "rgba(8,220,224,.12)" : "var(--surface)", color: "var(--text)",
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ fontSize: ".8rem", fontWeight: isToday ? 800 : 500 }}>{d}</span>
                 <DayDots k={k} />
@@ -6451,7 +6451,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
     <div className="dash">
       {isRemote && (
         <div style={{ padding:"8px 12px", borderRadius:"8px", marginBottom:"10px",
-          background:"rgba(232,255,79,.08)", border:"1px solid var(--accent)",
+          background:"rgba(8,220,224,.08)", border:"1px solid var(--accent)",
           color:"var(--accent)", fontSize:".78rem", fontWeight:600 }}>
           🔗 Shared client plan — you're viewing {fullName(data) || "this client"}'s account. Your changes save to their login, and you both see the same activity.
         </div>
@@ -6521,7 +6521,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
 
       {/* Expanded stat detail */}
       {expandedStat && (
-        <div className="card" style={{padding:"14px 16px",marginBottom:"14px",borderColor:"rgba(232,255,79,.2)",animation:"fadeUp .15s ease both"}}>
+        <div className="card" style={{padding:"14px 16px",marginBottom:"14px",borderColor:"rgba(8,220,224,.2)",animation:"fadeUp .15s ease both"}}>
           {expandedStat === "target" && (
             <>
               <div style={{fontWeight:700,fontSize:".88rem",marginBottom:"10px",color:"var(--accent)"}}>🎯 How Your Target Is Calculated</div>
@@ -6794,7 +6794,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
         <div className="dash-today-workout">
           {(todayCardio.workouts||[]).map((w,i)=>(
             <div key={`c${i}`} id={`workout-c${i}`}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"12px 8px",marginBottom:"4px",borderRadius:"8px",border:editingWorkout===`c${i}`?"1.5px solid var(--accent)":"1.5px solid var(--border)",background:editingWorkout===`c${i}`?"rgba(232,255,79,.04)":"var(--s2)",cursor:"pointer",transition:"all .15s"}}
+              <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"12px 8px",marginBottom:"4px",borderRadius:"8px",border:editingWorkout===`c${i}`?"1.5px solid var(--accent)":"1.5px solid var(--border)",background:editingWorkout===`c${i}`?"rgba(8,220,224,.04)":"var(--s2)",cursor:"pointer",transition:"all .15s"}}
                 onClick={()=>setEditingWorkout(editingWorkout===`c${i}`?null:`c${i}`)}>
                 <span style={{fontSize:"1rem"}}>{w.co?.icon||"🏃"}</span>
                 <div style={{flex:1}}>
@@ -6846,7 +6846,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
           ))}
           {(todayStrength.sessions||[]).map((s,i)=>(
             <div key={`s${i}`} id={`workout-s${i}`}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"12px 8px",marginBottom:"4px",borderRadius:"8px",border:editingWorkout===`s${i}`?"1.5px solid var(--accent)":"1.5px solid var(--border)",background:editingWorkout===`s${i}`?"rgba(232,255,79,.04)":"var(--s2)",cursor:"pointer",transition:"all .15s"}}
+              <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"12px 8px",marginBottom:"4px",borderRadius:"8px",border:editingWorkout===`s${i}`?"1.5px solid var(--accent)":"1.5px solid var(--border)",background:editingWorkout===`s${i}`?"rgba(8,220,224,.04)":"var(--s2)",cursor:"pointer",transition:"all .15s"}}
                 onClick={()=>setEditingWorkout(editingWorkout===`s${i}`?null:`s${i}`)}>
                 <span style={{fontSize:"1rem"}}>{s.ex?.icon||"🏋️"}</span>
                 <div style={{flex:1}}>
@@ -7440,7 +7440,7 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
         {/* Goal line (label is drawn last, below, so nothing covers it) */}
         {goal && (
           <line x1={PAD.left} y1={PAD.top + yScale(goal)} x2={PAD.left + chartW} y2={PAD.top + yScale(goal)}
-            stroke="rgba(232,255,79,.4)" strokeWidth="1.5" strokeDasharray="6 4" />
+            stroke="rgba(8,220,224,.4)" strokeWidth="1.5" strokeDasharray="6 4" />
         )}
 
         {/* Weight line */}
@@ -7494,7 +7494,7 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
             cover it; sits just left of the line's right end. */}
         {goal && (
           <text x={PAD.left + chartW + 8} y={PAD.top + yScale(goal) + 4}
-            fill="#e8ff4f" fontSize="11" fontWeight="700" fontFamily="DM Sans,sans-serif"
+            fill="#08dce0" fontSize="11" fontWeight="700" fontFamily="DM Sans,sans-serif"
             stroke="#0d0d18" strokeWidth="3.5" paintOrder="stroke" strokeLinejoin="round">
             {goal}
           </text>
@@ -8561,7 +8561,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                             const delConfirm = cpDelFor && cpDelFor.uid === c.uid && cpDelFor.planId === p.id;
                             return (
                               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px",
-                                borderRadius: 7, background: isActive ? "rgba(232,255,79,.08)" : "rgba(255,255,255,.03)" }}>
+                                borderRadius: 7, background: isActive ? "rgba(8,220,224,.08)" : "rgba(255,255,255,.03)" }}>
                                 {renaming ? (
                                   <>
                                     <input autoFocus value={cpDraft} onChange={(e) => setCpDraft(e.target.value)}
@@ -8608,7 +8608,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                         {openReqs.map((r) => (
                           <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
                             gap: 8, fontSize: ".8rem", padding: "6px 10px", borderRadius: 6,
-                            background: "rgba(232,255,79,.06)", border: "1px solid rgba(232,255,79,.18)" }}>
+                            background: "rgba(8,220,224,.06)", border: "1px solid rgba(8,220,224,.18)" }}>
                             <span style={{ color: "var(--text)" }}>📬 {r.prompt}</span>
                             <button onClick={() => cancelRequest(c.uid, r.id)} disabled={reqBusy} title="Cancel this request"
                               style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: ".9rem" }}>✕</button>
@@ -9114,7 +9114,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
                 border: "1px solid var(--border,rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)" }}>
                 {plans.map((p) => (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: 7,
-                    background: p.id === activePlanId ? "rgba(232,255,79,.08)" : "transparent" }}>
+                    background: p.id === activePlanId ? "rgba(8,220,224,.08)" : "transparent" }}>
                     {renamingPlanId === p.id ? (
                       <>
                         <input autoFocus value={planNameDraft} onChange={(e) => setPlanNameDraft(e.target.value)}
@@ -9154,7 +9154,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
 
         {/* Trainer requests — actionable to-dos at the very top (Session 19). */}
         {requests.filter((r) => r.status !== "done").length > 0 && (
-          <div className="card" style={{ border: "1px solid var(--accent)", background: "rgba(232,255,79,.05)" }}>
+          <div className="card" style={{ border: "1px solid var(--accent)", background: "rgba(8,220,224,.05)" }}>
             <div className="card-title" style={{ marginBottom: 4 }}>📬 From your trainer</div>
             <div className="card-sub" style={{ marginBottom: 12 }}>
               {requests.filter((r) => r.status !== "done").length} thing{requests.filter((r) => r.status !== "done").length !== 1 ? "s" : ""} to do
