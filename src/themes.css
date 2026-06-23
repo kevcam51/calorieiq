@@ -1,0 +1,92 @@
+/* ─── CalorieIQ theme token sets ──────────────────────────────────────────────
+ * Each [data-theme="…"] block defines one complete "look" by overriding the
+ * Tailwind design tokens (--color-*, --font-*, --radius-card) DIRECTLY. index.css
+ * maps these tokens to utilities (bg-surface, text-primary, font-display,
+ * rounded-card, …), so setting data-theme on a wrapper re-skins everything
+ * inside it instantly.
+ *
+ * NOTE: we override the token names directly (not via an indirection variable) —
+ * a `--color-x: var(--c-x)` declared on :root resolves at :root and won't
+ * re-resolve per descendant, so theme switching would silently fail.
+ *
+ * These affect ONLY components that use the tokens (the Showcase for now); the
+ * existing app keeps its own styling.
+ * -------------------------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap');
+
+/* 1) Clean / Minimal — light, airy, restrained indigo accent. */
+[data-theme="clean"] {
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface2: #eef1f4;
+  --color-border: #e2e6ea;
+  --color-fg: #1a1d21;
+  --color-muted: #6b7280;
+  --color-primary: #4f46e5;
+  --color-primaryfg: #ffffff;
+  --color-accent: #10b981;
+  --color-success: #10b981;
+  --color-warn: #f59e0b;
+  --color-danger: #ef4444;
+  --radius-card: 12px;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+}
+
+/* 2) Bold / Energetic — dark base, electric lime + orange, big bold type. */
+[data-theme="bold"] {
+  --color-bg: #0c0d10;
+  --color-surface: #16181d;
+  --color-surface2: #1f2228;
+  --color-border: #2b2f37;
+  --color-fg: #f5f7fa;
+  --color-muted: #9aa3b2;
+  --color-primary: #e8ff3a;
+  --color-primaryfg: #0c0d10;
+  --color-accent: #ff5c1a;
+  --color-success: #22e3a0;
+  --color-warn: #ffb020;
+  --color-danger: #ff4d4d;
+  --radius-card: 14px;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Bebas Neue', sans-serif;
+}
+
+/* 3) Warm / Friendly — cream surfaces, coral + amber, rounded shapes. */
+[data-theme="warm"] {
+  --color-bg: #faf5ef;
+  --color-surface: #fffdfa;
+  --color-surface2: #f3ece2;
+  --color-border: #e7ddcf;
+  --color-fg: #3a322a;
+  --color-muted: #8a7d6d;
+  --color-primary: #ef6f53;
+  --color-primaryfg: #ffffff;
+  --color-accent: #f0a500;
+  --color-success: #5bb98b;
+  --color-warn: #e8a33d;
+  --color-danger: #e0574b;
+  --radius-card: 20px;
+  --font-sans: 'Nunito', system-ui, sans-serif;
+  --font-display: 'Nunito', system-ui, sans-serif;
+}
+
+/* 4) Dark / Pro — deep charcoal, refined teal + sky, sharp corners. */
+[data-theme="pro"] {
+  --color-bg: #0a0e14;
+  --color-surface: #111722;
+  --color-surface2: #18202c;
+  --color-border: #243042;
+  --color-fg: #e6edf3;
+  --color-muted: #8b98a8;
+  --color-primary: #2dd4bf;
+  --color-primaryfg: #04201c;
+  --color-accent: #38bdf8;
+  --color-success: #34d399;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --radius-card: 8px;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-display: 'Sora', system-ui, sans-serif;
+}

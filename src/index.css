@@ -12,5 +12,32 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+@import "./themes.css";
+
+/* Semantic design tokens → Tailwind utilities (bg-surface, text-fg, text-primary,
+ * border-border, font-display, rounded-card, …). These are the DEFAULT values
+ * (the "Clean" look). Each [data-theme] block in themes.css overrides these same
+ * token names directly, so flipping data-theme re-skins everything that uses the
+ * utilities at runtime. (Overriding the token name directly — not via an
+ * indirection var — is required, or the utility stays locked to :root.) */
+@theme {
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface2: #eef1f4;
+  --color-border: #e2e6ea;
+  --color-fg: #1a1d21;
+  --color-muted: #6b7280;
+  --color-primary: #4f46e5;
+  --color-primaryfg: #ffffff;
+  --color-accent: #10b981;
+  --color-success: #10b981;
+  --color-warn: #f59e0b;
+  --color-danger: #ef4444;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+
+  --radius-card: 12px;
+}
 
 body { margin: 0; padding: 0; }
