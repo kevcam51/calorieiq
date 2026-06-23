@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setName, splitName, leaveTrainer } from "./profile.js";
 import { getForUser, setForUser, deleteForUser, listForUser } from "./clientData.js";
 import { auth } from "./firebase.js";
@@ -7354,10 +7355,16 @@ function SharePlanCard({ data, tdee, totalBurn, totalStrBurn }) {
 
 // ─── Progress Chart (from check-in history) ──────────────────────────────────
 
-function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerPoint, rangeLow, rangeHigh }) {
+function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerPoint, rangeLow, rangeHigh, surfaceless }) {
+  // surfaceless: drop the card background/border so the chart blends into a
+  // parent surface (used inside the brand-themed WeightChartModal, where the
+  // old purple .card background would clash with the near-black modal surface).
+  const cardStyle = surfaceless
+    ? { background: "transparent", border: "none", padding: 0, marginBottom: 0 }
+    : undefined;
   const sorted = [...(checkIns || [])].filter(c => c.weight).sort((a, b) => a.timestamp - b.timestamp);
   if (sorted.length < 2) return (
-    <div className="card" style={{padding:"16px",textAlign:"center",color:"var(--muted)",fontSize:".84rem",lineHeight:1.6}}>
+    <div className="card" style={{padding:"16px",textAlign:"center",color:"var(--muted)",fontSize:".84rem",lineHeight:1.6,...cardStyle}}>
       📈 Progress chart appears after 2+ check-ins with weight logged. Keep checking in daily!
     </div>
   );
@@ -7400,7 +7407,7 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
   const adherence = checkIns.length > 0 ? Math.round((hitDays / checkIns.length) * 100) : 0;
 
   return (
-    <div className="card" style={{padding:"16px",marginBottom:"16px"}}>
+    <div className="card" style={{padding:"16px",marginBottom:"16px",...cardStyle}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
         <div>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"var(--accent)"}}>📈 Progress</div>
@@ -7528,9 +7535,8 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
 // it read-only). `startWeight` lets the chart draw a "start → now" segment when
 // there's only one real weigh-in yet.
 function WeightChartModal({ checkIns, goalWeight, currentWeight, rangeLow, rangeHigh, startWeight, onDelete, onClose }) {
-  const miniBtn = { padding: "5px 9px", fontSize: ".74rem", fontWeight: 600, borderRadius: "7px",
-    border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
-    color: "var(--text)", cursor: "pointer", whiteSpace: "nowrap" };
+  // Self-contained brand theme (data-theme="pro") so it looks identical whether
+  // it's opened from the pro-themed Client Dashboard or the old-styled Results.
   const w = Number(currentWeight) || 0;
   const start = Number(startWeight) || 0;
   const weighIns = [...(checkIns || [])].filter(c => c.weight).sort((a, b) => a.timestamp - b.timestamp);
@@ -7540,45 +7546,46 @@ function WeightChartModal({ checkIns, goalWeight, currentWeight, rangeLow, range
     chartCheckIns = [{ date: new Date(firstTs - 86400000).toISOString().slice(0, 10),
       timestamp: firstTs - 86400000, weight: start, hitTarget: null }, ...(checkIns || [])];
   }
-  return (
-    <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 1000,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+  // Rendered through a portal to document.body so it anchors to the viewport,
+  // not to a transformed ancestor (the .page-transition wrapper keeps a CSS
+  // transform, which would otherwise become the containing block for fixed).
+  return createPortal(
+    <div data-theme="pro" onClick={onClose} style={{ fontFamily: "var(--font-sans)" }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
       <div onClick={e => e.stopPropagation()}
-        style={{ background: "var(--bg,#0d0d18)", borderRadius: 14, padding: 16, width: "100%",
-          maxWidth: 640, maxHeight: "88vh", overflow: "auto",
-          border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>📈 Weight progress</div>
-          <button style={miniBtn} onClick={onClose}>✕ Close</button>
+        className="w-full max-w-[640px] max-h-[88vh] overflow-auto rounded-card border border-border bg-surface p-4 text-fg">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[1.05rem] font-extrabold">📈 Weight progress</div>
+          <button onClick={onClose}
+            className="rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs font-semibold text-fg cursor-pointer whitespace-nowrap">✕ Close</button>
         </div>
         <ProgressChart checkIns={chartCheckIns} goalWeight={goalWeight} currentWeight={w} showValues pxPerPoint={64}
-          rangeLow={rangeLow} rangeHigh={rangeHigh} />
+          rangeLow={rangeLow} rangeHigh={rangeHigh} surfaceless />
         {onDelete && weighIns.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: ".8rem", color: "var(--muted)", marginBottom: 6 }}>
+          <div className="mt-3.5">
+            <div className="mb-1.5 text-sm text-muted">
               Weigh-ins ({weighIns.length}) — tap ✕ to remove a mistake
             </div>
-            <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className="flex max-h-[180px] flex-col gap-1 overflow-y-auto">
               {[...weighIns].reverse().map((c) => (
-                <div key={c.timestamp} style={{ display: "flex", justifyContent: "space-between",
-                  alignItems: "center", padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,.04)" }}>
-                  <span style={{ fontSize: ".88rem", fontWeight: 600 }}>
+                <div key={c.timestamp}
+                  className="flex items-center justify-between rounded-lg bg-surface2 px-2.5 py-1.5">
+                  <span className="text-[.88rem] font-semibold">
                     {c.weight} lbs
-                    <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: ".76rem", marginLeft: 8 }}>
+                    <span className="ml-2 text-[.76rem] font-normal text-muted">
                       {new Date(c.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                     </span>
                   </span>
                   <button onClick={() => onDelete(c.timestamp)} title="Delete this weigh-in"
-                    style={{ background: "transparent", border: "none", color: "#e5484d",
-                      cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "2px 6px" }}>✕</button>
+                    className="cursor-pointer border-none bg-transparent px-1.5 py-0.5 text-base leading-none text-danger">✕</button>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -7832,20 +7839,16 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
     } finally { setBusy(false); }
   };
 
-  const field = { padding:"10px 12px", fontSize:".9rem", borderRadius:"8px",
-    border:"1px solid rgba(255,255,255,.15)", background:"rgba(255,255,255,.05)",
-    color:"var(--text)", flex:1, minWidth:0 };
-  const btn = { padding:"10px 14px", fontSize:".85rem", fontWeight:700, borderRadius:"8px",
-    border:"none", background:"var(--accent)", color:"#111", cursor:"pointer" };
-  const btnGhost = { padding:"7px 10px", fontSize:".78rem", fontWeight:600, borderRadius:"8px",
-    border:"1px solid rgba(255,255,255,.2)", background:"transparent", color:"var(--text)",
-    cursor:"pointer", textAlign:"left" };
+  // Tailwind classes (matches the Session-26 ClientHome brand theme it renders in).
+  const fieldCls = "flex-1 min-w-0 rounded-lg border border-border bg-surface2 px-3 py-2.5 text-[.9rem] text-fg outline-none placeholder:text-muted";
+  const btnCls = "rounded-lg border-none bg-primary px-3.5 py-2.5 text-[.85rem] font-bold text-primaryfg cursor-pointer whitespace-nowrap disabled:opacity-55";
+  const subCls = "text-[.85rem] text-muted leading-relaxed";
 
   return (
-    <div className="card">
-      <div className="card-title">
+    <div className="bg-surface border border-border rounded-card p-5 text-fg">
+      <div className="mb-3 text-[.95rem] font-extrabold">
         {isTrainer ? "🧑‍🏫 Trainer" : "🙋 Client"}
-        <span style={{ fontWeight:400, color:"var(--muted)", fontSize:".8rem", marginLeft:8 }}>
+        <span className="ml-2 text-[.8rem] font-normal text-muted">
           {profile.email}
         </span>
       </div>
@@ -7854,21 +7857,21 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
           (Editing an existing name will move into the profile side menu later.) */}
       {!profile.displayName && (
         <>
-          <div className="card-sub" style={{ marginBottom:6 }}>
+          <div className={`${subCls} mb-1.5`}>
             Your name{isTrainer ? "" : " (optional)"}
           </div>
-          <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"0 0 16px" }}>
+          <div className="mb-4 flex items-center gap-2">
             <input
-              style={field} value={firstInput} placeholder="First name"
+              className={fieldCls} value={firstInput} placeholder="First name"
               onChange={(e) => setFirstInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
             />
             <input
-              style={field} value={lastInput} placeholder="Last name"
+              className={fieldCls} value={lastInput} placeholder="Last name"
               onChange={(e) => setLastInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
             />
-            <button style={btn} onClick={saveName} disabled={savingName}>
+            <button className={btnCls} onClick={saveName} disabled={savingName}>
               {savingName ? "…" : "Save"}
             </button>
           </div>
@@ -7876,35 +7879,34 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
       )}
 
       {isTrainer ? (
-        <div className="card-sub" style={{ marginBottom:0 }}>
-          📨 Invite codes &amp; links now live in the <strong style={{ color:"var(--text)" }}>≡ menu → Invite clients</strong>.
+        <div className={subCls}>
+          📨 Invite codes &amp; links now live in the <strong className="text-fg">≡ menu → Invite clients</strong>.
           Your connected clients (link / open / manage) are on the Dashboard.
         </div>
       ) : (
         <>
           {profile.assignedTrainerId ? (
             <>
-              <div className="card-sub">
+              <div className={subCls}>
                 You're linked to trainer:{" "}
-                <strong style={{ color:"var(--text)" }}>
+                <strong className="text-fg">
                   {trainerName || profile.assignedTrainerId}
                 </strong>
               </div>
               {confirmLeave ? (
-                <div style={{ marginTop:10 }}>
-                  <div style={{ fontSize:".85rem", color:"var(--text)", marginBottom:8 }}>
+                <div className="mt-2.5">
+                  <div className="mb-2 text-[.85rem] text-fg">
                     Leave this trainer? You can re-join later with their code.
                   </div>
-                  <div style={{ display:"flex", gap:"8px" }}>
+                  <div className="flex gap-2">
                     <button
-                      style={{ ...btn, background:"#e5484d", color:"#fff" }}
+                      className="rounded-lg border-none bg-danger px-3.5 py-2.5 text-[.85rem] font-bold text-white cursor-pointer disabled:opacity-55"
                       onClick={leave} disabled={busy}
                     >
                       {busy ? "…" : "Yes, leave"}
                     </button>
                     <button
-                      style={{ ...btn, background:"transparent", color:"var(--muted)",
-                        border:"1px solid rgba(255,255,255,.2)" }}
+                      className="rounded-lg border border-border bg-transparent px-3.5 py-2.5 text-[.85rem] font-bold text-muted cursor-pointer disabled:opacity-55"
                       onClick={() => setConfirmLeave(false)} disabled={busy}
                     >
                       Cancel
@@ -7913,8 +7915,7 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
                 </div>
               ) : (
                 <button
-                  style={{ ...btn, background:"transparent", color:"var(--muted)",
-                    border:"1px solid rgba(255,255,255,.2)", marginTop:10 }}
+                  className="mt-2.5 rounded-lg border border-border bg-transparent px-3.5 py-2.5 text-[.85rem] font-bold text-muted cursor-pointer disabled:opacity-55"
                   onClick={() => setConfirmLeave(true)} disabled={busy}
                 >
                   Leave trainer
@@ -7923,16 +7924,16 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
             </>
           ) : (
             <>
-              <div className="card-sub">
+              <div className={subCls}>
                 Have a trainer? Paste their invite code to link your account.
               </div>
-              <div style={{ display:"flex", gap:"8px", alignItems:"center", margin:"4px 0" }}>
+              <div className="my-1 flex items-center gap-2">
                 <input
-                  style={field} value={code} placeholder="Trainer invite code"
+                  className={fieldCls} value={code} placeholder="Trainer invite code"
                   onChange={(e) => setCode(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && join()}
                 />
-                <button style={btn} onClick={join} disabled={busy}>
+                <button className={btnCls} onClick={join} disabled={busy}>
                   {busy ? "…" : "Join"}
                 </button>
               </div>
@@ -7940,7 +7941,7 @@ function RolePanel({ onOpenClientPlan, onLinked, onCopyToLocal } = {}) {
           )}
         </>
       )}
-      {msg && <div style={{ marginTop:8, fontSize:".82rem", color:"var(--muted)" }}>{msg}</div>}
+      {msg && <div className="mt-2 text-[.82rem] text-muted">{msg}</div>}
     </div>
   );
 }
@@ -8019,18 +8020,9 @@ function QuickActionModal({ request, onWeighIn, onLogFood, onLogWorkout, onOpenP
   };
   const run = async (fn) => { setBusy(true); const ok = await fn(); await finish(ok); };
 
-  const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 1000,
-    display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
-  const sheet = { background: "var(--bg,#0d0d18)", borderRadius: 14, padding: 18, width: "100%",
-    maxWidth: 440, border: "1px solid var(--border,rgba(255,255,255,.12))" };
-  const input = { width: "100%", boxSizing: "border-box", borderRadius: 8, fontSize: "1.1rem",
-    border: "1px solid var(--border,rgba(255,255,255,.2))", background: "var(--surface,#16162a)",
-    color: "var(--text)", padding: "12px 14px", fontFamily: "inherit", textAlign: "center" };
-  const primary = { padding: "11px 14px", fontSize: ".92rem", fontWeight: 700, borderRadius: 9,
-    border: "none", background: "var(--accent)", color: "#0b0b12", cursor: "pointer", flex: 1 };
-  const ghost = { padding: "11px 14px", fontSize: ".88rem", fontWeight: 600, borderRadius: 9,
-    border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
-    color: "var(--text)", cursor: "pointer" };
+  const inputCls = "w-full box-border rounded-lg border border-border bg-surface2 px-3.5 py-3 text-center text-[1.1rem] text-fg outline-none placeholder:text-muted";
+  const primaryCls = "flex-1 rounded-[9px] border-none bg-primary px-3.5 py-3 text-[.92rem] font-bold text-primaryfg cursor-pointer disabled:opacity-55 disabled:cursor-default";
+  const ghostCls = "rounded-[9px] border border-border bg-transparent px-3.5 py-3 text-[.88rem] font-semibold text-fg cursor-pointer";
 
   const meta = {
     weigh_in:    { icon: "⚖️", title: "Log today's weight", label: "Today's weight (lbs)", ph: "e.g. 182", cta: "Log weight",  numeric: true,  fn: () => onWeighIn(val) },
@@ -8038,45 +8030,48 @@ function QuickActionModal({ request, onWeighIn, onLogFood, onLogWorkout, onOpenP
     log_workout: { icon: "🏋️", title: "Record your workout", label: "Add a note (optional)", ph: "e.g. Push day — felt strong", cta: "Mark workout done", numeric: false, fn: () => onLogWorkout(val) },
   }[type];
 
-  return (
-    <div style={overlay} onClick={onClose}>
-      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    <div data-theme="pro" onClick={onClose} style={{ fontFamily: "var(--font-sans)" }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
+      <div onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[440px] rounded-card border border-border bg-surface p-[18px] text-fg">
         {done ? (
-          <div style={{ textAlign: "center", padding: "18px 0" }}>
-            <div style={{ fontSize: "2.2rem" }}>✅</div>
-            <div style={{ fontSize: "1.05rem", fontWeight: 800, marginTop: 6 }}>Done!</div>
+          <div className="py-[18px] text-center">
+            <div className="text-[2.2rem]">✅</div>
+            <div className="mt-1.5 text-[1.05rem] font-extrabold">Done!</div>
           </div>
         ) : isLoggable ? (
           <>
-            <div style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: 4 }}>{meta.icon} {meta.title}</div>
-            <div style={{ fontSize: ".82rem", color: "var(--muted)", marginBottom: 14 }}>{request.prompt}</div>
-            <label style={{ fontSize: ".72rem", color: "var(--muted-light)", textTransform: "uppercase", letterSpacing: ".5px" }}>{meta.label}</label>
+            <div className="mb-1 text-[1.05rem] font-extrabold">{meta.icon} {meta.title}</div>
+            <div className="mb-3.5 text-[.82rem] text-muted">{request.prompt}</div>
+            <label className="text-[.72rem] uppercase tracking-[.5px] text-muted">{meta.label}</label>
             <input autoFocus type={meta.numeric ? "number" : "text"} inputMode={meta.numeric ? "decimal" : "text"}
-              value={val} placeholder={meta.ph} style={{ ...input, margin: "6px 0 16px" }}
+              value={val} placeholder={meta.ph} className={`${inputCls} my-1.5 mb-4`}
               onChange={(e) => setVal(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !busy) run(meta.fn); }} />
-            <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ ...primary, opacity: busy || (meta.numeric && !(Number(val) > 0)) ? .55 : 1 }}
+            <div className="flex gap-2.5">
+              <button className={primaryCls}
                 disabled={busy || (meta.numeric && !(Number(val) > 0))}
                 onClick={() => run(meta.fn)}>{busy ? "Saving…" : meta.cta}</button>
-              <button style={ghost} disabled={busy} onClick={onClose}>Cancel</button>
+              <button className={ghostCls} disabled={busy} onClick={onClose}>Cancel</button>
             </div>
           </>
         ) : (
           // enter_info / custom — needs the full editor, so offer a jump there.
           <>
-            <div style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: 4 }}>📝 {request.prompt}</div>
-            <div style={{ fontSize: ".82rem", color: "var(--muted)", marginBottom: 16 }}>
+            <div className="mb-1 text-[1.05rem] font-extrabold">📝 {request.prompt}</div>
+            <div className="mb-4 text-[.82rem] text-muted">
               Open your plan to take care of this, then come back.
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button style={primary} onClick={() => { onMarkDone(); onOpenPlan(); }}>Open my plan →</button>
-              <button style={ghost} onClick={onClose}>Close</button>
+            <div className="flex gap-2.5">
+              <button className={primaryCls} onClick={() => { onMarkDone(); onOpenPlan(); }}>Open my plan →</button>
+              <button className={ghostCls} onClick={onClose}>Close</button>
             </div>
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

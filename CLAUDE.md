@@ -474,6 +474,32 @@ enabled (Blaze has no default spending cap).
   migrated (later passes):** the modals (`WeightChartModal`/`QuickActionModal`) and `RolePanel` still use
   the old styles (they render fine, just slightly different) — safe to do next. Verified: renders with
   real data, interactions work (weight-log toggle etc.), no console errors. No `firestore.rules` change.
+- Session 27: **Finished the Client screen — modals + RolePanel migrated to Tailwind + brand theme.**
+  Closed out Session 26's deferred items (Option 3, client screen done). The three components that still
+  used old inline styles inside `ClientHome` were rewritten with Tailwind utilities + the semantic tokens
+  (`bg-surface`/`text-fg`/`text-muted`/`border-border`/`bg-primary`/`text-primaryfg`/`rounded-card`/
+  `bg-danger`), **logic/handlers/state untouched** (pure visual swap). (1) **`WeightChartModal`** and
+  (2) **`QuickActionModal`** each got their **own `data-theme="pro"` wrapper** on the overlay root, so
+  they're self-contained — important for `WeightChartModal`, which is ALSO opened from the old-styled
+  **Results** page (no `pro` wrapper there); previously a token-based modal would have fallen back to the
+  light default `@theme` and rendered white-on-dark. Now it looks identical from the Client Dashboard and
+  Results. (3) **`RolePanel`** (the client's "🙋 Client / linked-trainer / Leave / join-by-code" card)
+  was converted from the old `card`/`card-title`/`card-sub` classes + inline style objects to Tailwind
+  class-string consts (`fieldCls`/`btnCls`/`subCls`); it renders inside `ClientHome`'s `pro` wrapper so no
+  own `data-theme` is needed. The Leave-trainer confirm uses `bg-danger`. **`ProgressChart`** got an
+  optional `surfaceless` prop (passed from `WeightChartModal`) that drops its old `.card` purple
+  background/border so the chart blends into the brand modal's near-black surface; the Results "Pro
+  Tracking" chart keeps its normal card styling (prop omitted there). **Pre-existing bug fixed while
+  here:** both modals used `position:fixed; inset:0` with no portal, so when opened from the **Results**
+  page they anchored to the `.page-transition` wrapper (Session 18) — which keeps a CSS `transform`,
+  making it the containing block for `fixed` descendants — instead of the viewport, rendering mis-sized
+  and unusable. Fixed by rendering both modals through a **`createPortal(…, document.body)`** so they
+  escape the transformed ancestor (new import: `createPortal` from `react-dom`). This was broken since
+  Session 18, only surfaced now because the modal is normally opened from the Client Dashboard (where the
+  trap didn't apply), not Results. Verified live from BOTH entry points (logged in as `client.uitest` for
+  the dashboard and `trainer.uitest` → Casey's shared plan → Full Plan → Pro Tracking for Results): the
+  modal anchors to the viewport (375×812 at 0,0), renders on-brand, weigh-in delete list works, no console
+  errors, `npm run build` passes. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
