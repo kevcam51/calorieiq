@@ -76,9 +76,9 @@
  *    cyan (#08DCE0) as primary. Sharp, premium, data-forward. */
 [data-theme="pro"] {
   --color-bg: #05080a;          /* reads black like the logo */
-  --color-surface: #121b1e;     /* clearly lifted off the bg so cards pop */
-  --color-surface2: #1b2629;
-  --color-border: #28403f;      /* visible cyan-tinted hairline */
+  --color-surface: #161f24;     /* clearly lifted off the near-black bg so cards pop */
+  --color-surface2: #1e2a2e;
+  --color-border: #2e4241;      /* visible cyan-tinted hairline */
   --color-fg: #eafcfc;          /* near-white, faint cyan cast */
   --color-muted: #7e9a9a;       /* muted cyan-grey */
   --color-primary: #08dce0;     /* Smooth Training cyan (sampled from the logo) */

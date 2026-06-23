@@ -9,9 +9,15 @@
  * referenced. New components (themes / showcase) use utilities explicitly.
  * Enable preflight later (add the preflight import) when we fully migrate.
  */
-@layer theme, base, components, utilities;
+@layer theme;
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+/* Utilities imported UNLAYERED on purpose: App.jsx's own <style> block has an
+ * unlayered global reset (*{margin:0;padding:0}). Layered utilities lose to any
+ * unlayered rule, so padding/margin utilities (px-4, mt-4, space-y-*) would be
+ * killed inside the app. Unlayered, a class utility (.px-4, specificity 0,1,0)
+ * beats the universal reset (0,0,0). Existing app screens are unaffected (they
+ * don't use Tailwind classes; no element has both systems). */
+@import "tailwindcss/utilities.css";
 @import "./themes.css";
 
 /* Semantic design tokens → Tailwind utilities (bg-surface, text-fg, text-primary,

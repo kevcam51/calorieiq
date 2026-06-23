@@ -9062,7 +9062,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   const firstName = (planData && planData.firstName) || (meName ? meName.split(" ")[0] : "");
 
   // Tailwind class strings (Session 26 redesign — brand theme via data-theme="pro").
-  const cardCls = "bg-surface border border-border rounded-card p-5 shadow-[0_2px_12px_rgba(0,0,0,.45)]";
+  const cardCls = "bg-surface border border-border rounded-card p-5";
   const inputCls = "flex-1 min-w-0 bg-surface2 border border-border rounded-lg px-3 py-2.5 text-fg text-[.95rem] outline-none placeholder:text-muted";
   const primaryBtnCls = "px-4 py-2.5 rounded-lg font-bold text-sm bg-primary text-primaryfg cursor-pointer whitespace-nowrap";
   const ghostBtnCls = "px-4 py-2.5 rounded-lg font-semibold text-sm bg-transparent text-fg border border-border cursor-pointer whitespace-nowrap";
