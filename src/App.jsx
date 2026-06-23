@@ -9061,90 +9061,74 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   const remaining = target != null ? target - consumed : null;
   const firstName = (planData && planData.firstName) || (meName ? meName.split(" ")[0] : "");
 
-  const field = { padding: "10px 12px", fontSize: ".95rem", borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.05)",
-    color: "var(--text)", flex: 1, minWidth: 0 };
-  const logBtn = { padding: "10px 16px", fontSize: ".88rem", fontWeight: 700, borderRadius: "8px",
-    border: "none", background: "var(--accent)", color: "#0b0b12", cursor: "pointer", whiteSpace: "nowrap" };
-  const openBtn = { marginTop: 12, width: "100%", padding: "12px 14px", fontSize: ".95rem",
-    fontWeight: 700, borderRadius: "10px", border: "none", background: "var(--accent)",
-    color: "#0b0b12", cursor: "pointer" };
-  const ghostOpen = { ...openBtn, background: "transparent", color: "var(--text)",
-    border: "1px solid var(--border,rgba(255,255,255,.2))" };
-  const miniBtn = { padding: "5px 9px", fontSize: ".74rem", fontWeight: 600, borderRadius: "7px",
-    border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
-    color: "var(--text)", cursor: "pointer", whiteSpace: "nowrap" };
-  const miniBtnActive = { background: "var(--accent)", color: "#0b0b12", border: "none" };
+  // Tailwind class strings (Session 26 redesign — brand theme via data-theme="pro").
+  const cardCls = "bg-surface border border-border rounded-card p-5 shadow-[0_2px_12px_rgba(0,0,0,.45)]";
+  const inputCls = "flex-1 min-w-0 bg-surface2 border border-border rounded-lg px-3 py-2.5 text-fg text-[.95rem] outline-none placeholder:text-muted";
+  const primaryBtnCls = "px-4 py-2.5 rounded-lg font-bold text-sm bg-primary text-primaryfg cursor-pointer whitespace-nowrap";
+  const ghostBtnCls = "px-4 py-2.5 rounded-lg font-semibold text-sm bg-transparent text-fg border border-border cursor-pointer whitespace-nowrap";
+  const miniBtnCls = "px-2.5 py-1.5 rounded-md text-xs font-semibold bg-transparent text-fg border border-border cursor-pointer whitespace-nowrap";
+  const miniBtnActiveCls = "px-2.5 py-1.5 rounded-md text-xs font-bold bg-primary text-primaryfg border-0 cursor-pointer whitespace-nowrap";
 
   return (
-    <div className="prof-screen page-transition">
+    <div data-theme="pro" className="page-transition min-h-screen bg-bg text-fg" style={{ fontFamily: "var(--font-sans)" }}>
       <style>{css}</style>
-      <div className="header">
-        <div className="logo">CALORIE<span>IQ</span></div>
-        <div className="tagline">Maintenance · Deficit · Cardio · Strength · Timeline</div>
+      {/* Slim brand header — min-height clears the fixed hamburger (App chrome). */}
+      <div className="flex items-center justify-center min-h-[54px] px-14 border-b border-border">
+        <span className="font-display text-2xl tracking-[2px] text-primary">CALORIE<span className="text-fg">IQ</span></span>
       </div>
-      <div className="container">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 14px" }}>
-          <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>
-            {firstName ? `Hi, ${firstName} 👋` : ""}
+      <div className="max-w-[640px] mx-auto px-4 pt-6 pb-28">
+        <div className="flex items-center justify-between mb-5">
+          <div className="text-2xl font-extrabold tracking-tight">
+            {firstName ? `Hi, ${firstName} 👋` : "Your dashboard"}
           </div>
           <button onClick={() => load()} title="Reload the latest from your plan"
-            style={{ padding: "6px 10px", fontSize: ".78rem", fontWeight: 600, borderRadius: "8px",
-              border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
-              color: "var(--muted)", cursor: "pointer", whiteSpace: "nowrap" }}>
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-transparent text-muted cursor-pointer whitespace-nowrap">
             ↻ Refresh
           </button>
         </div>
 
         {/* Plan switcher (Session 21) — pick the active plan, or make a new one. */}
         {planData !== undefined && (planData || plans.length > 1) && (
-          <div style={{ marginBottom: 14 }}>
+          <div className="mb-4">
             <button onClick={() => setShowPlans((s) => !s)}
-              style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-                border: "1px solid var(--border,rgba(255,255,255,.2))", background: "var(--surface,#16162a)", color: "var(--text)" }}>
-              <span style={{ fontWeight: 600, fontSize: ".9rem" }}>
+              className="w-full flex justify-between items-center px-3.5 py-2.5 rounded-card border border-border bg-surface text-fg cursor-pointer">
+              <span className="font-semibold text-sm">
                 🗂️ {(plans.find((p) => p.id === activePlanId) || {}).name || "Main plan"}
-                {plans.length > 1 ? <span style={{ color: "var(--muted)", fontWeight: 400 }}> · {plans.length} plans</span> : ""}
+                {plans.length > 1 ? <span className="text-muted font-normal"> · {plans.length} plans</span> : ""}
               </span>
-              <span style={{ color: "var(--muted)" }}>{showPlans ? "▴" : "▾"}</span>
+              <span className="text-muted">{showPlans ? "▴" : "▾"}</span>
             </button>
             {showPlans && (
-              <div style={{ marginTop: 6, padding: 8, borderRadius: 10, display: "flex", flexDirection: "column", gap: 4,
-                border: "1px solid var(--border,rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)" }}>
+              <div className="mt-1.5 p-2 rounded-card border border-border bg-surface2 flex flex-col gap-1">
                 {plans.map((p) => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: 7,
-                    background: p.id === activePlanId ? "rgba(8,220,224,.08)" : "transparent" }}>
+                  <div key={p.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md"
+                    style={p.id === activePlanId ? { background: "color-mix(in srgb, var(--color-primary) 12%, transparent)" } : undefined}>
                     {renamingPlanId === p.id ? (
                       <>
                         <input autoFocus value={planNameDraft} onChange={(e) => setPlanNameDraft(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") { renamePlan(p.id, planNameDraft.trim()); setRenamingPlanId(null); } }}
-                          style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)",
-                            background: "var(--s2)", color: "var(--text)", fontSize: ".85rem" }} />
+                          className="flex-1 px-2 py-1 rounded border border-border bg-bg text-fg text-sm outline-none" />
                         <button onClick={() => { renamePlan(p.id, planNameDraft.trim()); setRenamingPlanId(null); }}
-                          style={{ border: "none", background: "var(--accent)", color: "#0b0b12", fontWeight: 700,
-                            borderRadius: 6, padding: "5px 9px", fontSize: ".76rem", cursor: "pointer" }}>Save</button>
+                          className="border-0 bg-primary text-primaryfg font-bold rounded px-2.5 py-1 text-xs cursor-pointer">Save</button>
                       </>
                     ) : (
                       <>
                         <button onClick={() => switchPlan(p.id)}
-                          style={{ flex: 1, textAlign: "left", border: "none", background: "transparent", cursor: "pointer",
-                            color: "var(--text)", fontSize: ".88rem", fontWeight: p.id === activePlanId ? 700 : 400 }}>
+                          className={`flex-1 text-left border-0 bg-transparent cursor-pointer text-fg text-sm ${p.id === activePlanId ? "font-bold" : "font-normal"}`}>
                           {p.id === activePlanId ? "● " : "○ "}{p.name}
                         </button>
                         <button onClick={() => { setPlanNameDraft(p.name); setRenamingPlanId(p.id); }} title="Rename"
-                          style={{ border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: ".85rem" }}>✎</button>
+                          className="border-0 bg-transparent text-muted cursor-pointer text-sm">✎</button>
                         {p.id !== "self" && plans.length > 1 && (
                           <button onClick={() => deletePlan(p.id)} title="Delete plan"
-                            style={{ border: "none", background: "transparent", color: "#e5484d", cursor: "pointer", fontSize: ".85rem" }}>✕</button>
+                            className="border-0 bg-transparent text-danger cursor-pointer text-sm">✕</button>
                         )}
                       </>
                     )}
                   </div>
                 ))}
                 <button onClick={() => createPlan()}
-                  style={{ marginTop: 4, padding: "8px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: ".82rem",
-                    border: "1px dashed var(--border,rgba(255,255,255,.25))", background: "transparent", color: "var(--accent)" }}>
+                  className="mt-1 p-2 rounded-md cursor-pointer font-bold text-sm border border-dashed border-border bg-transparent text-primary">
                   + New plan
                 </button>
               </div>
@@ -9154,32 +9138,23 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
 
         {/* Trainer requests — actionable to-dos at the very top (Session 19). */}
         {requests.filter((r) => r.status !== "done").length > 0 && (
-          <div className="card" style={{ border: "1px solid var(--accent)", background: "rgba(8,220,224,.05)" }}>
-            <div className="card-title" style={{ marginBottom: 4 }}>📬 From your trainer</div>
-            <div className="card-sub" style={{ marginBottom: 12 }}>
+          <div className={`${cardCls} mb-4 border-primary`}
+            style={{ background: "color-mix(in srgb, var(--color-primary) 6%, var(--color-surface))" }}>
+            <div className="font-display text-base tracking-wide text-primary uppercase mb-0.5">📬 From your trainer</div>
+            <div className="text-muted text-sm mb-3">
               {requests.filter((r) => r.status !== "done").length} thing{requests.filter((r) => r.status !== "done").length !== 1 ? "s" : ""} to do
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="flex flex-col gap-2">
               {requests.filter((r) => r.status !== "done").map((r) => {
                 const tmpl = REQUEST_TEMPLATES.find((t) => t.type === r.type);
                 return (
-                  <div key={r.id} style={{ padding: "10px 12px", borderRadius: 8,
-                    background: "rgba(255,255,255,.04)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
-                    <div style={{ fontSize: ".9rem", color: "var(--text)", marginBottom: 8 }}>
+                  <div key={r.id} className="px-3 py-2.5 rounded-lg bg-surface2 border border-border">
+                    <div className="text-[.9rem] text-fg mb-2">
                       {tmpl ? `${tmpl.icon} ` : "📝 "}{r.prompt}
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button onClick={() => setQuickReq(r)}
-                        style={{ padding: "7px 12px", fontSize: ".8rem", fontWeight: 700, borderRadius: 7,
-                          border: "none", background: "var(--accent)", color: "#0b0b12", cursor: "pointer" }}>
-                        Do it now →
-                      </button>
-                      <button onClick={() => markRequestDone(r.id)}
-                        style={{ padding: "7px 12px", fontSize: ".8rem", fontWeight: 600, borderRadius: 7,
-                          border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent",
-                          color: "var(--text)", cursor: "pointer" }}>
-                        ✓ Mark done
-                      </button>
+                    <div className="flex gap-2 flex-wrap">
+                      <button onClick={() => setQuickReq(r)} className={primaryBtnCls}>Do it now →</button>
+                      <button onClick={() => markRequestDone(r.id)} className={ghostBtnCls}>✓ Mark done</button>
                     </div>
                   </div>
                 );
@@ -9189,50 +9164,51 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
         )}
 
         {planData === undefined ? (
-          <div className="card"><div className="card-sub">Loading your plan…</div></div>
+          <div className={cardCls}><div className="text-muted text-sm">Loading your plan…</div></div>
         ) : planData === null || !w ? (
           // No plan set up yet — friendly get-started prompt instead of empty cards.
-          <div className="card">
-            <div className="card-title">📋 Get started</div>
-            <div className="card-sub">
+          <div className={cardCls}>
+            <div className="font-display text-base tracking-wide text-primary uppercase mb-1">📋 Get started</div>
+            <div className="text-muted text-sm mb-4">
               You don't have a plan set up yet. Open it to enter your details and
               goals — or if your trainer linked one, it'll be waiting for you.
             </div>
-            <button onClick={onOpenPlan} style={openBtn}>Set up my plan</button>
+            <button onClick={onOpenPlan} className={`${primaryBtnCls} w-full py-3 text-base`}>Set up my plan</button>
           </div>
         ) : (
-          <>
-            {/* Weight → goal */}
-            <div className="card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <div className="card-title" style={{ marginBottom: 0 }}>🎯 Weight &amp; goal</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button style={miniBtn} onClick={() => setShowChart(true)} title="See your progress chart">📈 Progress</button>
-                  <button style={{ ...miniBtn, ...(showWt ? miniBtnActive : {}) }}
+          <div className="flex flex-col gap-4">
+            {/* Weight → goal (hero — biggest element on the screen) */}
+            <div className={cardCls}>
+              <div className="flex justify-between items-center gap-2 mb-3">
+                <div className="font-display text-base tracking-wide text-primary uppercase">🎯 Weight &amp; goal</div>
+                <div className="flex gap-1.5">
+                  <button className={miniBtnCls} onClick={() => setShowChart(true)} title="See your progress chart">📈 Progress</button>
+                  <button className={showWt ? miniBtnActiveCls : miniBtnCls}
                     onClick={() => setShowWt(s => !s)} title="Log today's weight">
                     {showWt ? "Close" : "✎ Log"}
                   </button>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-                <span style={{ fontSize: "1.6rem", fontWeight: 800 }}>{w} lbs</span>
-                {g ? <span style={{ color: "var(--muted)" }}>→ {g} lbs</span> : null}
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <span className="font-display text-5xl leading-none">{w}<span className="text-2xl text-muted ml-1">lbs</span></span>
+                {g ? <span className="text-muted text-lg">→ {g} lbs</span> : null}
               </div>
-              {prevWeight != null && (
-                <div style={{ marginTop: 4, fontSize: ".8rem", color: "var(--muted)" }}>
-                  Previous: {prevWeight} lbs{w ? ` (${w - prevWeight > 0 ? "+" : ""}${Math.round((w - prevWeight) * 10) / 10} lbs)` : ""}
-                </div>
-              )}
               {toGo != null && toGo !== 0 && (
-                <div style={{ marginTop: 6, color: "var(--accent)", fontWeight: 700 }}>
+                <div className="mt-3 inline-block px-2.5 py-1 rounded-full text-primary font-bold text-sm"
+                  style={{ background: "color-mix(in srgb, var(--color-primary) 15%, transparent)" }}>
                   {Math.abs(toGo)} lbs to {toGo > 0 ? "lose" : "gain"}
                 </div>
               )}
+              {prevWeight != null && (
+                <div className="mt-2 text-sm text-muted">
+                  Previous: {prevWeight} lbs{w ? ` (${w - prevWeight > 0 ? "+" : ""}${Math.round((w - prevWeight) * 10) / 10} lbs)` : ""}
+                </div>
+              )}
               {hasRange && (
-                <div style={{ marginTop: 6, fontSize: ".8rem" }}>
-                  <span style={{ color: "var(--muted)" }}>Range: {rLo}–{rHi} lbs</span>
+                <div className="mt-1.5 text-sm">
+                  <span className="text-muted">Range: {rLo}–{rHi} lbs</span>
                   {" · "}
-                  <span style={{ fontWeight: 600, color: inRange ? "#39d98a" : "#f0a020" }}>
+                  <span className={`font-semibold ${inRange ? "text-success" : "text-warn"}`}>
                     {inRange ? "✅ in range"
                       : w < rLo ? `${rangeGap} lbs below range`
                       : `${rangeGap} lbs above range`}
@@ -9240,68 +9216,61 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
                 </div>
               )}
               {change != null && change !== 0 && (
-                <div style={{ marginTop: 6, fontSize: ".82rem", fontWeight: 600,
-                  color: towardGoal == null ? "var(--muted)" : towardGoal ? "#39d98a" : "#e5848d" }}>
+                <div className={`mt-1.5 text-sm font-semibold ${towardGoal == null ? "text-muted" : towardGoal ? "text-success" : "text-danger"}`}>
                   {change < 0 ? "▼" : "▲"} {Math.abs(change)} lbs {change < 0 ? "lost" : "gained"} since start
                 </div>
               )}
               {showWt && (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: ".82rem", color: "var(--muted)", marginBottom: 6 }}>
-                    Log today's weight
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input style={field} type="number" inputMode="decimal" placeholder="Today's weight (lbs)"
+                <div className="mt-3">
+                  <div className="text-sm text-muted mb-1.5">Log today's weight</div>
+                  <div className="flex gap-2">
+                    <input className={inputCls} type="number" inputMode="decimal" placeholder="Today's weight (lbs)"
                       value={wtDraft} onChange={e => setWtDraft(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") logWeight(); }} autoFocus />
-                    <button style={logBtn} onClick={logWeight}>Log</button>
+                    <button className={primaryBtnCls} onClick={logWeight}>Log</button>
                   </div>
-                  {wtMsg ? <div style={{ marginTop: 8, fontSize: ".82rem", color: "var(--muted)" }}>{wtMsg}</div> : null}
+                  {wtMsg ? <div className="mt-2 text-sm text-muted">{wtMsg}</div> : null}
                 </div>
               )}
             </div>
 
             {/* Projected timeline from the actual logged trend */}
-            <div className="card">
-              <div className="card-title">⏳ Time to goal</div>
+            <div className={cardCls}>
+              <div className="font-display text-base tracking-wide text-primary uppercase mb-2">⏳ Time to goal</div>
               {!g ? (
-                <div className="card-sub">Set a goal weight to see your projected timeline.</div>
+                <div className="text-muted text-sm">Set a goal weight to see your projected timeline.</div>
               ) : rate == null ? (
-                <div className="card-sub">
+                <div className="text-muted text-sm">
                   Log a few weigh-ins over the next couple of weeks and we'll project your
                   timeline from your <em>actual</em> rate of progress.
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: ".9rem", fontWeight: 600 }}>
+                  <div className="text-[.9rem] font-semibold">
                     {Math.abs(rate) < 0.05
                       ? "Your weight is holding steady right now."
                       : `${rate < 0 ? "Losing" : "Gaining"} about ${Math.abs(Math.round(rate * 10) / 10)} lbs/week`}
-                    <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: ".78rem" }}>
-                      {" "}· from {trend.n} weigh-ins
-                    </span>
+                    <span className="text-muted font-normal text-xs">{" "}· from {trend.n} weigh-ins</span>
                   </div>
                   {goalEtaWks == null ? (
-                    <div style={{ marginTop: 6, fontSize: ".84rem", color: "#f0a020", fontWeight: 600 }}>
+                    <div className="mt-1.5 text-sm text-warn font-semibold">
                       Not trending toward your goal yet — adjust and keep logging.
                     </div>
                   ) : goalEtaWks === 0 ? (
-                    <div style={{ marginTop: 6, fontSize: ".84rem", color: "#39d98a", fontWeight: 700 }}>
-                      🎉 You're at your goal weight!
-                    </div>
+                    <div className="mt-1.5 text-sm text-success font-bold">🎉 You're at your goal weight!</div>
                   ) : (
-                    <div style={{ marginTop: 6, fontSize: ".88rem" }}>
+                    <div className="mt-1.5 text-[.88rem]">
                       Reach <strong>{g} lbs</strong> by{" "}
-                      <strong style={{ color: "var(--accent)" }}>{etaDate(goalEtaWks) || "—"}</strong>
-                      <span style={{ color: "var(--muted)" }}> · ~{friendlyTime(goalEtaWks)}</span>
+                      <strong className="text-primary">{etaDate(goalEtaWks) || "—"}</strong>
+                      <span className="text-muted"> · ~{friendlyTime(goalEtaWks)}</span>
                     </div>
                   )}
                   {rangeEtaWks != null && rangeEtaWks > 0 && etaDate(rangeEtaWks) && (
-                    <div style={{ marginTop: 4, fontSize: ".82rem", color: "var(--muted)" }}>
+                    <div className="mt-1 text-sm text-muted">
                       Into your range (~{rangeEdge} lbs) by {etaDate(rangeEtaWks)}
                     </div>
                   )}
-                  <div style={{ marginTop: 8, fontSize: ".68rem", color: "var(--muted)", fontStyle: "italic" }}>
+                  <div className="mt-2 text-xs text-muted italic">
                     Estimate from your logged trend — it sharpens as you log more.
                   </div>
                 </>
@@ -9309,35 +9278,34 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
             </div>
 
             {/* Today's calories + quick-log */}
-            <div className="card">
-              <div className="card-title">🍽️ Today</div>
+            <div className={cardCls}>
+              <div className="font-display text-base tracking-wide text-primary uppercase mb-2">🍽️ Today</div>
               {target != null ? (
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "1.4rem", fontWeight: 800 }}>{consumed.toLocaleString()}</span>
-                  <span style={{ color: "var(--muted)" }}>/ {target.toLocaleString()} cal</span>
-                  <span style={{ marginLeft: "auto", fontWeight: 700,
-                    color: remaining >= 0 ? "#39d98a" : "#e5484d" }}>
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="font-display text-4xl leading-none">{consumed.toLocaleString()}</span>
+                  <span className="text-muted">/ {target.toLocaleString()} cal</span>
+                  <span className={`ml-auto font-bold ${remaining >= 0 ? "text-success" : "text-danger"}`}>
                     {remaining >= 0 ? `${remaining.toLocaleString()} left` : `${Math.abs(remaining).toLocaleString()} over`}
                   </span>
                 </div>
               ) : (
-                <div className="card-sub">Finish your plan to see a daily calorie target.</div>
+                <div className="text-muted text-sm">Finish your plan to see a daily calorie target.</div>
               )}
 
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <input style={field} type="number" inputMode="numeric" placeholder="Calories"
+              <div className="mt-3 flex flex-col gap-2">
+                <input className={`${inputCls} w-full`} type="number" inputMode="numeric" placeholder="Calories"
                   value={calDraft} onChange={e => setCalDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") adjustCalories(1); }} />
-                <button style={{ ...logBtn, background: "transparent", color: "var(--text)",
-                  border: "1px solid var(--border,rgba(255,255,255,.2))" }}
-                  title="Subtract from today" onClick={() => adjustCalories(-1)}>− Remove</button>
-                <button style={logBtn} title="Add to today" onClick={() => adjustCalories(1)}>+ Add</button>
+                <div className="flex gap-2">
+                  <button className={`${ghostBtnCls} flex-1`} title="Subtract from today" onClick={() => adjustCalories(-1)}>− Remove</button>
+                  <button className={`${primaryBtnCls} flex-1`} title="Add to today" onClick={() => adjustCalories(1)}>+ Add</button>
+                </div>
               </div>
-              {msg ? <div style={{ marginTop: 8, fontSize: ".82rem", color: "var(--muted)" }}>{msg}</div> : null}
+              {msg ? <div className="mt-2 text-sm text-muted">{msg}</div> : null}
             </div>
 
-            <button onClick={onOpenPlan} style={ghostOpen}>Open my full plan</button>
-          </>
+            <button onClick={onOpenPlan} className={`${ghostBtnCls} w-full py-3 text-base`}>Open my full plan</button>
+          </div>
         )}
 
         <div style={{ marginTop: 16 }}>

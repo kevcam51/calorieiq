@@ -52,7 +52,7 @@ function Ring({ pct = 68 }) {
       <svg width="120" height="120" viewBox="0 0 120 120" className="-rotate-90">
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--color-surface2)" strokeWidth="11" />
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--color-primary)" strokeWidth="11"
-          strokelinecap="round" strokeDasharray={c} strokeDashoffset={off} />
+          strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} />
       </svg>
       <div className="absolute text-center">
         <div className="font-display text-3xl leading-none text-fg">1,540</div>

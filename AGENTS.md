@@ -444,6 +444,21 @@ enabled (Blaze has no default spending cap).
   (~88 refs) — color-only, no functionality/layout change, so the whole live app is now on-brand cyan.
   **Deferred (Option 3, later):** gradually rebuild real screens in Tailwind + the brand theme, screen by
   screen, only when already working in that area (never break working UI). No `firestore.rules` change.
+- Session 26: **Client Dashboard redesigned in Tailwind + brand theme (Option 3 begins).** First real
+  screen migrated to the new system per the brief. `ClientHome`'s render was rewritten with Tailwind
+  utilities wrapped in `data-theme="pro"` (brand near-black + cyan), keeping **all logic/handlers/state
+  identical** (weight log, plan switcher, trainer requests, quick-log, progress chart, time-to-goal,
+  modals) — purely a visual layer swap. Design improvements (Part 3): the **current weight is now the
+  hero** (Sora display, text-5xl), clear card hierarchy with cyan section headers, consistent 16px rhythm
+  (`flex flex-col gap-4` — note: `space-y-*` was unreliable here), lifted card surfaces so they pop off
+  the near-black bg, and the TODAY quick-log restructured (input full-width over the −Remove/+Add row) so
+  it doesn't overflow on phones. Local style-object consts (`field`/`logBtn`/`miniBtn`/…) became Tailwind
+  class-string consts (`cardCls`/`inputCls`/`primaryBtnCls`/`ghostBtnCls`/`miniBtnCls`). The brand **pro**
+  theme tokens were tuned for card contrast (`--color-bg #05080a`, `--color-surface #121b1e`, brighter
+  `--color-border`). The header is a min-h-[54px] brand bar that clears the fixed hamburger. **Not yet
+  migrated (later passes):** the modals (`WeightChartModal`/`QuickActionModal`) and `RolePanel` still use
+  the old styles (they render fine, just slightly different) — safe to do next. Verified: renders with
+  real data, interactions work (weight-log toggle etc.), no console errors. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
@@ -451,6 +466,16 @@ enabled (Blaze has no default spending cap).
   that date.
 
 ## Roadmap (not yet built)
+
+- **Trainer analytics dashboard (Kevin's idea, planned).** The side menu's "📊 Dashboard" item currently
+  duplicates "🏠 Home" for trainers. Make it a real **coaching command center**, distinct from the client
+  list: clients active this week, **needing attention** (no logs in N days), **open requests** across all
+  clients, aggregate progress (total lbs lost, who's on track), and a quick jump to any flagged client.
+  Until built, the redundant "Dashboard" menu item is left in place (it'll become this screen). No Blaze.
+- **Continue the Tailwind redesign (Option 3, in progress).** Client Dashboard is done (Session 26).
+  Next candidates, one at a time, only when already in that area: the modals + RolePanel (finish the
+  client screen), then the trainer home, the wizard, and the full-plan/Results view. Never break working
+  UI to restyle it.
 
 - **UI cleanup pass on the other pages.** The new Client Dashboard set the visual bar (clean, card-based,
   clear CTAs); bring the older screens (the full plan editor / Results, trainer pages) up to the same

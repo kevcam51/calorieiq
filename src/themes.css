@@ -75,10 +75,10 @@
 /* 4) Dark / Pro — Smooth Training brand: near-black surfaces + the logo's bright
  *    cyan (#08DCE0) as primary. Sharp, premium, data-forward. */
 [data-theme="pro"] {
-  --color-bg: #060809;          /* reads black like the logo, with a touch of depth */
-  --color-surface: #0e1517;
-  --color-surface2: #15201f;
-  --color-border: #1f2e2d;      /* faint cyan-tinted hairline */
+  --color-bg: #05080a;          /* reads black like the logo */
+  --color-surface: #121b1e;     /* clearly lifted off the bg so cards pop */
+  --color-surface2: #1b2629;
+  --color-border: #28403f;      /* visible cyan-tinted hairline */
   --color-fg: #eafcfc;          /* near-white, faint cyan cast */
   --color-muted: #7e9a9a;       /* muted cyan-grey */
   --color-primary: #08dce0;     /* Smooth Training cyan (sampled from the logo) */
