@@ -6480,7 +6480,7 @@ function WeightDayLogger({ date, existing, onSave }) {
 
 function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPerDay,
   onOpenPlan, onOpenResults, onEditWorkouts, onLogUpdate, dailyLog, streak,
-  onUpdateCardio, onUpdateStrength, onAddMeal, onRemoveMeal, onEditMeal, recentFoods, history, onRefresh, isRemote,
+  onUpdateCardio, onUpdateStrength, onAddMeal, onRemoveMeal, onEditMeal, recentFoods, weekSummary, history, onRefresh, isRemote,
   onReadDay, onWriteDay, onListLoggedDays, onSaveCheckIn, onDeleteCheckIn, onSetMacroTargets }) {
 
   const [showCalendar, setShowCalendar] = useState(false);
@@ -6910,6 +6910,35 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
       )}
 
       <MealLog meals={dailyLog.meals} onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal} onEditMeal={onEditMeal} recentFoods={recentFoods} />
+
+      {/* This week — nutrition averages over the days logged in the last 7 (Session 40) */}
+      {weekSummary && weekSummary.days > 0 && (
+        <div style={{padding:"12px 14px",background:"var(--s2)",borderRadius:"8px",border:"1px solid var(--border)",marginBottom:"6px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"8px"}}>
+            <span className="sec-title" style={{margin:0}}>📅 This Week</span>
+            <span style={{fontSize:".72rem",color:"var(--muted)"}}>avg over {weekSummary.days} logged day{weekSummary.days!==1?"s":""}</span>
+          </div>
+          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+            {[
+              { label:"Calories", val:weekSummary.avgCal, tgt:target,        color:"var(--accent)", unit:"" },
+              { label:"Protein",  val:weekSummary.avgP,   tgt:proteinTarget, color:"#ff6b9d",       unit:"g" },
+              { label:"Carbs",    val:weekSummary.avgC,   tgt:carbsTarget,   color:"#ffcc44",       unit:"g" },
+              { label:"Fat",      val:weekSummary.avgF,   tgt:fatTarget,     color:"#4fc3f7",       unit:"g" },
+            ].map((s)=>(
+              <div key={s.label} style={{flex:"1 1 calc(50% - 4px)",minWidth:"120px",padding:"8px 10px",borderRadius:"7px",background:"var(--bg)",border:"1px solid var(--border)"}}>
+                <div style={{fontSize:".64rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>{s.label}</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.25rem",color:s.color,lineHeight:1.1}}>
+                  {s.val.toLocaleString()}{s.unit}
+                </div>
+                <div style={{fontSize:".64rem",color:"var(--muted)"}}>avg/day · target {s.tgt.toLocaleString()}{s.unit}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:"8px",fontStyle:"italic"}}>
+            Averaged over days with logged food in the last 7 · reflects saved logs
+          </div>
+        </div>
+      )}
 
       <div className="dash-log-row">
         <span className="dash-log-icon">💧</span>
@@ -10157,6 +10186,7 @@ export default function App() {
   const lastSnapshotRef = useRef(null);       // last data we diffed plan-edits against
   const [recentFoods, setRecentFoods] = useState([]); // named foods for one-tap re-add
   const recentFoodsRef = useRef([]);          // mirror (avoids stale closures in handlers)
+  const [weekSummary, setWeekSummary] = useState(null); // last-7-day nutrition averages
   const [meName, setMeName] = useState("");   // current user's display name
   const [meUid, setMeUid] = useState("");     // current user's uid
   const [meEmail, setMeEmail] = useState(""); // current user's email (for the menu)
@@ -10810,6 +10840,21 @@ export default function App() {
       if (fv) { try { foods = JSON.parse(fv) || []; } catch(e) {} }
       recentFoodsRef.current = foods;
       setRecentFoods(foods);
+      // Last-7-day nutrition summary (averaged over the days that were logged).
+      let days = 0, cal = 0, p = 0, c = 0, f = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const dk = d.toISOString().slice(0, 10);
+        const lv = await logRead(`caliq-log-${activeId}-${dk}`);
+        if (!lv) continue;
+        try {
+          const pl = JSON.parse(lv);
+          if ((pl.calories || 0) > 0) { days++; cal += pl.calories || 0; p += pl.protein || 0; c += pl.carbs || 0; f += pl.fat || 0; }
+        } catch (e) { /* ignore */ }
+      }
+      setWeekSummary(days > 0
+        ? { days, avgCal: Math.round(cal / days), avgP: Math.round(p / days), avgC: Math.round(c / days), avgF: Math.round(f / days) }
+        : { days: 0, avgCal: 0, avgP: 0, avgC: 0, avgF: 0 });
     })();
   }, [activeId, activeRemoteUid]);
 
@@ -10966,7 +11011,7 @@ export default function App() {
               onOpenPlan={()=>{setNavFrom("dashboard");setStepAndSave(0);}} onOpenResults={()=>{setNavFrom("dashboard");setShowDash(false);}}
               onEditWorkouts={()=>{setNavFrom("dashboard");setStepAndSave(3);}}
               onLogUpdate={onLogUpdate} dailyLog={dailyLog} streak={streak}
-              onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal} onEditMeal={onEditMeal} recentFoods={recentFoods} history={history} onRefresh={reloadPlanLive} isRemote={!!activeRemoteUid}
+              onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal} onEditMeal={onEditMeal} recentFoods={recentFoods} weekSummary={weekSummary} history={history} onRefresh={reloadPlanLive} isRemote={!!activeRemoteUid}
               onSetMacroTargets={(t)=>setDataAndSave(p=>{ const n={...p}; if(t) n.macroTargets=t; else delete n.macroTargets; return n; })}
               onReadDay={onReadDay} onWriteDay={onWriteDay} onListLoggedDays={onListLoggedDays}
               onSaveCheckIn={(checkin)=>setDataAndSave(p=>{

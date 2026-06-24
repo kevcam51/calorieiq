@@ -812,3 +812,14 @@ enabled (Blaze has no default spending cap).
   shows "Custom targets set by you" vs "Estimates from bodyweight & calorie goal". Verified live (Test
   Client): set protein 200→180 → log-row + progress bar updated to 180g, "Custom" label shown; Reset to auto
   → back to computed 200g. No `firestore.rules` change. Defaults unchanged (1g/lb, 28% fat) — now adjustable.
+- Session 40: **"This Week" nutrition summary on the Daily Dashboard.** A coaching-glance card showing the
+  last 7 days' nutrition averaged over the days actually logged: avg calories + avg protein/carbs/fat, each
+  next to its target. App computes it in the daily-log load effect (a dedicated 7-day `logRead` loop — the
+  streak loop can't be reused since it breaks on the first gap) into `weekSummary` state {days, avgCal,
+  avgP, avgC, avgF}, passed → `DailyDashboard`. Rendered (when ≥1 logged day) as a 2×2 tile grid (Sora
+  numbers, macro colours, "avg/day · target N") under the meal log, with "avg over N logged days" and a
+  "reflects saved logs" note (it's computed at load, not live — fine for a weekly average). Remote-aware via
+  the existing `logRead`, so a trainer viewing a client sees the client's week. Verified live (Test Client,
+  1 logged day): shows 1,200 cal / 45p / 70c / 12f vs targets 2,365 / 200 / 225 / 74. No `firestore.rules`
+  change. **Nutrition arc (S36–40) now covers:** per-food macros + daily totals, macro targets + progress
+  bars, editable targets (coach or client), one-tap recent-food re-add, and weekly averages.
