@@ -253,7 +253,7 @@ body{
   margin-bottom:18px;
 }
 .logo{
-  font-family:'Bebas Neue',sans-serif;
+  font-family:'Sora',sans-serif;
   font-size:1.5rem;letter-spacing:4px;
   color:var(--accent);line-height:1;
 }
@@ -307,7 +307,7 @@ body{
   box-shadow:var(--shadow-sm);
 }
 .card-title{
-  font-family:'Bebas Neue',sans-serif;
+  font-family:'Sora',sans-serif;
   font-size:1.5rem;letter-spacing:2.5px;
   color:var(--accent);margin-bottom:4px;
 }
@@ -327,7 +327,7 @@ body{
 }
 .wb-emoji{font-size:2.2rem;flex-shrink:0;line-height:1;margin-top:2px}
 .wb-title{
-  font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
+  font-family:'Sora',sans-serif;font-size:1.4rem;
   letter-spacing:2px;color:var(--accent);margin-bottom:5px;
 }
 .wb-sub{font-size:.84rem;color:var(--muted-light);line-height:1.55}
@@ -438,7 +438,7 @@ body{
 .btn{
   flex:1;min-height:var(--tap);
   padding:0 22px;border-radius:12px;border:none;cursor:pointer;
-  font-family:'Bebas Neue',sans-serif;
+  font-family:'Sora',sans-serif;
   font-size:1.15rem;letter-spacing:2px;
   transition:all .15s;
   display:flex;align-items:center;justify-content:center;
@@ -492,13 +492,13 @@ body{
   pointer-events:none;
 }
 .hero-lbl{font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.hero-val{font-family:'Bebas Neue',sans-serif;font-size:3.6rem;color:var(--accent);line-height:1}
+.hero-val{font-family:'Sora',sans-serif;font-size:3.6rem;color:var(--accent);line-height:1}
 .hero-unit{font-size:.84rem;color:var(--muted-light);margin-top:3px}
 .hero-detail{font-size:.74rem;color:var(--muted);margin-top:10px;line-height:1.5}
 
 /* ── Section titles ── */
 .sec-title{
-  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;
+  font-family:'Sora',sans-serif;font-size:1.1rem;
   letter-spacing:2px;color:var(--text-secondary);
   margin:20px 0 12px;
   display:flex;align-items:center;gap:10px;
@@ -513,7 +513,7 @@ body{
   transition:border-color .2s;
 }
 .dc-lbl{font-size:.62rem;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;line-height:1.4}
-.dc-val{font-family:'Bebas Neue',sans-serif;font-size:1.9rem}
+.dc-val{font-family:'Sora',sans-serif;font-size:1.9rem}
 .dc-unit{font-size:.68rem;color:var(--muted)}
 .dc-note{font-size:.65rem;color:var(--orange);margin-top:3px;line-height:1.3}
 
@@ -540,7 +540,7 @@ body{
 .drc-header:active{background:rgba(255,255,255,.02)}
 .drc-day{font-weight:700;font-size:.95rem;min-width:34px;flex-shrink:0;color:var(--text-secondary)}
 .drc-cardio{font-size:.82rem;color:var(--muted);flex:1;line-height:1.4}
-.drc-burn{font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--orange);letter-spacing:.5px;flex-shrink:0}
+.drc-burn{font-family:'Sora',sans-serif;font-size:.95rem;color:var(--orange);letter-spacing:.5px;flex-shrink:0}
 .drc-chevron{color:var(--muted);font-size:.65rem;transition:transform .2s;flex-shrink:0;margin-left:2px}
 .drc-chevron.open{transform:rotate(180deg);color:var(--accent)}
 .drc-edit-body{
@@ -558,7 +558,7 @@ body{
   border-radius:var(--radius-sm);font-size:.79rem;color:var(--text);line-height:1.5;
 }
 .drc-edit-live .burn-num{
-  font-family:'Bebas Neue',sans-serif;font-size:1.25rem;
+  font-family:'Sora',sans-serif;font-size:1.25rem;
   color:var(--orange);letter-spacing:.5px;white-space:nowrap;
 }
 .drc-row{
@@ -567,7 +567,7 @@ body{
 }
 .drc-cell{text-align:center;padding:9px 4px;background:var(--s2);border-radius:8px}
 .drc-cell-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:3px}
-.drc-cell-val{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.5px}
+.drc-cell-val{font-family:'Sora',sans-serif;font-size:1.1rem;letter-spacing:.5px}
 
 /* ── Weekly totals bar ── */
 .weekly-total-bar{
@@ -577,7 +577,7 @@ body{
 .wtb-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
 .wtb-row:last-child{border-bottom:none;padding-bottom:0}
 .wtb-label{font-size:.8rem;color:var(--muted)}
-.wtb-val{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.5px}
+.wtb-val{font-family:'Sora',sans-serif;font-size:1.1rem;letter-spacing:.5px}
 
 /* ── Cardio summary pill ── */
 .csumm{
@@ -625,10 +625,10 @@ body{
 .tl-card.two::before{background:var(--red)}
 .tlc-left{flex:1}
 .tlc-pace{font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
-.tlc-time{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;margin-bottom:2px}
+.tlc-time{font-family:'Sora',sans-serif;font-size:1.6rem;line-height:1;margin-bottom:2px}
 .tlc-sub{font-size:.74rem;color:var(--muted)}
 .tlc-right{text-align:right}
-.tlc-rate{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;color:var(--orange)}
+.tlc-rate{font-family:'Sora',sans-serif;font-size:1.35rem;color:var(--orange)}
 .tlc-rate-lbl{font-size:.65rem;color:var(--muted);margin-top:1px}
 
 /* Milestone cards */
@@ -637,7 +637,7 @@ body{
 .ms-row-inline{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
 .ms-row-inline:last-child{border-bottom:none;padding-bottom:0}
 .ms-pace{font-size:.79rem;color:var(--muted)}
-.ms-loss{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.5px}
+.ms-loss{font-family:'Sora',sans-serif;font-size:1.15rem;letter-spacing:.5px}
 .ms-wt{font-size:.72rem;color:var(--muted);margin-top:1px}
 .ms-card-goal{border-color:rgba(8,220,224,.3);background:rgba(8,220,224,.025)}
 .ms-card-goal .ms-card-header{color:var(--accent)}
@@ -648,7 +648,7 @@ body{
 .weight-compare{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:16px}
 .wc-box{background:var(--s2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;transition:border-color .2s}
 .wc-lbl{font-size:.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-.wc-val{font-family:'Bebas Neue',sans-serif;font-size:2.1rem;color:var(--accent)}
+.wc-val{font-family:'Sora',sans-serif;font-size:2.1rem;color:var(--accent)}
 .wc-unit{font-size:.72rem;color:var(--muted)}
 .wc-arrow{color:var(--orange);font-size:1.3rem;text-align:center}
 .lose-badge{
@@ -656,7 +656,7 @@ body{
   border-radius:var(--radius-sm);padding:14px 16px;text-align:center;margin-bottom:16px;
 }
 .lb-lbl{font-size:.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px}
-.lb-val{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--orange)}
+.lb-val{font-family:'Sora',sans-serif;font-size:2.4rem;color:var(--orange)}
 .lb-unit{font-size:.76rem;color:var(--muted)}
 
 /* ── Color utility classes ── */
@@ -687,19 +687,19 @@ body{
 }
 .ibw-toggle:active{background:rgba(255,255,255,.02)}
 .ibw-toggle-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
-.ibw-toggle-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--accent);white-space:nowrap}
+.ibw-toggle-title{font-family:'Sora',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--accent);white-space:nowrap}
 .ibw-toggle-summary{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ibw-toggle-chevron{color:var(--muted);font-size:.8rem;transition:transform .2s;flex-shrink:0}
 .ibw-toggle-chevron.open{transform:rotate(180deg);color:var(--accent)}
 .ibw-body{padding:0 18px 20px;animation:fadeUp .18s ease both}
-.ibw-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;color:var(--accent);margin-bottom:3px}
+.ibw-title{font-family:'Sora',sans-serif;font-size:1.3rem;letter-spacing:2px;color:var(--accent);margin-bottom:3px}
 .ibw-subtitle{font-size:.76rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .ibw-range-row{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px;flex-wrap:wrap}
 .ibw-range-val{flex:1}
-.ibw-range-num{font-family:'Bebas Neue',sans-serif;font-size:2.3rem;color:var(--green);line-height:1}
+.ibw-range-num{font-family:'Sora',sans-serif;font-size:2.3rem;color:var(--green);line-height:1}
 .ibw-range-lbl{font-size:.73rem;color:var(--muted);margin-top:4px}
 .ibw-bmi-badge{text-align:center;padding:12px 16px;border-radius:10px;background:var(--s2);border:1px solid var(--border);min-width:90px}
-.ibw-bmi-num{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;line-height:1}
+.ibw-bmi-num{font-family:'Sora',sans-serif;font-size:1.9rem;line-height:1}
 .ibw-bmi-lbl{font-size:.65rem;color:var(--muted);margin-top:2px;white-space:nowrap}
 .ibw-bar-wrap{margin-bottom:18px}
 .ibw-bar-labels{display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted);margin-bottom:5px;letter-spacing:.3px}
@@ -731,7 +731,7 @@ body{
 }
 .ibw-formula-row:last-child{border-bottom:none}
 .ibw-formula-name{font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
-.ibw-formula-val{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--accent);text-align:right;white-space:nowrap}
+.ibw-formula-val{font-family:'Sora',sans-serif;font-size:1rem;color:var(--accent);text-align:right;white-space:nowrap}
 .ibw-formula-note{font-size:.65rem;color:var(--muted);text-align:right}
 .info-icon{
   display:inline-flex;align-items:center;justify-content:center;
@@ -783,7 +783,7 @@ body{
   border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;
   display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
 }
-.cst-label{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;font-weight:700}
+.cst-label{font-family:'Sora',sans-serif;font-size:1.1rem;letter-spacing:1.5px;font-weight:700}
 .cst-sub{font-size:.74rem;color:var(--muted)}
 .chart-arrow-overlay{
   position:absolute;top:50%;transform:translateY(-50%);
@@ -869,7 +869,7 @@ body{
 }
 .cpt-row:nth-child(even){background:rgba(255,255,255,.015)}
 .cpt-period{color:var(--muted-light);font-weight:600}
-.cpt-val{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.5px;text-align:center}
+.cpt-val{font-family:'Sora',sans-serif;font-size:1rem;letter-spacing:.5px;text-align:center}
 
 /* ── Quick fill ── */
 .quick-fill-toggle{
@@ -915,12 +915,12 @@ body{
 }
 .day-card-header:active{background:rgba(255,255,255,.025)}
 .day-chip{
-  font-family:'Bebas Neue',sans-serif;font-size:.85rem;
+  font-family:'Sora',sans-serif;font-size:.85rem;
   letter-spacing:1px;color:var(--muted);width:36px;flex-shrink:0;
 }
 .day-cardio-name{flex:1;font-size:.9rem;font-weight:500;line-height:1.4}
 .day-cardio-name.rest{color:var(--muted)}
-.day-burn{font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--orange);letter-spacing:.5px;white-space:nowrap}
+.day-burn{font-family:'Sora',sans-serif;font-size:.9rem;color:var(--orange);letter-spacing:.5px;white-space:nowrap}
 .day-burn.zero{color:var(--muted)}
 .day-chevron{color:var(--muted);font-size:.8rem;transition:transform .2s;margin-left:4px}
 .day-chevron.open{transform:rotate(180deg);color:var(--accent)}
@@ -990,7 +990,7 @@ body{
   -webkit-tap-highlight-color:transparent;
 }
 .nutr-goal-btn:active{transform:scale(.96)}
-.nutr-cals-badge{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;color:var(--accent)}
+.nutr-cals-badge{font-family:'Sora',sans-serif;font-size:1rem;letter-spacing:1px;color:var(--accent)}
 .macro-bar-wrap{margin-bottom:18px}
 .macro-bar{height:13px;border-radius:7px;overflow:hidden;display:flex;margin-bottom:7px}
 .macro-bar-seg{height:100%;transition:width .4s ease}
@@ -1007,7 +1007,7 @@ body{
 .macro-fat{border-top:3px solid #4fc3f7}.macro-fibre{border-top:3px solid var(--green)}
 .mc-emoji{font-size:1.3rem;margin-bottom:5px}
 .mc-name{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px}
-.mc-grams{font-family:'Bebas Neue',sans-serif;font-size:2.1rem;line-height:1;color:var(--text)}
+.mc-grams{font-family:'Sora',sans-serif;font-size:2.1rem;line-height:1;color:var(--text)}
 .mc-grams span{font-size:1rem;color:var(--muted);margin-left:2px}
 .mc-cals{font-size:.7rem;color:var(--muted);margin-bottom:7px}
 .mc-why{font-size:.72rem;color:var(--muted);line-height:1.55;border-top:1px solid var(--border);padding-top:7px;margin-top:4px}
@@ -1018,7 +1018,7 @@ body{
 }
 .nutr-hydration-icon{font-size:1.7rem;line-height:1;flex-shrink:0}
 .nutr-hydration-title{font-weight:700;font-size:.92rem;margin-bottom:4px}
-.nutr-hydration-val{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.5px;color:#4fc3f7;margin-bottom:3px}
+.nutr-hydration-val{font-family:'Sora',sans-serif;font-size:1.15rem;letter-spacing:.5px;color:#4fc3f7;margin-bottom:3px}
 .nutr-hydration-note{font-size:.75rem;color:var(--muted);line-height:1.5}
 .micro-cat-label{font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:16px 0 7px}
 .micro-row{
@@ -1060,7 +1060,7 @@ body{
   border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;
 }
 .surplus-hero-icon{font-size:2rem;line-height:1;flex-shrink:0}
-.surplus-hero-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--orange);margin-bottom:3px}
+.surplus-hero-title{font-family:'Sora',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--orange);margin-bottom:3px}
 .surplus-hero-sub{font-size:.81rem;color:var(--muted);line-height:1.5}
 .surplus-science{
   background:var(--s2);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -1080,25 +1080,25 @@ body{
 .st-corner{padding:10px 8px;font-size:.6rem;color:var(--muted);letter-spacing:.5px;line-height:1.4;border-right:1px solid var(--border)}
 .st-col-header{padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
 .st-col-header:last-child{border-right:none}
-.st-surplus-num{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--orange);letter-spacing:.5px}
+.st-surplus-num{font-family:'Sora',sans-serif;font-size:1.05rem;color:var(--orange);letter-spacing:.5px}
 .st-surplus-unit{font-size:.6rem;color:var(--muted);text-transform:uppercase}
 .st-net-surplus{font-size:.58rem;color:var(--accent);margin-top:2px}
 .st-data-row{display:grid;grid-template-columns:90px repeat(7,1fr);border-bottom:1px solid var(--border)}
 .st-data-row:last-child{border-bottom:none}
 .st-data-row:nth-child(even){background:rgba(255,255,255,.012)}
 .st-row-label{padding:10px 8px;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center}
-.st-lbs{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.5px;color:var(--text)}
+.st-lbs{font-family:'Sora',sans-serif;font-size:1.1rem;letter-spacing:.5px;color:var(--text)}
 .st-fat-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.st-cell{padding:10px 4px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.5px;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.st-cell{padding:10px 4px;text-align:center;font-family:'Sora',sans-serif;font-size:.9rem;letter-spacing:.5px;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center}
 .st-cell:last-child{border-right:none}
 .surplus-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
 .surplus-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 13px}
 .surplus-card-offset{border-color:rgba(79,255,176,.22);background:rgba(79,255,176,.025)}
-.sc-surplus{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;color:var(--orange);margin-bottom:7px}
+.sc-surplus{font-family:'Sora',sans-serif;font-size:1.4rem;letter-spacing:1px;color:var(--orange);margin-bottom:7px}
 .sc-surplus-unit{font-size:.75rem;color:var(--muted);letter-spacing:0;font-family:'DM Sans',sans-serif}
 .sc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
 .sc-row:last-of-type{border-bottom:none;padding-bottom:0}
-.sc-label{font-size:.73rem;color:var(--muted)}.sc-val{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.5px}
+.sc-label{font-size:.73rem;color:var(--muted)}.sc-val{font-family:'Sora',sans-serif;font-size:1rem;letter-spacing:.5px}
 .sc-cardio-note{font-size:.65rem;color:var(--green);margin-top:5px;text-align:center}
 .sc-offset{font-size:.79rem;color:var(--green);line-height:1.4;margin-top:4px}
 .surplus-takeaway{
@@ -1122,7 +1122,7 @@ body{
   border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;
 }
 .muscle-hero-icon{font-size:2rem;flex-shrink:0}
-.muscle-hero-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--green);margin-bottom:3px}
+.muscle-hero-title{font-family:'Sora',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--green);margin-bottom:3px}
 .muscle-hero-sub{font-size:.81rem;color:var(--muted);line-height:1.5}
 .exp-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:16px}
 .exp-btn{
@@ -1141,13 +1141,13 @@ body{
 }
 .mch-left{flex:1;min-width:140px}
 .mch-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px}
-.mch-cals{font-family:'Bebas Neue',sans-serif;font-size:2.9rem;color:var(--green);line-height:1}
+.mch-cals{font-family:'Sora',sans-serif;font-size:2.9rem;color:var(--green);line-height:1}
 .mch-unit{font-size:.79rem;color:var(--muted);margin-bottom:7px}
 .mch-breakdown{font-size:.7rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--border);padding-top:7px}
 .mch-right{display:flex;gap:9px;flex-wrap:wrap}
 .mch-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;min-width:100px;text-align:center}
 .mch-box-lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px}
-.mch-box-val{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.5px;line-height:1}
+.mch-box-val{font-family:'Sora',sans-serif;font-size:1.3rem;letter-spacing:.5px;line-height:1}
 .mch-box-val.muscle{color:var(--green)}.mch-box-val.fat{color:var(--orange)}
 .mch-box-sub{font-size:.62rem;color:var(--muted);margin-top:2px}
 .recomp-note{
@@ -1178,7 +1178,7 @@ body{
 .mt-label-col{font-size:.8rem;padding:10px 9px;border-right:1px solid var(--border)}
 .mt-col{padding:10px 7px;text-align:center;border-right:1px solid var(--border)}
 .mt-col:last-child{border-right:none}
-.mt-surplus{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--orange)}
+.mt-surplus{font-family:'Sora',sans-serif;font-size:1.05rem;color:var(--orange)}
 .mt-unit{font-size:.7rem;color:var(--muted)}
 .mt-rec-badge{
   display:inline-block;margin-left:5px;
@@ -1188,11 +1188,11 @@ body{
 }
 .muscle-timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:15px}
 .mtl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 12px}
-.mtl-period{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:var(--accent);margin-bottom:11px}
+.mtl-period{font-family:'Sora',sans-serif;font-size:1.1rem;letter-spacing:1px;color:var(--accent);margin-bottom:11px}
 .mtl-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:.75rem}
 .mtl-row:last-of-type{border-bottom:none}
 .mtl-lbl{color:var(--muted);font-size:.72rem}
-.mtl-val{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.5px}
+.mtl-val{font-family:'Sora',sans-serif;font-size:.95rem;letter-spacing:.5px}
 .mtl-val.muscle{color:var(--green)}.mtl-val.fat{color:var(--orange)}
 .mtl-bar{height:8px;border-radius:4px;overflow:hidden;display:flex;margin-top:9px}
 .mtl-muscle-bar{background:var(--green);height:100%}.mtl-fat-bar{background:var(--orange);height:100%}
@@ -1207,12 +1207,12 @@ body{
   border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;
 }
 .str-hero-icon{font-size:2rem;flex-shrink:0}
-.str-hero-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#4fc3f7;margin-bottom:3px}
+.str-hero-title{font-family:'Sora',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#4fc3f7;margin-bottom:3px}
 .str-hero-sub{font-size:.81rem;color:var(--muted);line-height:1.5}
 .str-hero-sub strong{color:var(--text)}
 .str-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
 .str-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:15px 13px;text-align:center}
-.str-stat-val{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.5px;line-height:1;margin-bottom:3px}
+.str-stat-val{font-family:'Sora',sans-serif;font-size:1.6rem;letter-spacing:.5px;line-height:1;margin-bottom:3px}
 .str-stat-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
 .str-compound-note{
   background:rgba(255,204,68,.05);border:1px solid rgba(255,204,68,.18);
@@ -1221,10 +1221,10 @@ body{
 .str-compound-note strong{color:var(--yellow)}.str-compound-note em{color:var(--text)}
 .str-proj-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
 .str-proj-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 13px}
-.str-proj-period{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:1px;color:var(--accent);margin-bottom:9px}
+.str-proj-period{font-family:'Sora',sans-serif;font-size:1.05rem;letter-spacing:1px;color:var(--accent);margin-bottom:9px}
 .str-proj-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:.77rem}
 .str-proj-row:last-child{border-bottom:none;padding-bottom:0}
-.str-proj-lbl{color:var(--muted)}.str-proj-val{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.5px}
+.str-proj-lbl{color:var(--muted)}.str-proj-val{font-family:'Sora',sans-serif;font-size:.95rem;letter-spacing:.5px}
 @media(min-width:640px){.str-stat-grid{grid-template-columns:repeat(4,1fr)}.str-proj-grid{grid-template-columns:repeat(4,1fr)}}
 
 /* ── Welcome & step UX ── */
@@ -1243,7 +1243,7 @@ body{
   display:grid;grid-template-columns:1fr 1fr;gap:10px;
 }
 .rsb-stat{text-align:center;padding:8px}
-.rsb-val{font-family:'Bebas Neue',sans-serif;font-size:1.85rem;line-height:1;margin-bottom:3px}
+.rsb-val{font-family:'Sora',sans-serif;font-size:1.85rem;line-height:1;margin-bottom:3px}
 .rsb-lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
 .rsb-divider{border:none;border-top:1px solid var(--border);margin:0;grid-column:1/-1}
 
@@ -1263,14 +1263,14 @@ body{
 /* ── Daily Dashboard ── */
 .dash{animation:fadeUp .2s ease both}
 .dash-date{font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:6px}
-.dash-greeting{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--text);text-align:center;margin-bottom:18px}
+.dash-greeting{font-family:'Sora',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--text);text-align:center;margin-bottom:18px}
 .dash-streak{
   display:flex;align-items:center;justify-content:center;gap:8px;
   background:linear-gradient(135deg,rgba(8,220,224,.08),rgba(255,107,53,.04));
   border:1px solid rgba(8,220,224,.2);border-radius:var(--radius-lg);
   padding:14px;margin-bottom:18px;text-align:center;
 }
-.dash-streak-num{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--accent);line-height:1}
+.dash-streak-num{font-family:'Sora',sans-serif;font-size:2.4rem;color:var(--accent);line-height:1}
 .dash-streak-lbl{font-size:.78rem;color:var(--muted);line-height:1.3}
 .dash-ring-wrap{display:flex;justify-content:center;margin-bottom:18px}
 .dash-cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
@@ -1281,7 +1281,7 @@ body{
 }
 .dash-cta:active{transform:scale(.97);border-color:var(--accent)}
 .dash-cta-icon{font-size:1.6rem;margin-bottom:6px}
-.dash-cta-val{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--accent);letter-spacing:.5px}
+.dash-cta-val{font-family:'Sora',sans-serif;font-size:1.5rem;color:var(--accent);letter-spacing:.5px}
 .dash-cta-lbl{font-size:.7rem;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
 .dash-log-row{
   display:flex;align-items:center;gap:10px;
@@ -1295,7 +1295,7 @@ body{
 .dash-log-input{
   width:72px;min-height:38px;padding:6px 10px;border-radius:8px;
   border:1.5px solid var(--border);background:var(--s2);color:var(--text);
-  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;text-align:center;
+  font-family:'Sora',sans-serif;font-size:1.1rem;text-align:center;
   outline:none;letter-spacing:.5px;
 }
 .dash-log-input:focus{border-color:var(--accent)}
@@ -1317,10 +1317,10 @@ body{
   border:1.5px solid rgba(8,220,224,.2);border-radius:var(--radius-lg);
   padding:24px 20px;text-align:center;margin-top:16px;
 }
-.share-card-name{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent);margin-bottom:4px}
+.share-card-name{font-family:'Sora',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent);margin-bottom:4px}
 .share-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
 .share-stat{padding:10px 6px;background:var(--s2);border-radius:8px}
-.share-stat-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent)}
+.share-stat-val{font-family:'Sora',sans-serif;font-size:1.4rem;color:var(--accent)}
 .share-stat-lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .share-brand{font-size:.65rem;color:var(--muted);margin-top:10px;letter-spacing:1px}
 
@@ -1355,7 +1355,7 @@ body{
   animation:fadeUp .18s ease both;
 }
 .profiles-panel-title{
-  font-family:'Bebas Neue',sans-serif;font-size:1.2rem;
+  font-family:'Sora',sans-serif;font-size:1.2rem;
   letter-spacing:2px;color:var(--accent);margin-bottom:4px;
 }
 .profiles-panel-sub{font-size:.78rem;color:var(--muted);margin-bottom:14px;line-height:1.5}
@@ -1479,7 +1479,7 @@ body{
 /* ── Trainer Dashboard ── */
 .dash-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .dash-stat{background:var(--s2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 10px;text-align:center}
-.dash-stat-val{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1;margin-bottom:2px}
+.dash-stat-val{font-family:'Sora',sans-serif;font-size:1.8rem;line-height:1;margin-bottom:2px}
 .dash-stat-lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
 
 /* ── Daily Check-In ── */
@@ -1488,7 +1488,7 @@ body{
   border:1.5px solid rgba(79,255,176,.2);border-radius:var(--radius-lg);
   padding:18px;margin-bottom:16px;
 }
-.checkin-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--green);margin-bottom:4px}
+.checkin-title{font-family:'Sora',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--green);margin-bottom:4px}
 .checkin-sub{font-size:.78rem;color:var(--muted);margin-bottom:14px;line-height:1.5}
 .checkin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .checkin-field label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;font-weight:600}
@@ -1506,7 +1506,7 @@ body{
 .checkin-submit{
   width:100%;min-height:44px;border-radius:10px;border:none;
   background:var(--green);color:#0b0b12;cursor:pointer;
-  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;
+  font-family:'Sora',sans-serif;font-size:1.1rem;letter-spacing:2px;
   transition:all .15s;
 }
 .checkin-submit:active{transform:scale(.97)}
@@ -1520,7 +1520,7 @@ body{
   margin-bottom:14px;
 }
 .streak-fire{font-size:1.4rem}
-.streak-num{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--accent);line-height:1}
+.streak-num{font-family:'Sora',sans-serif;font-size:1.6rem;color:var(--accent);line-height:1}
 .streak-lbl{font-size:.72rem;color:var(--muted)}
 .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .badge{
@@ -1542,17 +1542,17 @@ body{
   content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;
   border-radius:50%;background:radial-gradient(circle,rgba(8,220,224,.08) 0%,transparent 70%);
 }
-.share-card-brand{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:var(--accent);opacity:.6;margin-bottom:8px}
-.share-card-name{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--text);margin-bottom:4px}
+.share-card-brand{font-family:'Sora',sans-serif;font-size:1rem;letter-spacing:3px;color:var(--accent);opacity:.6;margin-bottom:8px}
+.share-card-name{font-family:'Sora',sans-serif;font-size:1.8rem;color:var(--text);margin-bottom:4px}
 .share-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
 .scs-item{padding:10px 6px}
-.scs-val{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1;margin-bottom:2px}
+.scs-val{font-family:'Sora',sans-serif;font-size:1.5rem;line-height:1;margin-bottom:2px}
 .scs-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 .share-card-footer{font-size:.7rem;color:var(--muted);margin-top:12px}
 .share-btn{
   width:100%;min-height:46px;border-radius:10px;border:none;
   background:var(--accent);color:#0b0b12;cursor:pointer;
-  font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;
+  font-family:'Sora',sans-serif;font-size:1.05rem;letter-spacing:2px;
   display:flex;align-items:center;justify-content:center;gap:8px;
   transition:all .15s;margin-top:12px;
 }
@@ -1580,7 +1580,7 @@ body{
   width:44px;height:44px;border-radius:50%;
   background:var(--accent-dim);border:2px solid var(--accent);
   display:flex;align-items:center;justify-content:center;
-  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--accent);
+  font-family:'Sora',sans-serif;font-size:1.1rem;color:var(--accent);
   letter-spacing:1px;flex-shrink:0;
 }
 .prof-info{flex:1;min-width:0}
@@ -1596,7 +1596,7 @@ body{
 .prof-new-btn{
   width:100%;min-height:56px;border-radius:var(--radius-sm);
   border:2px dashed rgba(8,220,224,.3);background:rgba(8,220,224,.02);
-  color:var(--accent);cursor:pointer;font-family:'Bebas Neue',sans-serif;
+  color:var(--accent);cursor:pointer;font-family:'Sora',sans-serif;
   font-size:1.1rem;letter-spacing:2px;transition:all .15s;
   display:flex;align-items:center;justify-content:center;gap:10px;
 }
@@ -2794,7 +2794,7 @@ function SimulationSummary({ data, totalBurn }) {
     ? new Date(Date.now() + bestWks * 7 * 86400000).toLocaleDateString(undefined, { month: "long", year: "numeric" })
     : null;
   const stat = { flex: 1, textAlign: "center" };
-  const big = { fontFamily: "'Bebas Neue',sans-serif", fontSize: "2.4rem", lineHeight: 1 };
+  const big = { fontFamily: "'Sora',sans-serif", fontSize: "2.4rem", lineHeight: 1 };
   const lbl = { fontSize: ".66rem", letterSpacing: ".5px", textTransform: "uppercase", color: "var(--muted)", marginTop: 4 };
   return (
     <div className="card" style={{ border: "1px solid rgba(181,123,255,.45)", background: "linear-gradient(180deg,rgba(181,123,255,.1),transparent)" }}>
@@ -3007,7 +3007,7 @@ function Results({ data, isSimulation, onReset, onEdit, onUpdateCardio, onUpdate
             <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom: showNotes?"12px":"0",cursor:"pointer"}} onClick={()=>setShowNotes(v=>!v)}>
               <span style={{fontSize:"1.2rem"}}>📝</span>
               <div style={{flex:1}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",letterSpacing:"2px",color:"var(--text-secondary)"}}>Trainer Notes</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",letterSpacing:"2px",color:"var(--text-secondary)"}}>Trainer Notes</div>
                 <div style={{fontSize:".72rem",color:"var(--muted)"}}>{data.trainerNotes ? `${data.trainerNotes.length} chars · last updated` : "No notes yet — tap to add"}</div>
               </div>
               <span style={{color:"var(--muted)",fontSize:".7rem",transition:"transform .2s",transform:showNotes?"rotate(180deg)":"none"}}>▼</span>
@@ -3406,7 +3406,7 @@ function Results({ data, isSimulation, onReset, onEdit, onUpdateCardio, onUpdate
               <>
                 <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"14px",marginBottom:"12px",textAlign:"center"}}>
                   <div style={{fontSize:".68rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}}>Estimated Max Heart Rate</div>
-                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.4rem",color:"var(--red)",lineHeight:1}}>{hrMax}</div>
+                  <div style={{fontFamily:"'Sora',sans-serif",fontSize:"2.4rem",color:"var(--red)",lineHeight:1}}>{hrMax}</div>
                   <div style={{fontSize:".78rem",color:"var(--muted)"}}>BPM (Tanaka formula)</div>
                 </div>
                 {zones.map(z=>{
@@ -3421,7 +3421,7 @@ function Results({ data, isSimulation, onReset, onEdit, onUpdateCardio, onUpdate
                     }}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}}>
                         <div style={{fontWeight:700,fontSize:".88rem",color:z.color}}>{z.name}</div>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.15rem",color:z.color,letterSpacing:".5px"}}>{low}–{high} BPM</div>
+                        <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.15rem",color:z.color,letterSpacing:".5px"}}>{low}–{high} BPM</div>
                       </div>
                       <div style={{fontSize:".76rem",color:"var(--muted)",lineHeight:1.5}}>{z.desc}</div>
                       {z.highlight && (
@@ -3612,7 +3612,7 @@ function SummaryTab({ data, bmr, tdee, actObj, dayData, strengthDayData,
   const Row = ({ label, value, color }) => (
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border)",fontSize:".85rem"}}>
       <span style={{color:"var(--muted)"}}>{label}</span>
-      <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.05rem",letterSpacing:".5px",color:color||"var(--text)"}}>{value}</span>
+      <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1.05rem",letterSpacing:".5px",color:color||"var(--text)"}}>{value}</span>
     </div>
   );
 
@@ -3676,7 +3676,7 @@ function SummaryTab({ data, bmr, tdee, actObj, dayData, strengthDayData,
               <span style={{flex:1,fontSize:".78rem",color:"var(--muted)",lineHeight:1.4}}>
                 {cardioLabel}{strLabel ? ` · ${strLabel}` : ""}
               </span>
-              {combined > 0 && <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:".9rem",color:"var(--orange)",whiteSpace:"nowrap"}}>{combined} cal</span>}
+              {combined > 0 && <span style={{fontFamily:"'Sora',sans-serif",fontSize:".9rem",color:"var(--orange)",whiteSpace:"nowrap"}}>{combined} cal</span>}
             </div>
           );
         })}
@@ -3947,7 +3947,7 @@ function StrengthTab({ data, tdee, weightLbs, gender, age, name,
               <span style={{color:"var(--muted)"}}>{isRest?"Recovery day": allSessions.length===1?getEx(allSessions[0].type).cat:`${allSessions.length} exercises`}</span>
               {burned > 0 && (
                 <div style={{textAlign:"right"}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"var(--orange)",letterSpacing:".5px"}}>{burned} cal</span>
+                  <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",color:"var(--orange)",letterSpacing:".5px"}}>{burned} cal</span>
                   <span style={{color:"var(--muted)",fontSize:".72rem",marginLeft:"4px"}}>+ ~{Math.round(burned*0.15)} EPOC</span>
                 </div>
               )}
@@ -4431,10 +4431,10 @@ function MuscleTab({ tdee, totalBurn, avgBurnPerDay, activeDays, weightLbs, gend
                     <div style={{fontSize:".6rem",color:"var(--accent)"}}>net: +{r.netSurplus}</div>
                   )}
                 </div>
-                <div className="mt-col" style={{color:"var(--accent)",fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem"}}>{(tdee + r.surplus + (showCardio&&hasCardio?avgBurnPerDay:0)).toLocaleString()}</div>
-                <div className="mt-col" style={{color:"var(--green)",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem"}}>{((gainLow+gainHigh)/2).toFixed(2)} lbs</div>
-                <div className="mt-col" style={{color:mfColor,fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem"}}>{r.fatGainPerMonth.toFixed(2)} lbs</div>
-                <div className="mt-col" style={{color:mfColor,fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem"}}>{mfRatio}:1</div>
+                <div className="mt-col" style={{color:"var(--accent)",fontFamily:"'Sora',sans-serif",fontSize:"1rem"}}>{(tdee + r.surplus + (showCardio&&hasCardio?avgBurnPerDay:0)).toLocaleString()}</div>
+                <div className="mt-col" style={{color:"var(--green)",fontFamily:"'Sora',sans-serif",fontSize:".95rem"}}>{((gainLow+gainHigh)/2).toFixed(2)} lbs</div>
+                <div className="mt-col" style={{color:mfColor,fontFamily:"'Sora',sans-serif",fontSize:".95rem"}}>{r.fatGainPerMonth.toFixed(2)} lbs</div>
+                <div className="mt-col" style={{color:mfColor,fontFamily:"'Sora',sans-serif",fontSize:".95rem"}}>{mfRatio}:1</div>
               </div>
             );
           })}
@@ -4478,7 +4478,7 @@ function MuscleTab({ tdee, totalBurn, avgBurnPerDay, activeDays, weightLbs, gend
         <button onClick={()=>setShowMuscleDisclaimer(v=>!v)} style={{
           width:"100%",padding:"14px 16px",border:"none",cursor:"pointer",
           background:"rgba(255,204,68,.1)",color:"var(--yellow)",
-          fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.05rem",letterSpacing:"2px",
+          fontFamily:"'Sora',sans-serif",fontSize:"1.05rem",letterSpacing:"2px",
           display:"flex",alignItems:"center",justifyContent:"space-between",
           transition:"all .15s",
         }}>
@@ -5165,9 +5165,9 @@ function NutrientsTab({ weightLbs, gender, age, tdee, totalBurn, name, targets, 
               {cat.foods.map((f,i)=>(
                 <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0",padding:"8px 0",borderBottom:i<cat.foods.length-1?"1px solid var(--border)":"none",fontSize:".8rem",alignItems:"center"}}>
                   <span style={{color:"var(--text)",lineHeight:1.3,paddingRight:"8px"}}>{f.name}</span>
-                  <span style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:".9rem",color:"var(--muted)",minWidth:"42px"}}>{f.cals}</span>
-                  <span style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:".9rem",color:"#ff6b9d",minWidth:"32px"}}>{f.p}g</span>
-                  <span style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:".9rem",color:cat.color,minWidth:"32px"}}>{cat.id==="protein"?f.f+"g":cat.id==="carbs"?f.c+"g":f.f+"g"}</span>
+                  <span style={{textAlign:"right",fontFamily:"'Sora',sans-serif",fontSize:".9rem",color:"var(--muted)",minWidth:"42px"}}>{f.cals}</span>
+                  <span style={{textAlign:"right",fontFamily:"'Sora',sans-serif",fontSize:".9rem",color:"#ff6b9d",minWidth:"32px"}}>{f.p}g</span>
+                  <span style={{textAlign:"right",fontFamily:"'Sora',sans-serif",fontSize:".9rem",color:cat.color,minWidth:"32px"}}>{cat.id==="protein"?f.f+"g":cat.id==="carbs"?f.c+"g":f.f+"g"}</span>
                 </div>
               ))}
               <div style={{marginTop:"10px",fontSize:".75rem",color:"var(--muted)",lineHeight:1.5,padding:"8px 10px",background:"rgba(8,220,224,.04)",borderRadius:"8px",borderLeft:"3px solid "+cat.color}}>
@@ -6318,7 +6318,7 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
     const target = tdee ? Math.round(tdee) : null;
     const goStep = (n) => { const p = parseKey(sel); setSel(keyOf(p.y, p.m, p.d + n)); };
     const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, marginBottom: 12 };
-    const lbl = { fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.1rem", letterSpacing: 1.5, color: "var(--accent)", marginBottom: 10 };
+    const lbl = { fontFamily: "'Sora',sans-serif", fontSize: "1.1rem", letterSpacing: 1.5, color: "var(--accent)", marginBottom: 10 };
     const quick = { padding: "6px 10px", fontSize: ".78rem", fontWeight: 700, borderRadius: 7, cursor: "pointer", border: "1px solid var(--border)", background: "var(--s2)", color: "var(--text)" };
     return (
       <>
@@ -6336,7 +6336,7 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
         {/* Food */}
         <div style={card}>
           <div style={lbl}>🍽️ Food</div>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, fontFamily: "'Bebas Neue',sans-serif" }}>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, fontFamily: "'Sora',sans-serif" }}>
             {cals.toLocaleString()}{target ? <span style={{ fontSize: ".9rem", color: "var(--muted)", fontWeight: 400 }}> / {target.toLocaleString()} cal</span> : " cal"}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
@@ -6514,7 +6514,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
               strokeLinecap="round" style={{transition:"stroke-dashoffset .5s ease"}}/>
           </svg>
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.2rem",color:"var(--accent)",lineHeight:1}}>{remaining}</div>
+            <div style={{fontFamily:"'Sora',sans-serif",fontSize:"2.2rem",color:"var(--accent)",lineHeight:1}}>{remaining}</div>
             <div style={{fontSize:".65rem",color:"var(--muted)",letterSpacing:".5px"}}>CAL REMAINING</div>
           </div>
         </div>
@@ -6552,19 +6552,19 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
               <div style={{fontWeight:700,fontSize:".88rem",marginBottom:"10px",color:"var(--accent)"}}>🎯 How Your Target Is Calculated</div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Base TDEE</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem"}}>{tdee.toLocaleString()} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem"}}>{tdee.toLocaleString()} cal</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Deficit (1 lb/wk)</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"var(--red)"}}>−500 cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",color:"var(--red)"}}>−500 cal</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Today's workout burn</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"var(--green)"}}>+{todayTotalBurn} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",color:"var(--green)"}}>+{todayTotalBurn} cal</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:".88rem",fontWeight:700}}>
                 <span>Today's Target</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",color:"var(--accent)"}}>{target.toLocaleString()} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",color:"var(--accent)"}}>{target.toLocaleString()} cal</span>
               </div>
               <div style={{fontSize:".72rem",color:"var(--muted)",marginTop:"6px"}}>💡 To change your target, tap "Edit Info" to adjust your weight, goal, or activity level, or "Edit Workouts" to change your exercise plan.</div>
             </>
@@ -6574,15 +6574,15 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
               <div style={{fontWeight:700,fontSize:".88rem",marginBottom:"10px",color:"var(--accent)"}}>🍽️ Calories Logged Today</div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Logged</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem"}}>{logged.toLocaleString()} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem"}}>{logged.toLocaleString()} cal</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Target</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem"}}>{target.toLocaleString()} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem"}}>{target.toLocaleString()} cal</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:".88rem",fontWeight:700,borderBottom:"1px solid var(--border)"}}>
                 <span>Remaining</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",color:remaining>0?"var(--green)":"var(--red)"}}>{remaining} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",color:remaining>0?"var(--green)":"var(--red)"}}>{remaining} cal</span>
               </div>
               <div style={{marginTop:"10px"}}>
                 <div style={{fontSize:".72rem",color:"var(--muted)",fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",marginBottom:"6px"}}>Quick Add</div>
@@ -6617,7 +6617,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
                   onClick={e=>{e.stopPropagation();setExpandedStat(null);setEditingWorkout(editingWorkout===`c${i}`?null:`c${i}`);}}>
                   <span><span style={{fontSize:".65rem",color:"#4fc3f7",fontWeight:700,marginRight:"6px"}}>CARDIO</span>{w.co?.icon} {w.co?.label}</span>
                   <span style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                    <span style={{fontFamily:"'Bebas Neue',sans-serif",color:"var(--orange)"}}>{w.burned} cal</span>
+                    <span style={{fontFamily:"'Sora',sans-serif",color:"var(--orange)"}}>{w.burned} cal</span>
                     <span style={{fontSize:".6rem",color:"var(--muted)"}}>✏️</span>
                   </span>
                 </div>
@@ -6627,7 +6627,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
                   onClick={e=>{e.stopPropagation();setExpandedStat(null);setEditingWorkout(editingWorkout===`s${i}`?null:`s${i}`);}}>
                   <span><span style={{fontSize:".65rem",color:"#ff6b9d",fontWeight:700,marginRight:"6px"}}>STRENGTH</span>{s.ex?.icon} {s.ex?.label}</span>
                   <span style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                    <span style={{fontFamily:"'Bebas Neue',sans-serif",color:"var(--orange)"}}>{s.burned} cal</span>
+                    <span style={{fontFamily:"'Sora',sans-serif",color:"var(--orange)"}}>{s.burned} cal</span>
                     <span style={{fontSize:".6rem",color:"var(--muted)"}}>✏️</span>
                   </span>
                 </div>
@@ -6635,7 +6635,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
               {todayTotalBurn === 0 && <div style={{fontSize:".82rem",color:"var(--muted)",padding:"8px 0"}}>No workouts scheduled for today.</div>}
               <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:".88rem",fontWeight:700,borderBottom:"1px solid var(--border)"}}>
                 <span>Total</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",color:"var(--orange)"}}>{todayTotalBurn} cal</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",color:"var(--orange)"}}>{todayTotalBurn} cal</span>
               </div>
               <div style={{display:"flex",gap:"8px",marginTop:"10px"}}>
                 <button onClick={e=>{e.stopPropagation();const idx=(Array.isArray(data.cardio[dayName])?data.cardio[dayName]:[]).length;onUpdateCardio(dayName,idx,"type","outdoor_jog");setEditingWorkout(`c${idx}`);setExpandedStat(null);}}
@@ -6654,11 +6654,11 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
               <div style={{fontWeight:700,fontSize:".88rem",marginBottom:"10px",color:"#4fc3f7"}}>💧 Hydration</div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Logged</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem"}}>{dailyLog.water || 0} oz</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem"}}>{dailyLog.water || 0} oz</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:".82rem"}}>
                 <span style={{color:"var(--muted)"}}>Daily target</span>
-                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem"}}>{Math.round(Number(weightLbs)*0.5)} oz</span>
+                <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem"}}>{Math.round(Number(weightLbs)*0.5)} oz</span>
               </div>
               <div style={{height:"8px",borderRadius:"4px",background:"var(--border)",overflow:"hidden",marginTop:"8px"}}>
                 <div style={{height:"100%",borderRadius:"4px",background:"#4fc3f7",width:`${Math.min(100,((dailyLog.water||0)/(Number(weightLbs)*0.5))*100)}%`,transition:"width .3s"}}></div>
@@ -6826,7 +6826,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
                   <div style={{fontSize:".84rem",fontWeight:600}}>{w.co?.label||"Unknown Exercise"} <span style={{fontSize:".72rem",color:"var(--muted)"}}>· {(todayCardio.workouts[i]||{}).duration||30}m</span></div>
                   <div style={{fontSize:".65rem",color:"#4fc3f7",letterSpacing:".5px",textTransform:"uppercase",fontWeight:700}}>Cardio</div>
                 </div>
-                <span style={{color:"var(--orange)",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem"}}>{w.burned} cal</span>
+                <span style={{color:"var(--orange)",fontFamily:"'Sora',sans-serif",fontSize:".95rem"}}>{w.burned} cal</span>
                 <span style={{color:"var(--accent)",fontSize:".7rem",fontWeight:700}}>{editingWorkout===`c${i}`?"▲":"TAP"}</span>
               </div>
               {editingWorkout===`c${i}` && (
@@ -6851,11 +6851,11 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
                     {DURATIONS.map(m=><option key={m} value={m}>{m} minutes</option>)}
                   </select>
                   <div style={{display:"flex",gap:"8px",marginTop:"8px"}}>
-                    <button style={{flex:1,padding:"10px",borderRadius:"8px",border:"none",background:"var(--green)",color:"#0b0b12",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem",letterSpacing:"2px",cursor:"pointer"}}
+                    <button style={{flex:1,padding:"10px",borderRadius:"8px",border:"none",background:"var(--green)",color:"#0b0b12",fontFamily:"'Sora',sans-serif",fontSize:".95rem",letterSpacing:"2px",cursor:"pointer"}}
                       onClick={()=>setEditingWorkout(null)}>
                       ✓ Confirmed
                     </button>
-                    <button style={{padding:"10px 16px",borderRadius:"8px",border:"1.5px solid var(--red)",background:"rgba(255,79,107,.06)",color:"var(--red)",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem",letterSpacing:"1px",cursor:"pointer"}}
+                    <button style={{padding:"10px 16px",borderRadius:"8px",border:"1.5px solid var(--red)",background:"rgba(255,79,107,.06)",color:"var(--red)",fontFamily:"'Sora',sans-serif",fontSize:".95rem",letterSpacing:"1px",cursor:"pointer"}}
                       onClick={()=>{
                         const sessions = Array.isArray(data.cardio[dayName]) ? [...data.cardio[dayName]] : [];
                         sessions.splice(i, 1);
@@ -6878,7 +6878,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
                   <div style={{fontSize:".84rem",fontWeight:600}}>{s.ex?.label||"Unknown Exercise"} <span style={{fontSize:".72rem",color:"var(--muted)"}}>· {s.duration||60}m</span></div>
                   <div style={{fontSize:".65rem",color:"#ff6b9d",letterSpacing:".5px",textTransform:"uppercase",fontWeight:700}}>Strength · {s.ex?.cat||"Custom"}</div>
                 </div>
-                <span style={{color:"var(--orange)",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem"}}>{s.burned} cal</span>
+                <span style={{color:"var(--orange)",fontFamily:"'Sora',sans-serif",fontSize:".95rem"}}>{s.burned} cal</span>
                 <span style={{color:"var(--accent)",fontSize:".7rem",fontWeight:700}}>{editingWorkout===`s${i}`?"▲":"TAP"}</span>
               </div>
               {editingWorkout===`s${i}` && (
@@ -6905,11 +6905,11 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
                     {ST_DURATIONS.map(m=><option key={m} value={m}>{m} minutes</option>)}
                   </select>
                   <div style={{display:"flex",gap:"8px",marginTop:"8px"}}>
-                    <button style={{flex:1,padding:"10px",borderRadius:"8px",border:"none",background:"var(--green)",color:"#0b0b12",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem",letterSpacing:"2px",cursor:"pointer"}}
+                    <button style={{flex:1,padding:"10px",borderRadius:"8px",border:"none",background:"var(--green)",color:"#0b0b12",fontFamily:"'Sora',sans-serif",fontSize:".95rem",letterSpacing:"2px",cursor:"pointer"}}
                       onClick={()=>setEditingWorkout(null)}>
                       ✓ Confirmed
                     </button>
-                    <button style={{padding:"10px 16px",borderRadius:"8px",border:"1.5px solid var(--red)",background:"rgba(255,79,107,.06)",color:"var(--red)",fontFamily:"'Bebas Neue',sans-serif",fontSize:".95rem",letterSpacing:"1px",cursor:"pointer"}}
+                    <button style={{padding:"10px 16px",borderRadius:"8px",border:"1.5px solid var(--red)",background:"rgba(255,79,107,.06)",color:"var(--red)",fontFamily:"'Sora',sans-serif",fontSize:".95rem",letterSpacing:"1px",cursor:"pointer"}}
                       onClick={()=>{
                         const sessions = Array.isArray(data.strength[dayName]) ? [...data.strength[dayName]] : [];
                         sessions.splice(i, 1);
@@ -6996,22 +6996,22 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
           <div style={{marginTop:"14px",borderTop:"1px solid var(--border)",paddingTop:"14px",textAlign:"left",animation:"fadeUp .15s ease both"}} onClick={e=>e.stopPropagation()}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"12px"}}>
               <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.3rem",color:"var(--accent)"}}>{tdee.toLocaleString()}</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.3rem",color:"var(--accent)"}}>{tdee.toLocaleString()}</div>
                 <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>TDEE</div>
                 <div style={{fontSize:".55rem",color:"var(--muted)",marginTop:"2px"}}>Calories to maintain weight*</div>
               </div>
               <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.3rem",color:"var(--yellow)"}}>{target.toLocaleString()}</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.3rem",color:"var(--yellow)"}}>{target.toLocaleString()}</div>
                 <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Target Cal</div>
                 <div style={{fontSize:".55rem",color:"var(--muted)",marginTop:"2px"}}>Eat this to lose weight*</div>
               </div>
               <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.3rem",color:"var(--orange)"}}>{(todayCardio.burned+todayStrength.burned).toLocaleString()}</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.3rem",color:"var(--orange)"}}>{(todayCardio.burned+todayStrength.burned).toLocaleString()}</div>
                 <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Today's Burn</div>
                 <div style={{fontSize:".55rem",color:"var(--muted)",marginTop:"2px"}}>Est. calories from workouts*</div>
               </div>
               <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.3rem",color:"#4fc3f7"}}>{Math.round(Number(weightLbs)*0.5)} oz</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.3rem",color:"#4fc3f7"}}>{Math.round(Number(weightLbs)*0.5)} oz</div>
                 <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Water Goal</div>
                 <div style={{fontSize:".55rem",color:"var(--muted)",marginTop:"2px"}}>0.5 oz per lb bodyweight*</div>
               </div>
@@ -7025,15 +7025,15 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
               return (
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px",marginBottom:"10px"}}>
                   <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",color:diff>0?"var(--green)":"var(--orange)"}}>{diff>0?`−${diff.toFixed(1)}`:diff<0?`+${Math.abs(diff).toFixed(1)}`:"0"}</div>
+                    <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.2rem",color:diff>0?"var(--green)":"var(--orange)"}}>{diff>0?`−${diff.toFixed(1)}`:diff<0?`+${Math.abs(diff).toFixed(1)}`:"0"}</div>
                     <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>lbs Change</div>
                   </div>
                   <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",color:adherence>=80?"var(--green)":adherence>=50?"var(--yellow)":"var(--red)"}}>{adherence}%</div>
+                    <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.2rem",color:adherence>=80?"var(--green)":adherence>=50?"var(--yellow)":"var(--red)"}}>{adherence}%</div>
                     <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Adherence</div>
                   </div>
                   <div style={{padding:"10px",background:"var(--s2)",borderRadius:"8px",textAlign:"center"}}>
-                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",color:"var(--text)"}}>{data.checkIns.length}</div>
+                    <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.2rem",color:"var(--text)"}}>{data.checkIns.length}</div>
                     <div style={{fontSize:".62rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Check-ins</div>
                   </div>
                 </div>
@@ -7434,11 +7434,11 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
     <div className="card" style={{padding:"16px",marginBottom:"16px",...cardStyle}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
         <div>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"var(--accent)"}}>📈 Progress</div>
+          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"var(--accent)"}}>📈 Progress</div>
           <div style={{fontSize:".74rem",color:"var(--muted)"}}>{sorted.length} weigh-ins · {checkIns.length} check-ins</div>
         </div>
         <div style={{textAlign:"right"}}>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.3rem",color:trendColor}}>
+          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.3rem",color:trendColor}}>
             {diff > 0 ? `−${diff.toFixed(1)}` : diff < 0 ? `+${Math.abs(diff).toFixed(1)}` : "0"} lbs
           </div>
           <div style={{fontSize:".68rem",color:trendColor,textTransform:"uppercase",letterSpacing:"1px"}}>{trend}</div>
@@ -7535,16 +7535,16 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
 
       <div style={{display:"flex",gap:"16px",marginTop:"10px",justifyContent:"center",flexWrap:"wrap"}}>
         <div style={{textAlign:"center"}}>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",color:"var(--text)"}}>{startW} → {endW}</div>
+          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.2rem",color:"var(--text)"}}>{startW} → {endW}</div>
           <div style={{fontSize:".65rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Weight Trend</div>
         </div>
         <div style={{textAlign:"center"}}>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",color: adherence >= 80 ? "var(--green)" : adherence >= 50 ? "var(--yellow)" : "var(--red)"}}>{adherence}%</div>
+          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.2rem",color: adherence >= 80 ? "var(--green)" : adherence >= 50 ? "var(--yellow)" : "var(--red)"}}>{adherence}%</div>
           <div style={{fontSize:".65rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>Adherence</div>
         </div>
         {goal && (
           <div style={{textAlign:"center"}}>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",color:"var(--accent)"}}>{Math.max(0, (endW - goal)).toFixed(1)}</div>
+            <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.2rem",color:"var(--accent)"}}>{Math.max(0, (endW - goal)).toFixed(1)}</div>
             <div style={{fontSize:".65rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>lbs to goal</div>
           </div>
         )}
@@ -7676,7 +7676,7 @@ Respond in this exact JSON format (no markdown, no backticks):
       <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom: insights ? "14px" : "0"}}>
         <span style={{fontSize:"1.4rem"}}>🤖</span>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"#b57bff"}}>AI Coaching Insights</div>
+          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"#b57bff"}}>AI Coaching Insights</div>
           <div style={{fontSize:".73rem",color:"var(--muted)"}}>Powered by Claude — analyzes {data.firstName || "your client"}'s complete profile</div>
         </div>
         {!insights && (

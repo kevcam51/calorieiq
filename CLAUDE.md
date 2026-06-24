@@ -581,6 +581,21 @@ enabled (Blaze has no default spending cap).
   stylistic holdover (minor, left intentionally):** in-plan card titles still use Bebas Neue (the `.card-title`
   class) vs Sora (`font-display`) on the Tailwind-rebuilt screens — reads fine as a display font; a later
   polish pass could unify it. **Net:** every screen is now on-brand. No `firestore.rules` change.
+- Session 32: **Unified the heading font — Bebas Neue → Sora across the in-plan screens.** The last
+  stylistic holdover from Session 31: the in-plan css-block classes (`.card-title`, `.wb-title`, `.hero-val`,
+  `.lb-val`, `.wc-val`, `.ibw-title`, stat values, the old `.logo`/`.btn`, etc.) hardcoded
+  `font-family:'Bebas Neue'`, while the Tailwind-rebuilt screens use **Sora** (`--font-display` in the `pro`
+  theme). Replaced all **111** `'Bebas Neue',sans-serif` occurrences with `'Sora',sans-serif` (Sora is
+  already loaded globally via `src/themes.css`). **Visible effect:** Bebas is a caps-only condensed display
+  face, so title-case text *appeared* uppercase (e.g. "IDEAL BODY WEIGHT"); in Sora it now renders in its
+  real case ("Ideal Body Weight") — cleaner and matching the rebuilt screens. Big stat numbers (e.g. the
+  Daily Dashboard "2365 cal remaining" ring, Results "2,865") are now Sora, mirroring ClientHome's hero
+  weight; the in-plan "Hey Test" greeting now matches ClientHome's "Hi, Casey 👋" exactly. Small uppercase
+  labels (via `text-transform`/letter-spacing) are unchanged, preserving the heading→label hierarchy. The
+  font-load `@import` (line ~175) still pulls Bebas Neue but only **DM Sans** (the in-plan body font) is now
+  used from it — left as-is. Verified live (Results Basic + Pro, Daily Dashboard): headings render in Sora,
+  no overflow, no console errors, `npm run build` passes. The app's typography is now consistent everywhere.
+  No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
