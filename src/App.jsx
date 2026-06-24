@@ -8648,15 +8648,13 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
         )}
 
         <div className={cardCls}>
-          <div className="flex justify-between items-center gap-2">
-            <div className={sectionTitleCls}>📋 Local Plans</div>
-            <div className="flex gap-1.5">
-              <button onClick={onNewPlan} className={mBtnCls}>+ Plan</button>
-              <button onClick={onNewSimulation}
-                className="px-2.5 py-2 rounded-md text-xs font-bold border-none bg-[#b57bff] text-[#0b0b12] cursor-pointer whitespace-nowrap">
-                + 🧪 Simulation
-              </button>
-            </div>
+          <div className={`${sectionTitleCls} whitespace-nowrap`}>📋 Local Plans</div>
+          <div className="flex gap-1.5 mt-2">
+            <button onClick={onNewPlan} className={mBtnCls}>+ Plan</button>
+            <button onClick={onNewSimulation}
+              className="px-2.5 py-2 rounded-md text-xs font-bold border-none bg-[#b57bff] text-[#0b0b12] cursor-pointer whitespace-nowrap">
+              + 🧪 Simulation
+            </button>
           </div>
           <div className={`${subCls} mt-1.5 mb-1.5`}>
             📄 Plans not connected to a client login — templates, backups, and 🧪 simulations (sandbox
