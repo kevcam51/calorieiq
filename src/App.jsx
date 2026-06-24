@@ -179,29 +179,33 @@ const css = `
 
 /* ── Design tokens ── */
 :root{
-  /* Core palette */
-  --bg:#0d0d18;
-  --surface:#16162a;
-  --s2:#1e1e34;
-  --s3:#252540;
-  --border:#2e2e4a;
-  --border-light:#383858;
+  /* Core palette — aligned to the Smooth Training brand "pro" theme (Session 31):
+     cyan-tinted near-black, replacing the old purple-tinted dark. This brings the
+     remaining old-var in-plan screens (Results, DailyDashboard, MealLog,
+     ActivityFeed, AICoach, the exercise pickers) on-brand without a markup
+     rewrite. Mirrors src/themes.css [data-theme="pro"]. */
+  --bg:#05080a;
+  --surface:#161f24;
+  --s2:#1e2a2e;
+  --s3:#28383a;
+  --border:#2e4241;
+  --border-light:#3a5250;
 
   /* Brand colors */
   --accent:#08dce0;
   --accent-dim:rgba(8,220,224,.12);
   --orange:#ff6b35;
-  --green:#4fffb0;
-  --yellow:#ffcc44;
-  --red:#ff4f6b;
+  --green:#2fe0a8;
+  --yellow:#fbbf24;
+  --red:#f87171;
   --purple:#b57bff;
   --blue:#4fc3f7;
 
   /* Text */
-  --text:#f2f2ff;
-  --text-secondary:#c4c4e0;
-  --muted:#7070a0;
-  --muted-light:#9090c0;
+  --text:#eafcfc;
+  --text-secondary:#c4dede;
+  --muted:#7e9a9a;
+  --muted-light:#9bb8b8;
 
   /* Interaction */
   --tap:52px;

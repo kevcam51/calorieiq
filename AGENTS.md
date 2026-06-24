@@ -563,6 +563,24 @@ enabled (Blaze has no default spending cap).
   `createPortal(…, document.body)` — same transform-trap fix used for the modals (Session 27). This was
   pre-existing (the old `.bottom-nav` was trapped too). Verified: nav now sits at the viewport bottom and no
   content is covered on any step. No `firestore.rules` change.
+- Session 31: **In-plan flow finished on-brand via a token retune (Results + Daily Dashboard) — Option 3
+  done.** Instead of a risky ~3,000-line Tailwind rewrite of `Results`, the key insight: the in-plan screens
+  are built on the **old `:root` CSS variables** (in App.jsx's `css` block), which after the Session-25
+  recolor were dark **but purple-tinted** (`--bg #0d0d18`, `--surface #16162a`, purple `--border`/`--text`/
+  `--muted`) with the accent already brand cyan. So the only "off-brand" thing was the **purple cast**.
+  Fixed by **retuning the old neutral tokens to the brand `pro` values** (`--bg #05080a`, `--surface #161f24`,
+  `--s2 #1e2a2e`, `--s3 #28383a`, `--border #2e4241`, `--border-light #3a5250`, `--text #eafcfc`,
+  `--text-secondary #c4dede`, `--muted #7e9a9a`, `--muted-light #9bb8b8`) and aligning the semantic
+  `--green/--yellow/--red` to brand (`#2fe0a8`/`#fbbf24`/`#f87171`); `--accent` unchanged (already cyan);
+  `--orange`/`--purple`/`--blue` kept. ~12 lines, **zero markup change**, so no regression risk — and it
+  brings ALL remaining old-var screens on-brand at once: the full `Results` (Basic + Pro, all 8 tabs), the
+  `DailyDashboard`, `MealLog`, `ActivityFeed`, `AICoach`, and the exercise pickers. Mirrors the values in
+  `src/themes.css [data-theme="pro"]`. Login/`AuthGate` is unaffected (its own styling, mounts before the
+  css block). Verified live (trainer.uitest → Test Client → Results Basic + Pro, and the Daily Dashboard):
+  purple cast gone, near-black + cyan throughout, no console errors, `npm run build` passes. **Remaining
+  stylistic holdover (minor, left intentionally):** in-plan card titles still use Bebas Neue (the `.card-title`
+  class) vs Sora (`font-display`) on the Tailwind-rebuilt screens — reads fine as a display font; a later
+  polish pass could unify it. **Net:** every screen is now on-brand. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
