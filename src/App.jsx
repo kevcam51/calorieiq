@@ -8818,6 +8818,188 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   );
 }
 
+// ─── Trainer analytics dashboard (Session 34) ───────────────────────────────
+// A coaching command center, distinct from the home (connected clients + local
+// plans) and the All-clients manager. Reads each connected client's ACTIVE plan
+// + logs + requests and surfaces what a coach needs at a glance: who's active
+// this week, who needs attention (no logs in N days), all open requests across
+// clients, and aggregate progress (lbs lost, who's on track). Tap any client to
+// open their plan. Built entirely on existing per-client data; no Blaze.
+const ATTENTION_DAYS = 3; // no logs in this many days → "needs attention"
+
+function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole }) {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    let cs = [];
+    try { cs = await getMyClients(); } catch { /* ignore */ }
+    const rows = await Promise.all((cs || []).map(async (c) => {
+      let data = null, dates = [];
+      const m = await readPlansManifest((k) => getForUser(c.uid, k));
+      const activeId = m.active;
+      try { const r = await getForUser(c.uid, planDataKey(activeId)); if (r && r.value) data = (JSON.parse(r.value) || {}).data || {}; } catch { /* not linked / no plan */ }
+      try { const res = await listForUser(c.uid, planLogPrefix(activeId)); dates = (res.keys || []).map((k) => k.slice(-10)); } catch { /* ignore */ }
+      let requests = [];
+      try { requests = await readRequestsFor(c.uid, getForUser); } catch { /* ignore */ }
+      const openReqs = (requests || []).filter((r) => r.status !== "done");
+      const checkIns = (data && data.checkIns) || [];
+      const weighIns = checkIns.filter((x) => x.weight).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      const cur = data && data.weightLbs ? Number(data.weightLbs) : null;
+      const goal = data && data.goalWeight ? Number(data.goalWeight) : null;
+      const start = weighIns.length ? Number(weighIns[0].weight)
+        : (data && data.startWeightLbs ? Number(data.startWeightLbs) : null);
+      const lbsLost = (start && cur) ? Math.round((start - cur) * 10) / 10 : null;
+      const trend = weightTrend(checkIns);
+      const onTrack = (trend && cur && goal && goal !== cur) ? (etaWeeks(cur, goal, trend.ratePerWeek) != null) : null;
+      const lastLogDate = dates.length ? [...dates].sort().slice(-1)[0] : null;
+      const daysSince = lastLogDate
+        ? Math.floor((Date.now() - new Date(lastLogDate + "T00:00:00").getTime()) / 86400000) : null;
+      const activeThisWeek = dates.some((d) => (Date.now() - new Date(d + "T00:00:00").getTime()) / 86400000 <= 7);
+      const nm = data && (data.firstName || data.lastName)
+        ? `${data.firstName || ""} ${data.lastName || ""}`.trim()
+        : (c.displayName || c.email || "Client");
+      return { uid: c.uid, name: nm, hasPlan: !!data, cur, goal, start, lbsLost, onTrack,
+        lastLogDate, daysSince, activeThisWeek, openReqs };
+    }));
+    setClients(rows);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  // Aggregates
+  const total = clients.length;
+  const activeWeek = clients.filter((c) => c.activeThisWeek).length;
+  const needsAttention = clients.filter((c) => c.hasPlan && (c.daysSince === null || c.daysSince >= ATTENTION_DAYS))
+    .sort((a, b) => (b.daysSince === null ? 1e9 : b.daysSince) - (a.daysSince === null ? 1e9 : a.daysSince));
+  const openReqRows = clients.flatMap((c) => c.openReqs.map((r) => ({ ...r, clientUid: c.uid, clientName: c.name })));
+  const totalLbsLost = Math.round(clients.reduce((s, c) => s + (c.lbsLost && c.lbsLost > 0 ? c.lbsLost : 0), 0) * 10) / 10;
+  const onTrackCount = clients.filter((c) => c.onTrack === true).length;
+  const withProgress = clients.filter((c) => c.lbsLost != null).sort((a, b) => (b.lbsLost || 0) - (a.lbsLost || 0));
+
+  // Brand class strings (match TrainerDashboard)
+  const cardCls = "bg-surface border border-border rounded-card p-5 mb-4";
+  const titleCls = "font-display text-lg tracking-wider text-primary mb-1";
+  const subCls = "text-sm text-muted";
+  const rowCls = "flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-surface2 cursor-pointer";
+
+  const lastActiveLabel = (c) => c.daysSince === null ? "no logs yet"
+    : c.daysSince === 0 ? "active today" : c.daysSince === 1 ? "1 day ago" : `${c.daysSince} days ago`;
+
+  const Tile = ({ value, label, color }) => (
+    <div className="bg-surface2 border border-border rounded-lg py-3 px-2 text-center">
+      <div className={`font-display text-2xl ${color}`}>{value}</div>
+      <div className="text-[.62rem] uppercase tracking-wide text-muted mt-0.5 leading-tight">{label}</div>
+    </div>
+  );
+
+  return (
+    <div data-theme="pro" className="prof-screen page-transition min-h-screen bg-bg text-fg" style={{ fontFamily: "var(--font-sans)" }}>
+      <style>{css}</style>
+      <div className="flex items-center justify-center min-h-[54px] px-14 border-b border-border">
+        <span className="font-display text-2xl tracking-[2px] text-primary">CALORIE<span className="text-fg">IQ</span></span>
+      </div>
+      <div className="max-w-[640px] mx-auto px-4 pt-6 pb-28">
+        <div className="text-2xl font-extrabold tracking-tight mb-1">📊 Coaching Dashboard</div>
+        <div className={`${subCls} mb-4`}>Your clients at a glance — who's active, who needs a nudge, and how they're progressing.</div>
+
+        {loading ? (
+          <div className={cardCls}><div className="text-muted text-sm">Loading your clients…</div></div>
+        ) : total === 0 ? (
+          <div className={cardCls}>
+            <div className={titleCls}>No connected clients yet</div>
+            <div className={subCls}>Share your invite code (≡ menu → Invite clients) so clients can link to you. Once they do, their progress shows up here.</div>
+          </div>
+        ) : (
+          <>
+            {/* Summary tiles */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              <Tile value={total} label="Clients" color="text-primary" />
+              <Tile value={activeWeek} label="Active this wk" color="text-success" />
+              <Tile value={needsAttention.length} label="Need attention" color={needsAttention.length ? "text-warn" : "text-muted"} />
+              <Tile value={openReqRows.length} label="Open requests" color={openReqRows.length ? "text-primary" : "text-muted"} />
+            </div>
+
+            {/* Needs attention */}
+            <div className={cardCls}>
+              <div className={titleCls}>⚠️ Needs attention</div>
+              <div className={`${subCls} mb-2`}>No logs in {ATTENTION_DAYS}+ days — tap to open their plan.</div>
+              {needsAttention.length === 0 ? (
+                <div className="text-sm text-success py-1">🎉 Everyone's logged recently. Nice coaching.</div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {needsAttention.map((c) => (
+                    <div key={c.uid} className={rowCls} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}>
+                      <span className="font-semibold text-[.9rem] truncate">{c.name}</span>
+                      <span className="text-[.78rem] text-warn whitespace-nowrap">🕑 {lastActiveLabel(c)} →</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Open requests across clients */}
+            <div className={cardCls}>
+              <div className={titleCls}>📬 Open requests</div>
+              <div className={`${subCls} mb-2`}>To-dos you've sent that clients haven't completed yet.</div>
+              {openReqRows.length === 0 ? (
+                <div className="text-sm text-muted py-1">No open requests — all caught up.</div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {openReqRows.map((r) => (
+                    <div key={r.id} className={rowCls} onClick={() => onOpenClientPlan && onOpenClientPlan(r.clientUid)}>
+                      <span className="text-[.84rem] truncate"><span className="text-primary font-semibold">{r.clientName}</span> · {r.prompt}</span>
+                      <span className="text-[.78rem] text-muted whitespace-nowrap">→</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Aggregate progress */}
+            <div className={cardCls}>
+              <div className={titleCls}>📈 Progress</div>
+              <div className="flex gap-2 mb-3">
+                <div className="flex-1 bg-surface2 border border-border rounded-lg py-3 text-center">
+                  <div className="font-display text-2xl text-success">{totalLbsLost}</div>
+                  <div className="text-[.62rem] uppercase tracking-wide text-muted mt-0.5">Total lbs lost</div>
+                </div>
+                <div className="flex-1 bg-surface2 border border-border rounded-lg py-3 text-center">
+                  <div className="font-display text-2xl text-primary">{onTrackCount}<span className="text-muted text-base">/{total}</span></div>
+                  <div className="text-[.62rem] uppercase tracking-wide text-muted mt-0.5">On track to goal</div>
+                </div>
+              </div>
+              {withProgress.length === 0 ? (
+                <div className="text-sm text-muted py-1">No weigh-ins logged yet — progress shows once clients start tracking weight.</div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {withProgress.map((c) => (
+                    <div key={c.uid} className={rowCls} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}>
+                      <span className="font-semibold text-[.9rem] truncate">{c.name}</span>
+                      <span className="flex items-center gap-2 whitespace-nowrap text-[.8rem]">
+                        <span className={c.lbsLost > 0 ? "text-success" : c.lbsLost < 0 ? "text-warn" : "text-muted"}>
+                          {c.lbsLost > 0 ? `▼ ${c.lbsLost}` : c.lbsLost < 0 ? `▲ ${Math.abs(c.lbsLost)}` : "0"} lbs
+                        </span>
+                        {c.onTrack === true && <span className="text-success">✓ on track</span>}
+                        {c.onTrack === false && <span className="text-warn">off track</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button onClick={onGoClients} className="w-full py-3 rounded-lg border border-border bg-transparent text-fg text-sm font-semibold cursor-pointer">
+              👥 Manage all clients & plans
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Client home (Session 8) ────────────────────────────────────────────────
 // A client manages just their own plan (stored in their own account as
 // "caliq-self"). This is their landing screen: the role panel (their trainer
@@ -10557,7 +10739,7 @@ export default function App() {
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} meName={meName} meEmail={meEmail}
         isTrainer={isTrainerHome}
         onHome={() => { if (isTrainerHome) setHomeTab("dashboard"); goToProfiles(); }}
-        onDashboard={() => { setHomeTab("dashboard"); goToProfiles(); }}
+        onDashboard={() => { setHomeTab("analytics"); goToProfiles(); }}
         onClients={() => { setHomeTab("clients"); goToProfiles(); }}
         onNameSaved={(n) => setMeName(n)} />
     </>
@@ -10569,6 +10751,13 @@ export default function App() {
     if (role === ROLES.CLIENT) {
       return <>{chrome}<ClientHome onOpenPlan={() => selectProfile("self")}
         meUid={meUid} meName={meName} role={role} /></>;
+    }
+    if (isTrainerHome && homeTab === "analytics") {
+      return <>{chrome}<TrainerAnalytics
+        onOpenClientPlan={openClientPlan}
+        onGoClients={() => setHomeTab("clients")}
+        meUid={meUid} meName={meName} meRole={role}
+      /></>;
     }
     if (isTrainerHome && homeTab === "dashboard") {
       return <>{chrome}<TrainerDashboard

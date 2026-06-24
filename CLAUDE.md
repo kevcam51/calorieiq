@@ -605,6 +605,23 @@ enabled (Blaze has no default spending cap).
   Placeholder updated to hint the new capability. Logic unit-tested (15 cases) + verified live: "today" shows
   today's entries (incl. ones with no "today" in their text), "2 days ago" shows only the 2-days-ago entries.
   Filters live as you type. No `firestore.rules` change.
+- Session 34: **Trainer analytics dashboard (coaching command center) — the side-menu 📊 Dashboard is now a
+  real screen.** Previously the side menu's "📊 Dashboard" item duplicated "🏠 Home" for trainers (both set
+  `homeTab="dashboard"` → the connected-clients/local-plans `TrainerDashboard`). Added a third `homeTab`
+  value **`"analytics"`** and pointed "📊 Dashboard" at it (Home still → `"dashboard"`, All clients →
+  `"clients"`). New `TrainerAnalytics` component (rendered in App when `isTrainerHome && homeTab==="analytics"`):
+  loads `getMyClients()` then each client's ACTIVE plan (`getForUser` via the plans manifest) + logged dates
+  (`listForUser`) + requests (`readRequestsFor`), and surfaces, on-brand (Tailwind + `data-theme="pro"`):
+  (1) **summary tiles** — clients / active this week / need attention / open requests; (2) **⚠️ Needs
+  attention** — clients with no logs in `ATTENTION_DAYS` (3)+ days, sorted quietest-first, tap to open;
+  (3) **📬 Open requests** — every open trainer→client request across all clients, tap to open that client;
+  (4) **📈 Progress** — aggregate total lbs lost + on-track count (`weightTrend`/`etaWeeks`), and per-client
+  lbs lost (start weigh-in → current) with an on-track/off-track badge. Tapping any row calls
+  `openClientPlan(uid)`. Reuses existing helpers (`computeClientCalories` not needed here; `weightTrend`,
+  `etaWeeks`, `readPlansManifest`, `planDataKey`/`planLogPrefix`, `getForUser`/`listForUser`,
+  `readRequestsFor`). No new data model, no Blaze, no `firestore.rules` change. Verified live as
+  `trainer.uitest` (Casey connected): tiles, needs-attention (Casey at 3 days), open-requests empty state,
+  and progress all render; no console errors; `npm run build` passes.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
@@ -613,11 +630,11 @@ enabled (Blaze has no default spending cap).
 
 ## Roadmap (not yet built)
 
-- **Trainer analytics dashboard (Kevin's idea, planned).** The side menu's "📊 Dashboard" item currently
-  duplicates "🏠 Home" for trainers. Make it a real **coaching command center**, distinct from the client
-  list: clients active this week, **needing attention** (no logs in N days), **open requests** across all
-  clients, aggregate progress (total lbs lost, who's on track), and a quick jump to any flagged client.
-  Until built, the redundant "Dashboard" menu item is left in place (it'll become this screen). No Blaze.
+- ~~**Trainer analytics dashboard (Kevin's idea, planned).**~~ **BUILT — Session 34** (`TrainerAnalytics`).
+  The side-menu "📊 Dashboard" is now a real coaching command center (active this week, needs attention,
+  open requests across clients, aggregate progress + on-track), distinct from the home and All-clients.
+  Possible future enhancements: configurable attention threshold, per-client mini sparklines, week-over-week
+  deltas, filter/sort the lists. No Blaze.
 - **Continue the Tailwind redesign (Option 3, in progress).** Client Dashboard is done (Session 26).
   Next candidates, one at a time, only when already in that area: the modals + RolePanel (finish the
   client screen), then the trainer home, the wizard, and the full-plan/Results view. Never break working
