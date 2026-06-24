@@ -1810,9 +1810,12 @@ const wzFillDay = (sel) => `min-h-[40px] rounded-md border text-sm font-semibold
 const wzPreset = "px-2.5 py-1 rounded-md border border-border bg-surface2 text-fg text-[.72rem] cursor-pointer";
 
 function BottomNav({ onBack, onNext, nextLabel = "Next →", nextDisabled = false, showBack = true }) {
-  // Brand-themed fixed bottom bar (Session 30). data-theme="pro" makes it self-
-  // contained so the tokens resolve even though the bar is position:fixed.
-  return (
+  // Brand-themed fixed bottom bar (Session 30). Rendered through a portal to
+  // document.body so it anchors to the viewport — the wizard steps live inside
+  // the .page-transition wrapper, which keeps a CSS transform that would
+  // otherwise become the containing block for this position:fixed bar (the same
+  // trap fixed for the modals). data-theme="pro" keeps it self-themed.
+  return createPortal(
     <div data-theme="pro" style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom,0px))" }}
       className="fixed bottom-0 left-0 right-0 z-30 flex gap-2.5 px-4 py-3.5 border-t border-border bg-bg/95 backdrop-blur-xl">
       {showBack && (
@@ -1825,7 +1828,8 @@ function BottomNav({ onBack, onNext, nextLabel = "Next →", nextDisabled = fals
         className="flex-1 px-5 min-h-[52px] rounded-xl border-none bg-primary text-primaryfg font-bold text-base cursor-pointer disabled:bg-surface2 disabled:text-muted disabled:cursor-not-allowed">
         {nextLabel}
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }
 

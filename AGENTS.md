@@ -556,7 +556,13 @@ enabled (Blaze has no default spending cap).
   `npm run build` passes. **Still old-styled (acceptable interim, render dark+cyan):** the `SearchableSelect`
   and `CustomExerciseCreator` sub-components inside the workout steps. **Next:** the **~3,000-line `Results`**
   component (its own multi-pass effort) — the chrome around it is already branded; only its body remains. The
-  step-5 `DailyDashboard` (in-plan daily view) is also still old. No `firestore.rules` change.
+  step-5 `DailyDashboard` (in-plan daily view) is also still old. **Bug fixed (same session):** the fixed
+  `BottomNav` was anchoring to the `.page-transition` wrapper (its retained `transform: matrix(...)` becomes
+  the containing block for `position:fixed`) instead of the viewport, so the bar floated mid-page and covered
+  the last lines of long steps (e.g. the Activity disclaimer). Fixed by rendering `BottomNav` through
+  `createPortal(…, document.body)` — same transform-trap fix used for the modals (Session 27). This was
+  pre-existing (the old `.bottom-nav` was trapped too). Verified: nav now sits at the viewport bottom and no
+  content is covered on any step. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
