@@ -8353,88 +8353,84 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   const complete = realPlans.filter((p) => p.stepLabel === "Results").length;
   const activeWeek = realPlans.filter((p) => Date.now() - lastActiveTs(p) < 7 * 86400000).length;
 
-  const tabBtn = (active) => ({
-    flex: 1, padding: "10px", fontSize: ".85rem", fontWeight: 700, borderRadius: "8px",
-    border: "1px solid var(--border,rgba(255,255,255,.12))", cursor: active ? "default" : "pointer",
-    background: active ? "var(--accent)" : "transparent", color: active ? "#0b0b12" : "var(--text)",
-  });
+  // Tailwind class strings (Session 28 redesign — brand theme via data-theme="pro").
+  const cardCls = "bg-surface border border-border rounded-card p-5 mb-4";
+  const sectionTitleCls = "font-display text-lg tracking-wider text-primary";
+  const subCls = "text-sm text-muted";
+  const mBtnCls = "px-2.5 py-2 rounded-md text-xs font-semibold border border-border bg-transparent text-fg cursor-pointer text-left whitespace-nowrap disabled:opacity-55";
+  const mPrimaryCls = "px-2.5 py-2 rounded-md text-xs font-bold border-none bg-primary text-primaryfg cursor-pointer whitespace-nowrap disabled:opacity-55";
+  const dangerBtnCls = "px-2.5 py-2 rounded-md text-xs font-bold border-none bg-danger text-white cursor-pointer whitespace-nowrap disabled:opacity-55";
+  const dangerGhostCls = "px-2.5 py-2 rounded-md text-xs font-semibold border border-[rgba(248,113,113,.4)] bg-transparent text-danger cursor-pointer whitespace-nowrap disabled:opacity-55";
+  const inputCls = "flex-1 min-w-0 box-border rounded-md border border-border bg-surface2 text-fg px-2.5 py-1.5 text-sm outline-none placeholder:text-muted";
+  // Filter/sort chips: highlighted via border when active. `purple` variant for sim filter.
+  const chip = (active) => `px-2.5 py-1.5 text-xs rounded-md cursor-pointer border ${active ? "border-primary bg-surface2 text-fg" : "border-border bg-transparent text-fg"}`;
+  const purpleChip = (active) => `px-2.5 py-1.5 text-xs rounded-md cursor-pointer border ${active ? "border-[#b57bff] bg-[rgba(181,123,255,.12)] text-fg" : "border-border bg-transparent text-fg"}`;
 
   return (
-    <div className="prof-screen page-transition">
+    <div data-theme="pro" className="prof-screen page-transition min-h-screen bg-bg text-fg" style={{ fontFamily: "var(--font-sans)" }}>
       <style>{css}</style>
-      <div className="header">
-        <div className="logo">CALORIE<span>IQ</span></div>
-        <div className="tagline">Maintenance · Deficit · Cardio · Strength · Timeline</div>
+      {/* Slim brand header — min-height clears the fixed hamburger (App chrome). */}
+      <div className="flex items-center justify-center min-h-[54px] px-14 border-b border-border">
+        <span className="font-display text-2xl tracking-[2px] text-primary">CALORIE<span className="text-fg">IQ</span></span>
       </div>
-      <div className="container">
+      <div className="max-w-[640px] mx-auto px-4 pt-6 pb-28">
         {clients.length > 0 && (
-          <div className="card">
-            <div className="card-title">🔗 Your Connected Clients</div>
-            <div className="card-sub" style={{ marginBottom: 8 }}>
+          <div className={cardCls}>
+            <div className={sectionTitleCls}>🔗 Your Connected Clients</div>
+            <div className={`${subCls} mt-1 mb-2`}>
               Live data from each client's shared plan. Tap a card to open it.
             </div>
             {clients.length > 1 && (
-              <div style={{ display: "flex", gap: "6px", margin: "0 0 12px" }}>
+              <div className="flex gap-1.5 mb-3">
                 {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
-                  <button key={k} onClick={() => setClientSort(k)}
-                    style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
-                      border: "1px solid var(--border,rgba(255,255,255,.12))",
-                      background: clientSort === k ? "rgba(255,255,255,.1)" : "transparent", color: "var(--text)" }}>
+                  <button key={k} onClick={() => setClientSort(k)} className={chip(clientSort === k)}>
                     {lbl}
                   </button>
                 ))}
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="flex flex-col gap-2.5">
               {sortedClients.map((c) => {
                 const w = Number(c.weight), g = Number(c.goal);
                 const toGo = (w && g) ? Math.round((w - g) * 10) / 10 : null;
                 const ds = c.lastLogDate
                   ? Math.floor((Date.now() - new Date(c.lastLogDate + "T00:00:00").getTime()) / 86400000)
                   : null;
-                const mBtn = { padding:"7px 10px", fontSize:".76rem", fontWeight:600, borderRadius:"6px",
-                  border:"1px solid var(--border,rgba(255,255,255,.2))", background:"transparent",
-                  color:"var(--text)", cursor:"pointer", textAlign:"left" };
-                const mPrimary = { ...mBtn, background:"var(--accent)", color:"#0b0b12", border:"none", fontWeight:700 };
                 const reqs = c.requests || [];
                 const openReqs = reqs.filter((r) => r.status !== "done");
                 const doneReqs = reqs.filter((r) => r.status === "done");
                 return (
-                  <div key={c.uid}
-                    style={{ padding: "12px 14px", borderRadius: "10px",
-                      background: "rgba(255,255,255,.04)", border: "1px solid var(--accent)" }}>
+                  <div key={c.uid} className="p-3.5 rounded-[10px] bg-surface2 border border-primary">
                     {/* Tapping the card body opens the client's active plan (buttons below stay separate). */}
                     <div onClick={() => { if (c.hasPlan && onOpenClientPlan) onOpenClientPlan(c.uid); }}
-                      style={{ cursor: c.hasPlan ? "pointer" : "default" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: ".95rem" }}>{c.name}</span>
-                        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      className={c.hasPlan ? "cursor-pointer" : "cursor-default"}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-[.95rem]">{c.name}</span>
+                        <span className="flex gap-2 items-center">
                           {openReqs.length > 0 && (
-                            <span style={{ fontSize: ".68rem", fontWeight: 700, color: "#0b0b12",
-                              background: "var(--accent)", borderRadius: 10, padding: "2px 8px" }}>
+                            <span className="text-[.68rem] font-bold text-primaryfg bg-primary rounded-[10px] px-2 py-0.5">
                               📬 {openReqs.length} open
                             </span>
                           )}
-                          <span style={{ fontSize: ".7rem", color: "var(--accent)", fontWeight: 700 }}>🔗 Shared</span>
+                          <span className="text-[.7rem] text-primary font-bold">🔗 Shared</span>
                         </span>
                       </div>
                       {c.hasPlan ? (
                         <>
-                          <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
+                          <div className="text-[.95rem] text-fg font-semibold">
                             ⚖️ {c.weight ? `${c.weight} lbs` : "—"}{c.goal ? ` → ${c.goal} lbs` : ""}
                             {toGo !== null && toGo > 0
                               ? ` · ${toGo} lbs to go`
                               : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
                           </div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem",
-                            color: "var(--muted)", marginTop: 8 }}>
+                          <div className="flex flex-wrap gap-3.5 text-sm text-muted mt-2">
                             <span>🔥 {c.target != null ? `${c.target.toLocaleString()} cal/day` : "—"}</span>
                             <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
                           </div>
-                          <div style={{ fontSize: ".72rem", color: "var(--accent)", marginTop: 8 }}>Tap to open plan →</div>
+                          <div className="text-[.72rem] text-primary mt-2">Tap to open plan →</div>
                         </>
                       ) : (
-                        <div style={{ fontSize: ".82rem", color: "var(--muted)" }}>
+                        <div className="text-[.82rem] text-muted">
                           No plan linked yet — use "Link a profile" below.
                         </div>
                       )}
@@ -8442,149 +8438,144 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
 
                     {/* Management: link / open / copy / unlink */}
                     {confirmUnlink === c.uid ? (
-                      <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: ".78rem", color: "var(--text)", marginBottom: 8 }}>
+                      <div className="mt-2.5">
+                        <div className="text-[.78rem] text-fg mb-2">
                           Unlink <strong>{c.name}</strong>'s plan? We'll save a local copy to your files
                           first, then remove it from their account.
                         </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button style={{ ...mPrimary, background: "#e5484d", color: "#fff" }} disabled={linkBusy}
+                        <div className="flex gap-2">
+                          <button className={dangerBtnCls} disabled={linkBusy}
                             onClick={() => unlinkPlan(c.uid)}>{linkBusy ? "…" : "Yes, unlink"}</button>
-                          <button style={mBtn} disabled={linkBusy} onClick={() => setConfirmUnlink(null)}>Cancel</button>
+                          <button className={mBtnCls} disabled={linkBusy} onClick={() => setConfirmUnlink(null)}>Cancel</button>
                         </div>
                       </div>
                     ) : pendingLink && pendingLink.clientUid === c.uid ? (
-                      <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: ".78rem", color: "var(--text)", marginBottom: 8 }}>
+                      <div className="mt-2.5">
+                        <div className="text-[.78rem] text-fg mb-2">
                           Link <strong>{pendingLink.label}</strong> to <strong>{c.name}</strong>?
                           {c.hasPlan ? " This replaces their current linked plan." : ""} The local copy will be removed.
                         </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button style={mPrimary} disabled={linkBusy}
+                        <div className="flex gap-2">
+                          <button className={mPrimaryCls} disabled={linkBusy}
                             onClick={() => linkPlan(c.uid, pendingLink.localId)}>{linkBusy ? "…" : "Confirm"}</button>
-                          <button style={mBtn} disabled={linkBusy} onClick={() => setPendingLink(null)}>Cancel</button>
+                          <button className={mBtnCls} disabled={linkBusy} onClick={() => setPendingLink(null)}>Cancel</button>
                         </div>
                       </div>
                     ) : linkingFor === c.uid ? (
-                      <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: ".74rem", color: "var(--muted)", marginBottom: 4 }}>
+                      <div className="mt-2.5">
+                        <div className={`${subCls} mb-1`}>
                           Pick a local plan to link to this client:
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", maxHeight: 170, overflow: "auto" }}>
+                        <div className="flex flex-col gap-1 max-h-[170px] overflow-auto">
                           {profiles.length === 0 ? (
-                            <div style={{ fontSize: ".78rem", color: "var(--muted)" }}>
+                            <div className="text-[.78rem] text-muted">
                               No local plans yet — create one under "All clients" first.
                             </div>
                           ) : profiles.map((lp) => (
-                            <button key={lp.id} style={mBtn} disabled={linkBusy}
+                            <button key={lp.id} className={mBtnCls} disabled={linkBusy}
                               onClick={() => setPendingLink({ clientUid: c.uid, localId: lp.id, label: lp.customName || lp.name || "Unnamed plan" })}>
                               {lp.customName || lp.name || "Unnamed plan"}{lp.weight ? ` · ${lp.weight} lbs` : ""}
                             </button>
                           ))}
                         </div>
-                        <button style={{ ...mBtn, marginTop: 6 }} disabled={linkBusy} onClick={() => setLinkingFor(null)}>Cancel</button>
+                        <button className={`${mBtnCls} mt-1.5`} disabled={linkBusy} onClick={() => setLinkingFor(null)}>Cancel</button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", gap: "8px", marginTop: 10, flexWrap: "wrap" }}>
-                        <button style={mPrimary} onClick={() => { setComposingFor(composingFor === c.uid ? null : c.uid); setReqDraft(""); }}>
+                      <div className="flex gap-2 mt-2.5 flex-wrap">
+                        <button className={mPrimaryCls} onClick={() => { setComposingFor(composingFor === c.uid ? null : c.uid); setReqDraft(""); }}>
                           ✉️ Send request
                         </button>
                         {c.hasPlan && (
-                          <button style={mBtn} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}>Open plan</button>
+                          <button className={mBtnCls} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}>Open plan</button>
                         )}
-                        <button style={mBtn} onClick={() => setPlansForClient(plansForClient === c.uid ? null : c.uid)}>
+                        <button className={mBtnCls} onClick={() => setPlansForClient(plansForClient === c.uid ? null : c.uid)}>
                           🗂️ Plans{(c.plans && c.plans.length > 1) ? ` (${c.plans.length})` : ""}
                         </button>
-                        <button style={mBtn} onClick={() => setLinkingFor(c.uid)}>
+                        <button className={mBtnCls} onClick={() => setLinkingFor(c.uid)}>
                           {c.hasPlan ? "Re-link a different plan" : "Link a profile"}
                         </button>
                         {c.hasPlan && (
-                          <button style={mBtn} disabled={linkBusy} onClick={() => copyLocal(c.uid)}>Copy to local file</button>
+                          <button className={mBtnCls} disabled={linkBusy} onClick={() => copyLocal(c.uid)}>Copy to local file</button>
                         )}
                         {c.hasPlan && (
-                          <button style={{ ...mBtn, color: "#e5484d", borderColor: "rgba(229,72,77,.4)" }}
-                            onClick={() => setConfirmUnlink(c.uid)}>Unlink</button>
+                          <button className={dangerGhostCls} onClick={() => setConfirmUnlink(c.uid)}>Unlink</button>
                         )}
                       </div>
                     )}
 
                     {/* Request composer (Session 19) */}
                     {composingFor === c.uid && (
-                      <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8,
-                        background: "rgba(255,255,255,.03)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
-                        <div style={{ fontSize: ".74rem", color: "var(--muted)", marginBottom: 6 }}>
+                      <div className="mt-2.5 p-3 rounded-lg bg-bg border border-border">
+                        <div className={`${subCls} mb-1.5`}>
                           Quick requests — tap to send:
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                        <div className="flex flex-wrap gap-1.5 mb-2.5">
                           {REQUEST_TEMPLATES.map((t) => (
-                            <button key={t.type} style={mBtn} disabled={reqBusy}
+                            <button key={t.type} className={mBtnCls} disabled={reqBusy}
                               onClick={() => sendRequest(c.uid, t)}>
                               {t.icon} {t.label}
                             </button>
                           ))}
                         </div>
-                        <div style={{ fontSize: ".74rem", color: "var(--muted)", marginBottom: 4 }}>
+                        <div className={`${subCls} mb-1`}>
                           Or write a custom message:
                         </div>
                         <textarea value={reqDraft} onChange={(e) => setReqDraft(e.target.value)}
                           placeholder="e.g. Send me a progress photo this week"
-                          rows={2} style={{ width: "100%", boxSizing: "border-box", borderRadius: 6, resize: "vertical",
-                            border: "1px solid var(--border,rgba(255,255,255,.2))", background: "var(--bg,#0d0d18)",
-                            color: "var(--text)", padding: "8px 10px", fontSize: ".82rem", fontFamily: "inherit" }} />
-                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                          <button style={{ ...mPrimary, opacity: reqDraft.trim() && !reqBusy ? 1 : .5 }}
+                          rows={2}
+                          className="w-full box-border rounded-md resize-y border border-border bg-surface text-fg px-2.5 py-2 text-[.82rem] outline-none placeholder:text-muted"
+                          style={{ fontFamily: "inherit" }} />
+                        <div className="flex gap-2 mt-2">
+                          <button className={mPrimaryCls}
                             disabled={!reqDraft.trim() || reqBusy}
                             onClick={() => sendRequest(c.uid, { type: "custom", prompt: reqDraft.trim() })}>
                             {reqBusy ? "Sending…" : "Send custom"}
                           </button>
-                          <button style={mBtn} disabled={reqBusy} onClick={() => { setComposingFor(null); setReqDraft(""); }}>Cancel</button>
+                          <button className={mBtnCls} disabled={reqBusy} onClick={() => { setComposingFor(null); setReqDraft(""); }}>Cancel</button>
                         </div>
                       </div>
                     )}
 
                     {/* Plans manager (Session 21) — switch active, open, rename, delete, add. */}
                     {plansForClient === c.uid && (
-                      <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8,
-                        background: "rgba(255,255,255,.03)", border: "1px solid var(--border,rgba(255,255,255,.12))" }}>
-                        <div style={{ fontSize: ".74rem", color: "var(--muted)", marginBottom: 8 }}>
+                      <div className="mt-2.5 p-3 rounded-lg bg-bg border border-border">
+                        <div className={`${subCls} mb-2`}>
                           {c.name}'s plans — ● is active (what the client sees on their home).
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                        <div className="flex flex-col gap-1.5">
                           {(c.plans || []).map((p) => {
                             const isActive = p.id === c.activePlanId;
                             const renaming = cpRenaming && cpRenaming.uid === c.uid && cpRenaming.planId === p.id;
                             const delConfirm = cpDelFor && cpDelFor.uid === c.uid && cpDelFor.planId === p.id;
                             return (
-                              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px",
-                                borderRadius: 7, background: isActive ? "rgba(8,220,224,.08)" : "rgba(255,255,255,.03)" }}>
+                              <div key={p.id} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-[7px] ${isActive ? "bg-[rgba(8,220,224,.08)]" : "bg-surface2"}`}>
                                 {renaming ? (
                                   <>
                                     <input autoFocus value={cpDraft} onChange={(e) => setCpDraft(e.target.value)}
                                       onKeyDown={(e) => { if (e.key === "Enter") { renameClientPlan(c.uid, p.id, cpDraft.trim()); setCpRenaming(null); } }}
-                                      style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)",
-                                        background: "var(--s2)", color: "var(--text)", fontSize: ".82rem" }} />
-                                    <button style={mPrimary} onClick={() => { renameClientPlan(c.uid, p.id, cpDraft.trim()); setCpRenaming(null); }}>Save</button>
+                                      className={inputCls} />
+                                    <button className={mPrimaryCls} onClick={() => { renameClientPlan(c.uid, p.id, cpDraft.trim()); setCpRenaming(null); }}>Save</button>
                                   </>
                                 ) : delConfirm ? (
                                   <>
-                                    <span style={{ flex: 1, fontSize: ".82rem", color: "var(--text)" }}>Delete “{p.name}”?</span>
-                                    <button style={{ ...mPrimary, background: "#e5484d", color: "#fff" }} onClick={() => { deleteClientPlan(c.uid, p.id); setCpDelFor(null); }}>Delete</button>
-                                    <button style={mBtn} onClick={() => setCpDelFor(null)}>Cancel</button>
+                                    <span className="flex-1 text-[.82rem] text-fg">Delete “{p.name}”?</span>
+                                    <button className={dangerBtnCls} onClick={() => { deleteClientPlan(c.uid, p.id); setCpDelFor(null); }}>Delete</button>
+                                    <button className={mBtnCls} onClick={() => setCpDelFor(null)}>Cancel</button>
                                   </>
                                 ) : (
                                   <>
-                                    <span style={{ flex: 1, fontSize: ".85rem", fontWeight: isActive ? 700 : 400, color: "var(--text)" }}>
+                                    <span className={`flex-1 text-[.85rem] text-fg ${isActive ? "font-bold" : "font-normal"}`}>
                                       {isActive ? "● " : "○ "}{p.name}
                                     </span>
                                     {!isActive && (
-                                      <button style={mBtn} onClick={() => setActiveClientPlan(c.uid, p.id)}>Make active</button>
+                                      <button className={mBtnCls} onClick={() => setActiveClientPlan(c.uid, p.id)}>Make active</button>
                                     )}
-                                    <button style={mBtn} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid, p.id)}>Open</button>
+                                    <button className={mBtnCls} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid, p.id)}>Open</button>
                                     <button onClick={() => { setCpDraft(p.name); setCpRenaming({ uid: c.uid, planId: p.id }); }} title="Rename"
-                                      style={{ border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: ".85rem" }}>✎</button>
+                                      className="border-none bg-transparent text-muted cursor-pointer text-[.85rem]">✎</button>
                                     {p.id !== "self" && (c.plans || []).length > 1 && (
                                       <button onClick={() => setCpDelFor({ uid: c.uid, planId: p.id })} title="Delete"
-                                        style={{ border: "none", background: "transparent", color: "#e5484d", cursor: "pointer", fontSize: ".85rem" }}>✕</button>
+                                        className="border-none bg-transparent text-danger cursor-pointer text-[.85rem]">✕</button>
                                     )}
                                   </>
                                 )}
@@ -8592,36 +8583,32 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                             );
                           })}
                         </div>
-                        <button style={{ ...mBtn, marginTop: 8, borderStyle: "dashed", color: "var(--accent)" }}
+                        <button className={`${mBtnCls} mt-2 border-dashed text-primary`}
                           onClick={() => newClientPlan(c.uid)}>+ New plan for {c.name}</button>
                       </div>
                     )}
 
                     {/* Sent requests — open (with cancel) + collapsible done list */}
                     {(openReqs.length > 0 || doneReqs.length > 0) && (
-                      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div className="mt-2.5 flex flex-col gap-1">
                         {openReqs.map((r) => (
-                          <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                            gap: 8, fontSize: ".8rem", padding: "6px 10px", borderRadius: 6,
-                            background: "rgba(8,220,224,.06)", border: "1px solid rgba(8,220,224,.18)" }}>
-                            <span style={{ color: "var(--text)" }}>📬 {r.prompt}</span>
+                          <div key={r.id} className="flex justify-between items-center gap-2 text-sm px-2.5 py-1.5 rounded-md bg-[rgba(8,220,224,.06)] border border-[rgba(8,220,224,.18)]">
+                            <span className="text-fg">📬 {r.prompt}</span>
                             <button onClick={() => cancelRequest(c.uid, r.id)} disabled={reqBusy} title="Cancel this request"
-                              style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: ".9rem" }}>✕</button>
+                              className="bg-transparent border-none text-muted cursor-pointer text-[.9rem]">✕</button>
                           </div>
                         ))}
                         {doneReqs.length > 0 && (
                           <>
                             <button onClick={() => setShowDoneFor(showDoneFor === c.uid ? null : c.uid)}
-                              style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer",
-                                fontSize: ".74rem", textAlign: "left", padding: "2px 0" }}>
+                              className="bg-transparent border-none text-muted cursor-pointer text-[.74rem] text-left py-0.5">
                               {showDoneFor === c.uid ? "▾" : "▸"} {doneReqs.length} completed
                             </button>
                             {showDoneFor === c.uid && doneReqs.map((r) => (
-                              <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                                gap: 8, fontSize: ".78rem", padding: "5px 10px", borderRadius: 6, background: "rgba(255,255,255,.03)" }}>
-                                <span style={{ color: "var(--muted)" }}>✓ {r.prompt}</span>
+                              <div key={r.id} className="flex justify-between items-center gap-2 text-[.78rem] px-2.5 py-1 rounded-md bg-surface2">
+                                <span className="text-muted">✓ {r.prompt}</span>
                                 <button onClick={() => cancelRequest(c.uid, r.id)} disabled={reqBusy} title="Remove"
-                                  style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: ".9rem" }}>✕</button>
+                                  className="bg-transparent border-none text-muted cursor-pointer text-[.9rem]">✕</button>
                               </div>
                             ))}
                           </>
@@ -8631,32 +8618,27 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                   </div>
                 );
               })}
-              {cMsg && <div style={{ fontSize: ".8rem", color: "var(--muted)", marginTop: 4 }}>{cMsg}</div>}
+              {cMsg && <div className="text-sm text-muted mt-1">{cMsg}</div>}
             </div>
           </div>
         )}
 
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <div className="card-title" style={{ marginBottom: 0 }}>📋 Local Plans</div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={onNewPlan}
-                style={{ padding: "8px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 8, cursor: "pointer",
-                  border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)", whiteSpace: "nowrap" }}>
-                + Plan
-              </button>
+        <div className={cardCls}>
+          <div className="flex justify-between items-center gap-2">
+            <div className={sectionTitleCls}>📋 Local Plans</div>
+            <div className="flex gap-1.5">
+              <button onClick={onNewPlan} className={mBtnCls}>+ Plan</button>
               <button onClick={onNewSimulation}
-                style={{ padding: "8px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 8, cursor: "pointer",
-                  border: "none", background: "var(--purple)", color: "#0b0b12", whiteSpace: "nowrap" }}>
+                className="px-2.5 py-2 rounded-md text-xs font-bold border-none bg-[#b57bff] text-[#0b0b12] cursor-pointer whitespace-nowrap">
                 + 🧪 Simulation
               </button>
             </div>
           </div>
-          <div className="card-sub" style={{ marginTop: 6, marginBottom: 6 }}>
+          <div className={`${subCls} mt-1.5 mb-1.5`}>
             📄 Plans not connected to a client login — templates, backups, and 🧪 simulations (sandbox
             what-if projections). Connected clients are under “Your clients” above.
           </div>
-          <div className="card-sub">
+          <div className={subCls}>
             {loading ? "Loading…"
               : `${realPlans.length} plan${realPlans.length !== 1 ? "s" : ""} · ${sims.length} simulation${sims.length !== 1 ? "s" : ""} · ${complete} complete`}
           </div>
@@ -8664,23 +8646,17 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
           {!loading && profiles.length > 0 && (
             <>
               {/* Filter: all / plans / simulations */}
-              <div style={{ display: "flex", gap: "6px", margin: "12px 0 6px" }}>
+              <div className="flex gap-1.5 mt-3 mb-1.5">
                 {[["all", `All (${profiles.length})`], ["plans", `Plans (${realPlans.length})`], ["sims", `🧪 Sims (${sims.length})`]].map(([k, lbl]) => (
-                  <button key={k} onClick={() => setPlanFilter(k)}
-                    style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
-                      border: "1px solid " + (planFilter === k ? "var(--purple)" : "var(--border,rgba(255,255,255,.12))"),
-                      background: planFilter === k ? "rgba(181,123,255,.12)" : "transparent", color: "var(--text)" }}>
+                  <button key={k} onClick={() => setPlanFilter(k)} className={purpleChip(planFilter === k)}>
                     {lbl}
                   </button>
                 ))}
               </div>
               {/* Sort */}
-              <div style={{ display: "flex", gap: "6px", margin: "0 0 4px" }}>
+              <div className="flex gap-1.5 mb-1">
                 {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
-                  <button key={k} onClick={() => setSort(k)}
-                    style={{ padding: "6px 10px", fontSize: ".75rem", borderRadius: "6px", cursor: "pointer",
-                      border: "1px solid var(--border,rgba(255,255,255,.12))",
-                      background: sort === k ? "rgba(255,255,255,.1)" : "transparent", color: "var(--text)" }}>
+                  <button key={k} onClick={() => setSort(k)} className={chip(sort === k)}>
                     {lbl}
                   </button>
                 ))}
@@ -8689,13 +8665,13 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
           )}
 
           {loading ? null : profiles.length === 0 ? (
-            <div style={{ color: "var(--muted)", fontSize: ".85rem", padding: "8px 0" }}>
+            <div className="text-muted text-[.85rem] py-2">
               No local plans yet — tap “+ Plan” to make one, or “+ 🧪 Simulation” for a what-if projection.
             </div>
           ) : filteredLocal.length === 0 ? (
-            <div style={{ color: "var(--muted)", fontSize: ".85rem", padding: "8px 0" }}>Nothing in this filter.</div>
+            <div className="text-muted text-[.85rem] py-2">Nothing in this filter.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
+            <div className="flex flex-col gap-2.5 mt-1.5">
               {filteredLocal.map((p) => {
                 const sim = !!p.isSimulation;
                 const st = statusOf(p);
@@ -8706,39 +8682,32 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                 const pct = det && det.pct != null ? det.pct : null;
                 return (
                   <div key={p.id} onClick={() => onSelect(p.id)}
-                    style={{ cursor: "pointer", padding: "12px 14px", borderRadius: "10px",
-                      background: sim ? "rgba(181,123,255,.06)" : "rgba(255,255,255,.04)",
-                      border: "1px solid " + (sim ? "rgba(181,123,255,.35)" : "var(--border,rgba(255,255,255,.12))") }}>
+                    className={`cursor-pointer p-3.5 rounded-[10px] ${sim ? "bg-[rgba(181,123,255,.06)] border border-[rgba(181,123,255,.35)]" : "bg-surface2 border border-border"}`}>
                     {renamingId === p.id ? (
-                      <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: "6px", marginBottom: 8 }}>
+                      <div onClick={(e) => e.stopPropagation()} className="flex gap-1.5 mb-2">
                         <input autoFocus value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") { onRename && onRename(p.id, renameDraft); setRenamingId(null); } }}
-                          style={{ flex: 1, padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--border)",
-                            background: "var(--s2)", color: "var(--text)", fontSize: ".85rem" }} />
+                          className={inputCls} />
                         <button onClick={() => { onRename && onRename(p.id, renameDraft); setRenamingId(null); }}
-                          style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: "var(--accent)",
-                            color: "#0b0b12", fontWeight: 700, fontSize: ".78rem", cursor: "pointer" }}>Save</button>
-                        <button onClick={() => setRenamingId(null)}
-                          style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--border)",
-                            background: "transparent", color: "var(--muted)", fontSize: ".78rem", cursor: "pointer" }}>✕</button>
+                          className={mPrimaryCls}>Save</button>
+                        <button onClick={() => setRenamingId(null)} className={mBtnCls}>✕</button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: ".95rem" }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-[.95rem]">
                           {p.customName || p.name || (sim ? "Untitled simulation" : "Unnamed client")}
                           {onRename && (
                             <button onClick={(e) => { e.stopPropagation(); setRenameDraft(p.customName || p.name || ""); setRenamingId(p.id); }}
-                              title="Rename" style={{ border: "none", background: "transparent", color: "var(--muted)",
-                                cursor: "pointer", fontSize: ".85rem", marginLeft: 6 }}>✎</button>
+                              title="Rename" className="border-none bg-transparent text-muted cursor-pointer text-[.85rem] ml-1.5">✎</button>
                           )}
                         </span>
                         {sim
-                          ? <span style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--purple)" }}>🧪 SANDBOX</span>
-                          : <span style={{ fontSize: ".72rem", color: st.color, fontWeight: 600 }}>{st.label}</span>}
+                          ? <span className="text-[.66rem] font-bold text-[#b57bff]">🧪 SANDBOX</span>
+                          : <span className="text-[.72rem] font-semibold" style={{ color: st.color }}>{st.label}</span>}
                       </div>
                     )}
                     {/* Weight → goal: larger and brighter so it's easy to read */}
-                    <div style={{ fontSize: ".95rem", color: "var(--text)", fontWeight: 600 }}>
+                    <div className="text-[.95rem] text-fg font-semibold">
                       ⚖️ {p.weight ? `${p.weight} lbs` : "—"}{p.goal ? ` → ${p.goal} lbs` : ""}
                       {toGo !== null && toGo > 0
                         ? ` · ${toGo} lbs to go`
@@ -8746,50 +8715,40 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                     </div>
                     {/* Progress + activity meta — only for real plans (sims aren't tracked) */}
                     {!sim && pct !== null && (
-                      <div style={{ margin: "8px 0 2px" }}>
-                        <div style={{ height: 7, borderRadius: 4, overflow: "hidden", background: "rgba(255,255,255,.1)" }}>
-                          <div style={{ height: "100%", width: `${pct}%`, borderRadius: 4, background: "var(--accent)" }} />
+                      <div className="mt-2 mb-0.5">
+                        <div className="h-[7px] rounded overflow-hidden bg-surface">
+                          <div className="h-full rounded bg-primary" style={{ width: `${pct}%` }} />
                         </div>
-                        <div style={{ fontSize: ".68rem", color: "var(--muted)", marginTop: 3 }}>{pct}% to goal</div>
+                        <div className="text-[.68rem] text-muted mt-1">{pct}% to goal</div>
                       </div>
                     )}
                     {!sim && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: ".8rem", color: "var(--muted)", marginTop: 8 }}>
+                      <div className="flex flex-wrap gap-3.5 text-sm text-muted mt-2">
                         <span>🔥 {det && det.target != null ? `${det.target.toLocaleString()} cal/day` : "—"}</span>
                         <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
                       </div>
                     )}
                     {/* Actions: convert (sims) + delete (all) */}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }} onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-wrap gap-2 mt-2.5" onClick={(e) => e.stopPropagation()}>
                       {sim && (convertSimFor === p.id ? (
-                        <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                        <span className="inline-flex gap-1.5 items-center">
                           <button onClick={() => { onConvertSimulation(p.id); setConvertSimFor(null); }}
-                            style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 6, cursor: "pointer",
-                              border: "none", background: "var(--accent)", color: "#0b0b12" }}>Confirm — make it a client plan</button>
-                          <button onClick={() => setConvertSimFor(null)}
-                            style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 600, borderRadius: 6, cursor: "pointer",
-                              border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)" }}>Cancel</button>
+                            className={mPrimaryCls}>Confirm — make it a client plan</button>
+                          <button onClick={() => setConvertSimFor(null)} className={mBtnCls}>Cancel</button>
                         </span>
                       ) : (
-                        <button onClick={() => setConvertSimFor(p.id)}
-                          style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 600, borderRadius: 6, cursor: "pointer",
-                            border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)" }}>
+                        <button onClick={() => setConvertSimFor(p.id)} className={mBtnCls}>
                           Convert to client plan →
                         </button>
                       ))}
                       {confirmDelFor === p.id ? (
-                        <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                        <span className="inline-flex gap-1.5 items-center">
                           <button onClick={() => { onDeletePlan && onDeletePlan(p.id); setConfirmDelFor(null); }}
-                            style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 700, borderRadius: 6, cursor: "pointer",
-                              border: "none", background: "#e5484d", color: "#fff" }}>Confirm delete</button>
-                          <button onClick={() => setConfirmDelFor(null)}
-                            style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 600, borderRadius: 6, cursor: "pointer",
-                              border: "1px solid var(--border,rgba(255,255,255,.2))", background: "transparent", color: "var(--text)" }}>Cancel</button>
+                            className={dangerBtnCls}>Confirm delete</button>
+                          <button onClick={() => setConfirmDelFor(null)} className={mBtnCls}>Cancel</button>
                         </span>
                       ) : (
-                        <button onClick={() => setConfirmDelFor(p.id)}
-                          style={{ padding: "7px 11px", fontSize: ".76rem", fontWeight: 600, borderRadius: 6, cursor: "pointer",
-                            border: "1px solid rgba(229,72,77,.4)", background: "transparent", color: "#e5484d" }}>Delete</button>
+                        <button onClick={() => setConfirmDelFor(p.id)} className={dangerGhostCls}>Delete</button>
                       )}
                     </div>
                   </div>

@@ -500,6 +500,25 @@ enabled (Blaze has no default spending cap).
   the dashboard and `trainer.uitest` → Casey's shared plan → Full Plan → Pro Tracking for Results): the
   modal anchors to the viewport (375×812 at 0,0), renders on-brand, weigh-in delete list works, no console
   errors, `npm run build` passes. No `firestore.rules` change.
+- Session 28: **Trainer home (`TrainerDashboard`) redesigned in Tailwind + brand theme (Option 3 continues).**
+  The trainer's landing screen was migrated to the new system — the second real screen after the Client
+  Dashboard. **Logic/handlers/state/data-loading all untouched** (loadClients, link/unlink/copy, request
+  composer, multi-plan manager, sims, sort/filter) — purely the render + the inline style-object consts
+  were swapped to Tailwind. The whole return is wrapped in `data-theme="pro"` with the slim brand header bar
+  (`min-h-[54px]`, clears the fixed hamburger) and the same `max-w-[640px]` container as ClientHome. The old
+  `.header`/`.tagline` and the `card`/`card-title`/`card-sub` classes were replaced; per-element inline
+  styles became Tailwind class-string consts (`cardCls`/`sectionTitleCls`/`subCls`/`mBtnCls`/`mPrimaryCls`/
+  `dangerBtnCls`/`dangerGhostCls`/`inputCls` + `chip(active)`/`purpleChip(active)` helpers for the
+  sort/filter chips). Semantic tokens throughout (`bg-surface`/`bg-surface2`/`bg-bg`/`text-fg`/`text-muted`/
+  `border-border`/`bg-primary`/`text-primaryfg`/`bg-danger`). **Sims keep their established purple identity**
+  (🧪 SANDBOX tag, purple-tinted card, "+ 🧪 Simulation" button, purple filter chip) via arbitrary values
+  (`#b57bff` / `rgba(181,123,255,…)`) since the brand palette has no purple — purple = "sandbox, not a real
+  client" is meaningful color. Cyan tints (connected-client border, active-plan row, open-request pills)
+  use brand-cyan arbitrary rgba (`rgba(8,220,224,…)`). The dead `tabBtn` const (leftover from the Session-24
+  nav removal) was deleted. Verified live as `trainer.uitest` (has Casey connected + 2 local plans + 1 sim):
+  header, Connected Clients card, client card, request composer, plans manager, Local Plans cards/chips all
+  render on-brand; no console errors; `npm run build` passes. **Not yet migrated (later passes):** the
+  All-clients `ProfileSelector`, the setup wizard, and the full-plan/Results editor. No `firestore.rules` change.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date
