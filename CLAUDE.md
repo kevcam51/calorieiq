@@ -622,6 +622,18 @@ enabled (Blaze has no default spending cap).
   `readRequestsFor`). No new data model, no Blaze, no `firestore.rules` change. Verified live as
   `trainer.uitest` (Casey connected): tiles, needs-attention (Casey at 3 days), open-requests empty state,
   and progress all render; no console errors; `npm run build` passes.
+- Session 35: **Redesign loose ends — last two sub-components + dead font import.** Closed out the brand
+  redesign. (1) `SearchableSelect` (the exercise type-ahead in the workout steps) and (2)
+  `CustomExerciseCreator` (the "⭐ Create Custom Exercise" panel) were the last components still on old inline
+  styles / `.quick-fill-*` classes. Rewrote both with Tailwind + the shared `WZ`/`WZW` helper class strings
+  (`WZ.input`/`WZ.label`/`WZ.hint`), so they match the rest of the wizard exactly — note these reference the
+  module-level `WZ`/`WZW` consts defined *later* in the file, which is fine since the components are only
+  called at render time (after module eval). `CustomExerciseCreator` keeps its distinct **purple** identity
+  (toggle, panel border, Save button) signalling "user-created / non-standard", consistent with how sims use
+  purple. (3) Removed **Bebas Neue** from the css-block `@import` (line ~175) — it was unused after the
+  Session-32 font unification; only DM Sans (the in-plan body font) is still pulled from it. Zero Bebas refs
+  remain in the file. Verified live (Strength step → Custom Exercise panel renders on-brand, purple Save
+  button); no console errors; `npm run build` passes. The whole app is now consistently on the brand system.
 - **Known state:** there are test accounts and test client profiles in Firestore from manual
   testing — these are not real users and can be cleared. The Session-13/14 testing also left **test
   weigh-ins/check-ins** (incl. some old same-day duplicates from before the Session-15 one-per-date

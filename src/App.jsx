@@ -172,7 +172,7 @@ function projectedLoss(weeks, weeklyDeficitCal) {
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 /* ── Reset ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1666,7 +1666,7 @@ function SearchableSelect({ exercises, groups, value, onChange, placeholder }) {
   const current = exercises.find(e => e.id === value);
 
   return (
-    <div style={{position:"relative"}}>
+    <div className="relative">
       <input
         ref={inputRef}
         type="text"
@@ -1675,40 +1675,26 @@ function SearchableSelect({ exercises, groups, value, onChange, placeholder }) {
         onChange={e => { setSearch(e.target.value); setShowResults(true); }}
         onFocus={() => setShowResults(true)}
         onBlur={() => setTimeout(() => setShowResults(false), 200)}
-        style={{
-          width:"100%", padding:"12px 14px", borderRadius:"var(--radius-sm)",
-          border:"1.5px solid var(--border)", background:"var(--s2)",
-          color:"var(--text)", fontFamily:"inherit", fontSize:".88rem",
-          outline:"none", marginBottom:"6px",
-        }}
+        className={`${WZ.input} mb-1.5`}
       />
       {showResults && filtered.length > 0 && (
-        <div style={{
-          position:"absolute", top:"100%", left:0, right:0, zIndex:20,
-          background:"var(--surface)", border:"1.5px solid var(--accent)",
-          borderRadius:"var(--radius-sm)", maxHeight:"240px", overflowY:"auto",
-          boxShadow:"var(--shadow-md)",
-        }}>
+        <div className="absolute top-full left-0 right-0 z-20 max-h-[240px] overflow-y-auto rounded-lg border border-primary bg-surface shadow-lg">
           {filtered.map(ex => (
             <div key={ex.id}
               onMouseDown={e => { e.preventDefault(); onChange(ex.id); setSearch(""); setShowResults(false); }}
-              style={{
-                padding:"10px 14px", cursor:"pointer", borderBottom:"1px solid var(--border)",
-                display:"flex", gap:"8px", alignItems:"center",
-                background: ex.id === value ? "rgba(8,220,224,.06)" : "transparent",
-              }}
+              className={`flex items-center gap-2 px-3.5 py-2.5 cursor-pointer border-b border-border ${ex.id === value ? "bg-[rgba(8,220,224,.06)]" : "bg-transparent"}`}
             >
-              <span style={{fontSize:"1rem"}}>{ex.icon}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:600,fontSize:".84rem"}}>{ex.label}</div>
-                <div style={{fontSize:".7rem",color:"var(--muted)"}}>{ex.cat||""}{ex.note ? ` · ${ex.note}` : ""}</div>
+              <span className="text-base">{ex.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-[.84rem] text-fg">{ex.label}</div>
+                <div className="text-[.7rem] text-muted">{ex.cat||""}{ex.note ? ` · ${ex.note}` : ""}</div>
               </div>
             </div>
           ))}
         </div>
       )}
       {query.length >= 2 && filtered.length === 0 && showResults && (
-        <div style={{fontSize:".78rem",color:"var(--muted)",padding:"6px 0"}}>No matches — try a different term</div>
+        <div className="text-[.78rem] text-muted py-1.5">No matches — try a different term</div>
       )}
     </div>
   );
@@ -1745,32 +1731,33 @@ function CustomExerciseCreator({ exerciseType, onAdd }) {
   };
 
   return (
-    <div style={{marginTop:"10px",marginBottom:"10px"}}>
-      <button className="quick-fill-toggle" style={{borderColor:"rgba(181,123,255,.25)",color:"#b57bff",background:"rgba(181,123,255,.03)",marginBottom:show?"8px":"0"}}
+    <div className="my-2.5">
+      <button
+        className={`w-full text-left px-3.5 py-3 rounded-lg border border-[rgba(181,123,255,.3)] bg-[rgba(181,123,255,.05)] text-[#b57bff] text-sm font-semibold cursor-pointer ${show ? "mb-2" : ""}`}
         onClick={()=>setShow(v=>!v)}>
         ⭐ Create Custom {exerciseType === "cardio" ? "Cardio" : "Strength"} Exercise {show?"▲":"▼"}
       </button>
       {show && (
-        <div className="quick-fill-panel" style={{borderColor:"rgba(181,123,255,.2)"}}>
-          <div className="field">
-            <label>Exercise Name</label>
+        <div className="fu rounded-lg border border-[rgba(181,123,255,.25)] bg-bg p-3.5">
+          <div className="mb-4">
+            <label className={WZ.label}>Exercise Name</label>
             <input type="text" placeholder="e.g. Battle Ropes, TRX Row, Sled Push" value={name}
-              onChange={e=>setName(e.target.value)} style={{width:"100%",padding:"10px 12px",borderRadius:"8px",border:"1.5px solid var(--border)",background:"var(--s2)",color:"var(--text)",fontFamily:"inherit",fontSize:".88rem"}} />
+              onChange={e=>setName(e.target.value)} className={WZ.input} />
           </div>
-          <div className="field">
-            <label>Estimated Calories Burned Per Minute <span className="field-hint">your best estimate</span></label>
+          <div className="mb-4">
+            <label className={WZ.label}>Estimated Calories Burned Per Minute <span className={WZ.hint}>your best estimate</span></label>
             <input type="text" inputMode="decimal" placeholder="e.g. 8" value={calPerMin}
-              onChange={e=>setCalPerMin(e.target.value.replace(/[^0-9.]/g,""))}
-              style={{width:"100%",padding:"10px 12px",borderRadius:"8px",border:"1.5px solid var(--border)",background:"var(--s2)",color:"var(--text)",fontFamily:"inherit",fontSize:".88rem"}} />
-            <div style={{fontSize:".7rem",color:"var(--muted)",marginTop:"4px",lineHeight:1.4}}>
+              onChange={e=>setCalPerMin(e.target.value.replace(/[^0-9.]/g,""))} className={WZ.input} />
+            <div className="text-[.7rem] text-muted mt-1 leading-snug">
               💡 Reference: walking ≈ 4 cal/min, jogging ≈ 9 cal/min, intense HIIT ≈ 14 cal/min. If unsure, estimate conservatively.
             </div>
           </div>
-          <button className="btn btn-p" style={{width:"100%",fontSize:".9rem",minHeight:"42px"}}
+          <button
+            className="w-full min-h-[42px] rounded-lg border-none bg-[#b57bff] text-[#0b0b12] font-bold text-[.9rem] cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
             disabled={!canSave||saved} onClick={handleSave}>
             {saved ? "✓ Added!" : `Save Custom Exercise`}
           </button>
-          <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:"6px",fontStyle:"italic",textAlign:"center"}}>
+          <div className="text-[.6rem] text-muted mt-1.5 italic text-center">
             ⭐ Custom exercises are marked with a star and labeled "User Estimate" to distinguish them from CalorieIQ's library. Calorie values are your estimates, not validated.
           </div>
         </div>
