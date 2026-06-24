@@ -823,3 +823,13 @@ enabled (Blaze has no default spending cap).
   1 logged day): shows 1,200 cal / 45p / 70c / 12f vs targets 2,365 / 200 / 225 / 74. No `firestore.rules`
   change. **Nutrition arc (S36–40) now covers:** per-food macros + daily totals, macro targets + progress
   bars, editable targets (coach or client), one-tap recent-food re-add, and weekly averages.
+- Session 41: **Daily Dashboard UX tweaks (meal-log discoverability + section grouping).** Two small
+  requests from Kevin. (1) **Meal logging was not obviously tappable:** the "🍽️ Meals & Food Today" header
+  now shows a clear cyan pill — "＋ Log food" (empty) / "＋ Add food" (has items) / "▾ Close" (open) — instead
+  of a bare ▸ chevron, and the per-meal "+ Add food to {Meal}" buttons were upgraded from faint dashed ghosts
+  to solid accent-bordered, accent-tinted, larger buttons so it's obvious where to enter meals. (2) **"This
+  Week" moved out of the entry flow:** it was sandwiched between data-entry rows (calories/meals → weekly
+  summary → water/weight); relocated it below the workout section under a new **"📈 Progress & Insights"**
+  `sec-title`, grouping it with the Recent Activity feed (the display/insight area) and separating it from the
+  entry controls. Pure UI; no logic/data change. Verified live (Test Client): pill + prominent add buttons
+  render, This Week sits under Progress & Insights. No `firestore.rules` change.

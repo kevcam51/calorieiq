@@ -5870,8 +5870,8 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
 
   const inp = { padding:"9px 11px", fontSize:".85rem", borderRadius:"8px",
     border:"1px solid var(--border)", background:"var(--s2)", color:"var(--text)", minWidth:0 };
-  const addBtn = { marginTop:"4px", padding:"6px 10px", fontSize:".76rem", fontWeight:600,
-    borderRadius:"6px", border:"1px dashed var(--border)", background:"transparent",
+  const addBtn = { marginTop:"4px", padding:"9px 12px", fontSize:".8rem", fontWeight:700,
+    borderRadius:"8px", border:"1px solid var(--accent)", background:"rgba(8,220,224,.08)",
     color:"var(--accent)", cursor:"pointer" };
 
   const mealRow = (m) => (
@@ -5963,15 +5963,21 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
     <div style={{ padding:"12px 14px", background:"var(--s2)", borderRadius:"8px",
       border:"1px solid var(--border)", marginBottom:"6px" }}>
       <div onClick={() => setOpen((o) => !o)}
-        style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }}>
+        style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", gap:"8px" }}>
         <div className="sec-title" style={{ marginTop:0, marginBottom:0 }}>🍽️ Meals &amp; Food Today</div>
         <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
           {list.length > 0 && (
-            <span style={{ fontSize:".78rem", color:"var(--muted)" }}>
+            <span style={{ fontSize:".78rem", color:"var(--muted)", whiteSpace:"nowrap" }}>
               {loggedTotal.toLocaleString()} cal · {list.length} item{list.length!==1?"s":""}
             </span>
           )}
-          <span style={{ color:"var(--muted)", fontSize:".8rem" }}>{open ? "▾" : "▸"}</span>
+          {/* Clear, button-like cue that this section is where you log food. */}
+          <span style={{ display:"inline-flex", alignItems:"center", gap:"5px", padding:"6px 11px",
+            borderRadius:"999px", border:"1px solid var(--accent)",
+            background: open ? "transparent" : "rgba(8,220,224,.1)",
+            color:"var(--accent)", fontSize:".76rem", fontWeight:700, whiteSpace:"nowrap" }}>
+            {open ? "▾ Close" : (list.length > 0 ? "＋ Add food" : "＋ Log food")}
+          </span>
         </div>
       </div>
 
@@ -6911,35 +6917,6 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
 
       <MealLog meals={dailyLog.meals} onAddMeal={onAddMeal} onRemoveMeal={onRemoveMeal} onEditMeal={onEditMeal} recentFoods={recentFoods} />
 
-      {/* This week — nutrition averages over the days logged in the last 7 (Session 40) */}
-      {weekSummary && weekSummary.days > 0 && (
-        <div style={{padding:"12px 14px",background:"var(--s2)",borderRadius:"8px",border:"1px solid var(--border)",marginBottom:"6px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"8px"}}>
-            <span className="sec-title" style={{margin:0}}>📅 This Week</span>
-            <span style={{fontSize:".72rem",color:"var(--muted)"}}>avg over {weekSummary.days} logged day{weekSummary.days!==1?"s":""}</span>
-          </div>
-          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-            {[
-              { label:"Calories", val:weekSummary.avgCal, tgt:target,        color:"var(--accent)", unit:"" },
-              { label:"Protein",  val:weekSummary.avgP,   tgt:proteinTarget, color:"#ff6b9d",       unit:"g" },
-              { label:"Carbs",    val:weekSummary.avgC,   tgt:carbsTarget,   color:"#ffcc44",       unit:"g" },
-              { label:"Fat",      val:weekSummary.avgF,   tgt:fatTarget,     color:"#4fc3f7",       unit:"g" },
-            ].map((s)=>(
-              <div key={s.label} style={{flex:"1 1 calc(50% - 4px)",minWidth:"120px",padding:"8px 10px",borderRadius:"7px",background:"var(--bg)",border:"1px solid var(--border)"}}>
-                <div style={{fontSize:".64rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>{s.label}</div>
-                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.25rem",color:s.color,lineHeight:1.1}}>
-                  {s.val.toLocaleString()}{s.unit}
-                </div>
-                <div style={{fontSize:".64rem",color:"var(--muted)"}}>avg/day · target {s.tgt.toLocaleString()}{s.unit}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:"8px",fontStyle:"italic"}}>
-            Averaged over days with logged food in the last 7 · reflects saved logs
-          </div>
-        </div>
-      )}
-
       <div className="dash-log-row">
         <span className="dash-log-icon">💧</span>
         <div className="dash-log-info">
@@ -7103,6 +7080,38 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
           + Add Strength
         </button>
       </div>
+
+      {/* ── Progress & insights (display, not entry) ── */}
+      <div className="sec-title">📈 Progress &amp; Insights</div>
+
+      {/* This week — nutrition averages over the days logged in the last 7 (Session 40) */}
+      {weekSummary && weekSummary.days > 0 && (
+        <div style={{padding:"12px 14px",background:"var(--s2)",borderRadius:"8px",border:"1px solid var(--border)",marginBottom:"6px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"8px"}}>
+            <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",letterSpacing:".5px"}}>📅 This Week</span>
+            <span style={{fontSize:".72rem",color:"var(--muted)"}}>avg over {weekSummary.days} logged day{weekSummary.days!==1?"s":""}</span>
+          </div>
+          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+            {[
+              { label:"Calories", val:weekSummary.avgCal, tgt:target,        color:"var(--accent)", unit:"" },
+              { label:"Protein",  val:weekSummary.avgP,   tgt:proteinTarget, color:"#ff6b9d",       unit:"g" },
+              { label:"Carbs",    val:weekSummary.avgC,   tgt:carbsTarget,   color:"#ffcc44",       unit:"g" },
+              { label:"Fat",      val:weekSummary.avgF,   tgt:fatTarget,     color:"#4fc3f7",       unit:"g" },
+            ].map((s)=>(
+              <div key={s.label} style={{flex:"1 1 calc(50% - 4px)",minWidth:"120px",padding:"8px 10px",borderRadius:"7px",background:"var(--bg)",border:"1px solid var(--border)"}}>
+                <div style={{fontSize:".64rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:".5px"}}>{s.label}</div>
+                <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.25rem",color:s.color,lineHeight:1.1}}>
+                  {s.val.toLocaleString()}{s.unit}
+                </div>
+                <div style={{fontSize:".64rem",color:"var(--muted)"}}>avg/day · target {s.tgt.toLocaleString()}{s.unit}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:"8px",fontStyle:"italic"}}>
+            Averaged over days with logged food in the last 7 · reflects saved logs
+          </div>
+        </div>
+      )}
 
       <ActivityFeed history={history} onRefresh={onRefresh} />
 
