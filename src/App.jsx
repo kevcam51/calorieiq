@@ -1775,11 +1775,39 @@ function CustomExerciseCreator({ exerciseType, onAdd }) {
   );
 }
 
+// Shared wizard Tailwind class strings (Session 30 brand redesign — pro theme).
+// Used across all five step components for a consistent look.
+const WZ = {
+  card: "bg-surface border border-border rounded-card p-5 mb-4",
+  title: "font-display text-lg tracking-wider text-primary mb-1",
+  sub: "text-sm text-muted mb-5 leading-relaxed",
+  label: "block text-[.72rem] tracking-wide uppercase text-muted mb-2 font-semibold",
+  hint: "text-[.65rem] font-normal text-muted ml-1.5 normal-case",
+  input: "w-full min-h-[48px] px-4 py-3 bg-surface2 border border-border rounded-lg text-fg text-base outline-none focus:border-primary placeholder:text-muted",
+  err: "text-[.78rem] text-danger bg-[rgba(248,113,113,.08)] border border-[rgba(248,113,113,.3)] rounded-lg px-3 py-2 mt-2",
+  tip: "text-[.78rem] text-muted leading-relaxed px-3.5 py-3 mt-2.5 bg-surface2 rounded-lg border-l-2 border-border",
+};
+// Big toggle button (gender, etc.) — cyan when active.
+const wzGbtn = (active) => `min-h-[48px] p-4 rounded-lg border-2 cursor-pointer font-semibold flex items-center justify-center gap-2 transition-colors ${active ? "border-primary text-primary bg-[rgba(8,220,224,.08)]" : "border-border text-muted bg-surface2"}`;
+// Large scannable selection row (activity levels, exercises) — cyan when active.
+const wzAbtn = (active) => `w-full min-h-[60px] px-4 py-3.5 rounded-lg border-2 cursor-pointer flex items-center gap-3.5 text-left transition-colors ${active ? "border-primary bg-[rgba(8,220,224,.06)]" : "border-border bg-surface2"}`;
+
 function BottomNav({ onBack, onNext, nextLabel = "Next →", nextDisabled = false, showBack = true }) {
+  // Brand-themed fixed bottom bar (Session 30). data-theme="pro" makes it self-
+  // contained so the tokens resolve even though the bar is position:fixed.
   return (
-    <div className="bottom-nav">
-      {showBack && <button className="btn btn-g" onClick={onBack}>← Back</button>}
-      <button className="btn btn-p" disabled={nextDisabled} onClick={onNext}>{nextLabel}</button>
+    <div data-theme="pro" style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom,0px))" }}
+      className="fixed bottom-0 left-0 right-0 z-30 flex gap-2.5 px-4 py-3.5 border-t border-border bg-bg/95 backdrop-blur-xl">
+      {showBack && (
+        <button onClick={onBack}
+          className="flex-none px-5 min-h-[52px] rounded-xl border border-border bg-surface2 text-fg font-bold text-base cursor-pointer">
+          ← Back
+        </button>
+      )}
+      <button disabled={nextDisabled} onClick={onNext}
+        className="flex-1 px-5 min-h-[52px] rounded-xl border-none bg-primary text-primaryfg font-bold text-base cursor-pointer disabled:bg-surface2 disabled:text-muted disabled:cursor-not-allowed">
+        {nextLabel}
+      </button>
     </div>
   );
 }
@@ -1805,69 +1833,65 @@ function StepPersonal({ data, onChange, onNext }) {
   };
 
   return (
-    <div className="fu">
+    <div data-theme="pro" className="fu text-fg">
       {/* Welcome banner */}
-      <div className="welcome-banner">
-        <div className="wb-emoji">👋</div>
+      <div className="flex items-start gap-3.5 p-4 mb-4 rounded-card border border-primary bg-[rgba(8,220,224,.06)]">
+        <div className="text-[2.2rem] leading-none shrink-0 mt-0.5">👋</div>
         <div>
-          <div className="wb-title">Welcome to CalorieIQ</div>
-          <div className="wb-sub">Answer a few quick questions and we'll build your personalized plan. Takes about 2 minutes.</div>
+          <div className="font-display text-xl tracking-wide text-primary mb-1">Welcome to CalorieIQ</div>
+          <div className="text-[.84rem] text-muted leading-relaxed">Answer a few quick questions and we'll build your personalized plan. Takes about 2 minutes.</div>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-title">About You</div>
-        <div className="card-sub">This lets us calculate your exact metabolism using a clinically validated formula.</div>
+      <div className={WZ.card}>
+        <div className={WZ.title}>About You</div>
+        <div className={WZ.sub}>This lets us calculate your exact metabolism using a clinically validated formula.</div>
 
-        <div className="field">
-          <label>I am a</label>
-          <div className="gender-toggle">
-            <button className={`gbtn${data.gender==="male"?" active":""}`} onClick={()=>onChange("gender","male")}>
-              <span style={{fontSize:"1.2rem"}}>♂</span> Male
+        <div className="mb-4">
+          <label className={WZ.label}>I am a</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button className={wzGbtn(data.gender==="male")} onClick={()=>onChange("gender","male")}>
+              <span className="text-xl">♂</span> Male
             </button>
-            <button className={`gbtn${data.gender==="female"?" active":""}`} onClick={()=>onChange("gender","female")}>
-              <span style={{fontSize:"1.2rem"}}>♀</span> Female
+            <button className={wzGbtn(data.gender==="female")} onClick={()=>onChange("gender","female")}>
+              <span className="text-xl">♀</span> Female
             </button>
           </div>
         </div>
 
-        <div className="field-row">
-          <div className="field">
-            <label>Age <span className="field-hint">years</span></label>
-            <input inputMode="numeric" placeholder="28" value={data.age} onChange={numOnly("age")} maxLength={3} onKeyDown={advanceOnEnter}/>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className={WZ.label}>Age <span className={WZ.hint}>years</span></label>
+            <input className={WZ.input} inputMode="numeric" placeholder="28" value={data.age} onChange={numOnly("age")} maxLength={3} onKeyDown={advanceOnEnter}/>
           </div>
-          <div className="field">
-            <label>Current Weight <span className="field-hint">lbs</span></label>
-            <input inputMode="decimal" placeholder="185" value={data.weightLbs} onChange={decOnly("weightLbs")} maxLength={6} onKeyDown={advanceOnEnter}/>
-          </div>
-        </div>
-
-        <div className="field">
-          <label>Height</label>
-          <div className="field-row">
-            <div className="field" style={{marginBottom:0}}>
-              <input inputMode="numeric" placeholder="Feet — e.g. 5" value={data.heightFt} onChange={numOnly("heightFt")} maxLength={1} onKeyDown={advanceOnEnter}/>
-            </div>
-            <div className="field" style={{marginBottom:0}}>
-              <input inputMode="numeric" placeholder="Inches — e.g. 10" value={data.heightIn} onChange={numOnly("heightIn")} maxLength={2} onKeyDown={advanceOnEnter}/>
-            </div>
+          <div>
+            <label className={WZ.label}>Current Weight <span className={WZ.hint}>lbs</span></label>
+            <input className={WZ.input} inputMode="decimal" placeholder="185" value={data.weightLbs} onChange={decOnly("weightLbs")} maxLength={6} onKeyDown={advanceOnEnter}/>
           </div>
         </div>
 
-        <div className="field-row">
-          <div className="field">
-            <label>First Name</label>
-            <input inputMode="text" placeholder="e.g. Alex" value={data.firstName} onChange={textOnly("firstName")} maxLength={25} onKeyDown={advanceOnEnter}/>
-          </div>
-          <div className="field">
-            <label>Last Name</label>
-            <input inputMode="text" placeholder="e.g. Smith" value={data.lastName} onChange={textOnly("lastName")} maxLength={25} onKeyDown={advanceOnEnter}/>
+        <div className="mb-4">
+          <label className={WZ.label}>Height</label>
+          <div className="grid grid-cols-2 gap-3">
+            <input className={WZ.input} inputMode="numeric" placeholder="Feet — e.g. 5" value={data.heightFt} onChange={numOnly("heightFt")} maxLength={1} onKeyDown={advanceOnEnter}/>
+            <input className={WZ.input} inputMode="numeric" placeholder="Inches — e.g. 10" value={data.heightIn} onChange={numOnly("heightIn")} maxLength={2} onKeyDown={advanceOnEnter}/>
           </div>
         </div>
 
-        <div className="field">
-          <label>Body Fat % <span className="field-hint">optional — from calipers, scale, or DEXA</span></label>
-          <input inputMode="decimal" placeholder="e.g. 22" value={data.bodyFat} onChange={decOnly("bodyFat")} maxLength={5} onKeyDown={advanceOnEnter}/>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className={WZ.label}>First Name</label>
+            <input className={WZ.input} inputMode="text" placeholder="e.g. Alex" value={data.firstName} onChange={textOnly("firstName")} maxLength={25} onKeyDown={advanceOnEnter}/>
+          </div>
+          <div>
+            <label className={WZ.label}>Last Name</label>
+            <input className={WZ.input} inputMode="text" placeholder="e.g. Smith" value={data.lastName} onChange={textOnly("lastName")} maxLength={25} onKeyDown={advanceOnEnter}/>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className={WZ.label}>Body Fat % <span className={WZ.hint}>optional — from calipers, scale, or DEXA</span></label>
+          <input className={WZ.input} inputMode="decimal" placeholder="e.g. 22" value={data.bodyFat} onChange={decOnly("bodyFat")} maxLength={5} onKeyDown={advanceOnEnter}/>
           {data.bodyFat && Number(data.bodyFat) > 0 && (()=>{
             const bf = Number(data.bodyFat);
             const isMale = data.gender === "male";
@@ -1877,8 +1901,8 @@ function StepPersonal({ data, onChange, onNext }) {
             const lbmLbs = Math.round(Number(data.weightLbs) * (1 - bf/100));
             const fatLbs = Math.round(Number(data.weightLbs) * (bf/100));
             return (
-              <div style={{display:"flex",gap:"10px",marginTop:"8px",fontSize:".78rem",color:"var(--muted)",flexWrap:"wrap"}}>
-                <span style={{color:cat.color,fontWeight:600}}>{cat.label}</span>
+              <div className="flex gap-2.5 mt-2 text-[.78rem] text-muted flex-wrap">
+                <span style={{color:cat.color}} className="font-semibold">{cat.label}</span>
                 <span>·</span>
                 <span>{fatLbs} lbs fat</span>
                 <span>·</span>
@@ -1886,12 +1910,12 @@ function StepPersonal({ data, onChange, onNext }) {
               </div>
             );
           })()}
-          <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:"4px",fontStyle:"italic"}}>*BF% from consumer scales can be off by 3-8%. DEXA and calipers by a trained professional are more accurate.</div>
+          <div className="text-[.6rem] text-muted mt-1 italic">*BF% from consumer scales can be off by 3-8%. DEXA and calipers by a trained professional are more accurate.</div>
         </div>
 
         {/* Privacy note */}
-        <div className="privacy-note">🔒 Your information is used only to calculate your results — nothing is stored or shared.</div>
-        <div style={{fontSize:".6rem",color:"var(--muted)",textAlign:"center",marginTop:"6px",fontStyle:"italic"}}>⚠️ All calculations are estimates based on published formulas — not medical advice.</div>
+        <div className="text-[.7rem] text-muted text-center mt-4 pt-3.5 border-t border-border leading-snug">🔒 Your information is used only to calculate your results — nothing is stored or shared.</div>
+        <div className="text-[.6rem] text-muted text-center mt-1.5 italic">⚠️ All calculations are estimates based on published formulas — not medical advice.</div>
       </div>
       <BottomNav showBack={false} onNext={onNext} nextLabel="Continue →" nextDisabled={!valid}/>
     </div>
@@ -1907,30 +1931,28 @@ function StepGoalWeight({ data, onChange, onBack, onNext }) {
   const valid   = toLose !== null;
 
   return (
-    <div className="fu">
-      <div className="card">
-        <div className="card-title">Your Goal Weight</div>
-        <div className="card-sub">
+    <div data-theme="pro" className="fu text-fg">
+      <div className={WZ.card}>
+        <div className={WZ.title}>Your Goal Weight</div>
+        <div className={WZ.sub}>
           Where do you want to be? We'll show you exactly how long it takes and what to do each day to get there.
         </div>
-        <div className="weight-compare">
-          <div className="wc-box">
-            <div className="wc-lbl">Starting at</div>
-            <div className="wc-val">{current||"—"}</div>
-            <div className="wc-unit">lbs today</div>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex-1 text-center rounded-lg border border-border bg-surface2 py-3">
+            <div className="text-[.62rem] uppercase tracking-wide text-muted">Starting at</div>
+            <div className="font-display text-3xl text-fg leading-tight">{current||"—"}</div>
+            <div className="text-[.62rem] text-muted">lbs today</div>
           </div>
-          <div className="wc-arrow">→</div>
-          <div className="wc-box" style={{borderColor: valid?"var(--accent)":"var(--border)"}}>
-            <div className="wc-lbl">Goal</div>
-            <div className="wc-val" style={{color:valid?"var(--accent)":"var(--muted)"}}>
-              {goal||"?"}
-            </div>
-            <div className="wc-unit">lbs target</div>
+          <div className="text-muted text-xl">→</div>
+          <div className={`flex-1 text-center rounded-lg border bg-surface2 py-3 ${valid?"border-primary":"border-border"}`}>
+            <div className="text-[.62rem] uppercase tracking-wide text-muted">Goal</div>
+            <div className={`font-display text-3xl leading-tight ${valid?"text-primary":"text-muted"}`}>{goal||"?"}</div>
+            <div className="text-[.62rem] text-muted">lbs target</div>
           </div>
         </div>
-        <div className="field">
-          <label>Enter your goal weight <span className="field-hint">lbs</span></label>
-          <input
+        <div className="mb-4">
+          <label className={WZ.label}>Enter your goal weight <span className={WZ.hint}>lbs</span></label>
+          <input className={`${WZ.input} text-center font-semibold text-[1.1rem]`}
             inputMode="decimal"
             placeholder="e.g. 165"
             value={data.goalWeight}
@@ -1942,49 +1964,48 @@ function StepGoalWeight({ data, onChange, onBack, onNext }) {
             }}
             maxLength={6}
             onKeyDown={advanceOnEnter}
-            style={{fontSize:"1.1rem",textAlign:"center",fontWeight:600}}
           />
         </div>
         {toLose && (
-          <div className="lose-badge">
-            <div className="lb-lbl">Total to lose</div>
-            <div className="lb-val">{toLose.toFixed(1)}</div>
-            <div className="lb-unit">pounds — we'll map out exactly how to get there</div>
+          <div className="text-center rounded-lg border border-primary bg-[rgba(8,220,224,.06)] py-3 mb-3">
+            <div className="text-[.62rem] uppercase tracking-wide text-muted">Total to lose</div>
+            <div className="font-display text-4xl text-primary leading-tight">{toLose.toFixed(1)}</div>
+            <div className="text-[.62rem] text-muted">pounds — we'll map out exactly how to get there</div>
           </div>
         )}
         {goal > 0 && goal >= current && (
-          <div className="error-box">⚠️ Goal must be less than your current weight ({current} lbs).</div>
+          <div className={WZ.err}>⚠️ Goal must be less than your current weight ({current} lbs).</div>
         )}
 
         {/* Goal weight range (optional band the client aims to stay within) */}
-        <div className="field" style={{marginTop:"12px"}}>
-          <label>Goal weight range <span className="field-hint">optional — a healthy band to stay within</span></label>
-          <div style={{display:"flex", gap:"8px", alignItems:"center"}}>
-            <input inputMode="decimal" placeholder="Low e.g. 190" value={data.goalRangeLow || ""}
+        <div className="mb-4 mt-3">
+          <label className={WZ.label}>Goal weight range <span className={WZ.hint}>optional — a healthy band to stay within</span></label>
+          <div className="flex gap-2 items-center">
+            <input className={`${WZ.input} text-center font-semibold`} inputMode="decimal" placeholder="Low e.g. 190" value={data.goalRangeLow || ""}
               onChange={e => { let v = e.target.value.replace(/[^0-9.]/g,""); const p=v.split("."); if(p.length>2) v=p[0]+"."+p.slice(1).join(""); onChange("goalRangeLow", v); }}
-              maxLength={6} style={{textAlign:"center", fontWeight:600}} />
-            <span style={{color:"var(--muted)", fontSize:".85rem"}}>to</span>
-            <input inputMode="decimal" placeholder="High e.g. 198" value={data.goalRangeHigh || ""}
+              maxLength={6} />
+            <span className="text-muted text-[.85rem]">to</span>
+            <input className={`${WZ.input} text-center font-semibold`} inputMode="decimal" placeholder="High e.g. 198" value={data.goalRangeHigh || ""}
               onChange={e => { let v = e.target.value.replace(/[^0-9.]/g,""); const p=v.split("."); if(p.length>2) v=p[0]+"."+p.slice(1).join(""); onChange("goalRangeHigh", v); }}
-              maxLength={6} style={{textAlign:"center", fontWeight:600}} />
-            <span className="field-hint">lbs</span>
+              maxLength={6} />
+            <span className={WZ.hint}>lbs</span>
           </div>
           {(() => {
             const lo = Number(data.goalRangeLow), hi = Number(data.goalRangeHigh);
-            if (lo > 0 && hi > 0 && lo >= hi) return <div className="error-box">⚠️ The low end should be below the high end.</div>;
-            if (lo > 0 && hi > 0) return <div style={{fontSize:".72rem", color:"var(--muted)", marginTop:"4px"}}>You'll aim to stay between {lo} and {hi} lbs.</div>;
+            if (lo > 0 && hi > 0 && lo >= hi) return <div className={WZ.err}>⚠️ The low end should be below the high end.</div>;
+            if (lo > 0 && hi > 0) return <div className="text-[.72rem] text-muted mt-1">You'll aim to stay between {lo} and {hi} lbs.</div>;
             return null;
           })()}
         </div>
 
         {/* Body Fat Goal */}
         {data.bodyFat && Number(data.bodyFat) > 0 && (
-          <div className="field" style={{marginTop:"12px"}}>
-            <label>Goal Body Fat % <span className="field-hint">optional</span></label>
-            <input inputMode="decimal" placeholder={`e.g. ${Math.max(8, Math.round(Number(data.bodyFat) - 5))}`}
+          <div className="mb-4 mt-3">
+            <label className={WZ.label}>Goal Body Fat % <span className={WZ.hint}>optional</span></label>
+            <input className={`${WZ.input} text-center font-semibold`} inputMode="decimal" placeholder={`e.g. ${Math.max(8, Math.round(Number(data.bodyFat) - 5))}`}
               value={data.goalBodyFat}
               onChange={e => { let v = e.target.value.replace(/[^0-9.]/g,""); onChange("goalBodyFat",v); }}
-              maxLength={5} style={{textAlign:"center",fontWeight:600}} />
+              maxLength={5} />
             {data.goalBodyFat && Number(data.goalBodyFat) > 0 && (()=>{
               const startBf = Number(data.bodyFat);
               const goalBf = Number(data.goalBodyFat);
@@ -2002,25 +2023,25 @@ function StepGoalWeight({ data, onChange, onBack, onNext }) {
               return (
                 <>
                   {bfToLose > 0 && (
-                    <div className="lose-badge" style={{marginTop:"10px",borderColor:"rgba(79,255,176,.22)",background:"rgba(79,255,176,.05)"}}>
-                      <div className="lb-lbl" style={{color:"var(--green)"}}>Body Fat Goal</div>
-                      <div className="lb-val" style={{color:"var(--green)"}}>{startBf}% → {goalBf}%</div>
-                      <div className="lb-unit">≈ {fatLbsToLose} lbs of fat to lose · est. {monthsFast}–{monthsSlow} months*</div>
+                    <div className="text-center rounded-lg border border-[rgba(47,224,168,.3)] bg-[rgba(47,224,168,.06)] py-3 mt-2.5">
+                      <div className="text-[.62rem] uppercase tracking-wide text-success">Body Fat Goal</div>
+                      <div className="font-display text-3xl text-success leading-tight">{startBf}% → {goalBf}%</div>
+                      <div className="text-[.62rem] text-muted">≈ {fatLbsToLose} lbs of fat to lose · est. {monthsFast}–{monthsSlow} months*</div>
                     </div>
                   )}
                   {tooLow && (
-                    <div className="error-box">⚠️ {goalBf}% is below the {isMale?"athletic (6%)":"athletic (14%)"} threshold for {isMale?"men":"women"}. Going below {minBf}% BF can be harmful — competition-level leanness is not sustainable long-term.</div>
+                    <div className={WZ.err}>⚠️ {goalBf}% is below the {isMale?"athletic (6%)":"athletic (14%)"} threshold for {isMale?"men":"women"}. Going below {minBf}% BF can be harmful — competition-level leanness is not sustainable long-term.</div>
                   )}
                   {bfToLose > 0 && (
-                    <div style={{fontSize:".62rem",color:"var(--muted)",marginTop:"4px",fontStyle:"italic"}}>*BF% timeline estimates 0.5–1% loss per month with consistent deficit and resistance training. Actual results vary significantly.</div>
+                    <div className="text-[.62rem] text-muted mt-1 italic">*BF% timeline estimates 0.5–1% loss per month with consistent deficit and resistance training. Actual results vary significantly.</div>
                   )}
-                  {goalBf >= startBf && <div className="error-box">⚠️ Goal BF% should be lower than your current {startBf}%.</div>}
+                  {goalBf >= startBf && <div className={WZ.err}>⚠️ Goal BF% should be lower than your current {startBf}%.</div>}
                 </>
               );
             })()}
           </div>
         )}
-        <div className="field-tip">
+        <div className={WZ.tip}>
           {(()=>{
             const ten = Math.round(current * 0.90);
             const fifteen = Math.round(current * 0.85);
@@ -2048,7 +2069,7 @@ function StepGoalWeight({ data, onChange, onBack, onNext }) {
             </>;
           })()}
         </div>
-        <div style={{fontSize:".6rem",color:"var(--muted)",textAlign:"center",marginTop:"8px",fontStyle:"italic"}}>⚠️ Weight loss timelines are estimates. Consult a healthcare provider before starting any weight loss program.</div>
+        <div className="text-[.6rem] text-muted text-center mt-2 italic">⚠️ Weight loss timelines are estimates. Consult a healthcare provider before starting any weight loss program.</div>
       </div>
       <BottomNav onBack={onBack} onNext={onNext} nextLabel="Continue →" nextDisabled={!valid}/>
     </div>
@@ -2067,36 +2088,38 @@ function StepActivity({ data, onChange, onBack, onNext }) {
     extra: "Extremely hard physical labor for most of the day — the kind of work where you're exhausted by the end of every shift. Examples: roofer, heavy farmer, lumberjack, commercial fisherman, mining. Very few people are truly in this category. Multiplier: 1.9× BMR.",
   };
   return (
-    <div className="fu" onClick={()=>activeInfo && setActiveInfo(null)}>
-      <div className="card">
-        <div className="card-title">Daily Activity Level</div>
-        <div className="card-sub">
-          This measures your <strong style={{color:"var(--text)"}}>non-exercise movement</strong> — your job, daily routine, and how much you're on your feet. <strong style={{color:"var(--text)"}}>Do NOT include planned workouts</strong> — those are tracked separately in the next steps.
+    <div data-theme="pro" className="fu text-fg" onClick={()=>activeInfo && setActiveInfo(null)}>
+      <div className={WZ.card}>
+        <div className={WZ.title}>Daily Activity Level</div>
+        <div className={WZ.sub}>
+          This measures your <strong className="text-fg">non-exercise movement</strong> — your job, daily routine, and how much you're on your feet. <strong className="text-fg">Do NOT include planned workouts</strong> — those are tracked separately in the next steps.
         </div>
-        <div className="field-tip" style={{marginTop:0,marginBottom:"16px"}}>
+        <div className={`${WZ.tip} mt-0 mb-4`}>
           📊 <strong>How this works:</strong> Your body burns a baseline number of calories just existing (BMR). This step estimates how much your daily lifestyle adds on top of that — sitting at a desk all day burns far fewer calories than being on your feet in a warehouse. Your planned cardio and strength training are calculated separately in the next steps and added to this baseline, so you get an accurate total without double-counting.
         </div>
-        {ACTIVITY_LEVELS.map(a=>(
-          <div key={a.id}>
-            <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
-              <button className={`abtn${data.activityLevel===a.id?" active":""}`} style={{flex:1}} onClick={()=>{onChange("activityLevel",a.id);setActiveInfo(null);}}>
-                <span className="abtn-emoji">{a.emoji}</span>
-                <div><div className="al">{a.label}</div><div className="ad">{a.desc}</div></div>
-                {data.activityLevel===a.id && <span className="abtn-check">✓</span>}
+        {ACTIVITY_LEVELS.map(a=>{
+          const active = data.activityLevel===a.id;
+          return (
+          <div key={a.id} className="mb-2.5">
+            <div className="flex items-center gap-1">
+              <button className={`${wzAbtn(active)} flex-1`} onClick={()=>{onChange("activityLevel",a.id);setActiveInfo(null);}}>
+                <span className="text-2xl leading-none shrink-0">{a.emoji}</span>
+                <div><div className={`font-bold text-[.97rem] ${active?"text-primary":"text-fg"}`}>{a.label}</div><div className="text-[.76rem] text-muted leading-snug">{a.desc}</div></div>
+                {active && <span className="ml-auto shrink-0 w-7 h-7 rounded-full bg-[rgba(8,220,224,.15)] text-primary flex items-center justify-center text-lg">✓</span>}
               </button>
-              <button className={`info-icon${activeInfo===a.id?" active":""}`}
-                onClick={(e)=>{e.stopPropagation();setActiveInfo(activeInfo===a.id?null:a.id);}}
-                style={{marginLeft:"4px",flexShrink:0}}>i</button>
+              <button className={`shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-sm cursor-pointer ${activeInfo===a.id?"border-primary text-primary bg-[rgba(8,220,224,.08)]":"border-border text-muted bg-surface2"}`}
+                onClick={(e)=>{e.stopPropagation();setActiveInfo(activeInfo===a.id?null:a.id);}}>i</button>
             </div>
             {activeInfo===a.id && (
-              <div onClick={e=>e.stopPropagation()} style={{padding:"12px 14px",marginBottom:"8px",background:"rgba(8,220,224,.06)",border:"1.5px solid rgba(8,220,224,.2)",borderRadius:"8px",fontSize:".82rem",color:"var(--text-secondary)",lineHeight:1.7,animation:"fadeUp .15s ease both"}}>
+              <div onClick={e=>e.stopPropagation()} className="px-3.5 py-3 mt-2 rounded-lg bg-[rgba(8,220,224,.06)] border border-[rgba(8,220,224,.2)] text-[.82rem] text-fg leading-relaxed">
                 {ACTIVITY_DETAILS[a.id]}
               </div>
             )}
           </div>
-        ))}
-        <div className="field-tip">💡 When in doubt, choose one level lower — most people overestimate how active they are day-to-day.</div>
-        <div style={{fontSize:".6rem",color:"var(--muted)",textAlign:"center",marginTop:"8px",fontStyle:"italic"}}>⚠️ Activity multipliers are general estimates — actual energy expenditure varies by individual.</div>
+          );
+        })}
+        <div className={WZ.tip}>💡 When in doubt, choose one level lower — most people overestimate how active they are day-to-day.</div>
+        <div className="text-[.6rem] text-muted text-center mt-2 italic">⚠️ Activity multipliers are general estimates — actual energy expenditure varies by individual.</div>
       </div>
       <BottomNav onBack={onBack} onNext={onNext} nextLabel="Continue →" nextDisabled={!data.activityLevel}/>
     </div>
