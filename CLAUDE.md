@@ -777,3 +777,14 @@ enabled (Blaze has no default spending cap).
 - **Commit style**: clear, descriptive messages; keep unrelated changes in separate commits.
 - Build (`npm run build`) should pass before committing code changes.
 - Keep this file (CLAUDE.md) updated as the project evolves.
+- Session 37: **Macro targets + progress bars in the Daily Dashboard.** The dashboard already had macro
+  logging with protein (1g/lb) and fat (28% of cal) targets, but **carbs had no target** ("fills remaining
+  after P & F") and the macro summary bar showed only the consumed *split* (proportional), not progress vs
+  goal. Computed the three targets once (`proteinTarget` = `weightLbs`×1, `fatTarget` = `target`×0.28/9,
+  `carbsTarget` = remaining cals ÷4) and: (1) carbs log-row now shows "Target: ~Ng"; (2) replaced the
+  proportional split bar with **per-macro logged-vs-target progress bars** (protein pink / carbs yellow /
+  fat blue, fill capped 100%, turns `--orange` + ⚠️ when over, ✓ when at/over goal), keeping the "cal from
+  macros · targets are estimates" caption. Display-only (commit path unchanged); reads `dailyLog.protein/
+  carbs/fat`. Verified live (Test Client): targets show 200g/225g/74g for a 200lb client; bars render
+  45/200, 70/225, 12/74 from logged macros. No `firestore.rules` change. **Note:** macro split uses common
+  coaching defaults (1g/lb protein, 28% fat) — easily adjustable; could become trainer-editable later.

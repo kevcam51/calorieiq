@@ -6500,6 +6500,11 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
   const logged = dailyLog.calories || 0;
   const remaining = Math.max(0, target - logged);
   const pct = Math.min(100, Math.round((logged / target) * 100));
+  // Macro targets (estimates): protein 1g/lb bodyweight, fat 28% of calories,
+  // carbs fill the remaining calories. Shown as logged-vs-target progress.
+  const proteinTarget = Math.round(Number(weightLbs) * 1.0) || 0;
+  const fatTarget = Math.round(target * 0.28 / 9);
+  const carbsTarget = Math.max(0, Math.round((target - proteinTarget * 4 - fatTarget * 9) / 4));
 
   // Ring SVG
   const ringR = 58, ringC = 2 * Math.PI * ringR;
@@ -6766,7 +6771,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
             <span className="dash-log-icon">🥩</span>
             <div className="dash-log-info">
               <div className="dash-log-title" style={{color:"#ff6b9d"}}>Protein</div>
-              <div className="dash-log-sub">Target: ~{Math.round(Number(weightLbs)*1.0)}g*</div>
+              <div className="dash-log-sub">Target: ~{proteinTarget}g*</div>
             </div>
             <input className="dash-log-input" type="number" inputMode="numeric" placeholder="0"
               onBlur={e=>{ const v=parseInt(e.target.value); if(v>0){ onLogUpdate("protein",(dailyLog.protein||0)+v); e.target.value=""; }}}
@@ -6778,7 +6783,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
             <span className="dash-log-icon">🌾</span>
             <div className="dash-log-info">
               <div className="dash-log-title" style={{color:"#ffcc44"}}>Carbs</div>
-              <div className="dash-log-sub">Fills remaining after P & F*</div>
+              <div className="dash-log-sub">Target: ~{carbsTarget}g*</div>
             </div>
             <input className="dash-log-input" type="number" inputMode="numeric" placeholder="0"
               onBlur={e=>{ const v=parseInt(e.target.value); if(v>0){ onLogUpdate("carbs",(dailyLog.carbs||0)+v); e.target.value=""; }}}
@@ -6790,7 +6795,7 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
             <span className="dash-log-icon">🥑</span>
             <div className="dash-log-info">
               <div className="dash-log-title" style={{color:"#4fc3f7"}}>Fat</div>
-              <div className="dash-log-sub">~{Math.round(target*0.28/9)}g target*</div>
+              <div className="dash-log-sub">Target: ~{fatTarget}g*</div>
             </div>
             <input className="dash-log-input" type="number" inputMode="numeric" placeholder="0"
               onBlur={e=>{ const v=parseInt(e.target.value); if(v>0){ onLogUpdate("fat",(dailyLog.fat||0)+v); e.target.value=""; }}}
@@ -6802,30 +6807,33 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
         </div>
       )}
 
-      {/* Macro summary bar */}
+      {/* Macro progress vs target — per-macro bars (logged / target) */}
       {(dailyLog.protein > 0 || dailyLog.carbs > 0 || dailyLog.fat > 0) && (
         <div style={{padding:"10px 14px",background:"var(--s2)",borderRadius:"8px",border:"1px solid var(--border)",marginBottom:"6px"}}>
-          <div style={{display:"flex",gap:"14px",marginBottom:"6px",fontSize:".75rem"}}>
-            <span style={{color:"#ff6b9d"}}>🥩 {dailyLog.protein||0}g / {Math.round(Number(weightLbs)*1.0)}g</span>
-            <span style={{color:"#ffcc44"}}>🌾 {dailyLog.carbs||0}g</span>
-            <span style={{color:"#4fc3f7"}}>🥑 {dailyLog.fat||0}g / {Math.round(target*0.28/9)}g</span>
-          </div>
-          <div style={{height:"8px",borderRadius:"4px",overflow:"hidden",display:"flex",background:"var(--border)"}}>
-            {(()=>{
-              const totalMacroCal = (dailyLog.protein||0)*4 + (dailyLog.carbs||0)*4 + (dailyLog.fat||0)*9;
-              if(totalMacroCal===0) return null;
-              const pPct = ((dailyLog.protein||0)*4/totalMacroCal)*100;
-              const cPct = ((dailyLog.carbs||0)*4/totalMacroCal)*100;
-              const fPct = ((dailyLog.fat||0)*9/totalMacroCal)*100;
-              return <>
-                <div style={{width:`${pPct}%`,background:"#ff6b9d",height:"100%"}}></div>
-                <div style={{width:`${cPct}%`,background:"#ffcc44",height:"100%"}}></div>
-                <div style={{width:`${fPct}%`,background:"#4fc3f7",height:"100%"}}></div>
-              </>;
-            })()}
-          </div>
-          <div style={{fontSize:".65rem",color:"var(--muted)",marginTop:"4px",textAlign:"center"}}>
-            Macro calories: {((dailyLog.protein||0)*4 + (dailyLog.carbs||0)*4 + (dailyLog.fat||0)*9).toLocaleString()} cal from macros
+          {[
+            { icon:"🥩", label:"Protein", color:"#ff6b9d", val:dailyLog.protein||0, tgt:proteinTarget },
+            { icon:"🌾", label:"Carbs",   color:"#ffcc44", val:dailyLog.carbs||0,   tgt:carbsTarget },
+            { icon:"🥑", label:"Fat",     color:"#4fc3f7", val:dailyLog.fat||0,     tgt:fatTarget },
+          ].map((m) => {
+            const fill = m.tgt > 0 ? Math.min(100, Math.round((m.val / m.tgt) * 100)) : 0;
+            const over = m.tgt > 0 && m.val > m.tgt;
+            return (
+              <div key={m.label} style={{ marginBottom:"8px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:".74rem", marginBottom:"3px" }}>
+                  <span style={{ color:m.color, fontWeight:600 }}>{m.icon} {m.label}</span>
+                  <span style={{ color: over ? "var(--orange)" : "var(--muted)" }}>
+                    {m.val}g <span style={{ opacity:.7 }}>/ {m.tgt}g</span>{over ? " ⚠️" : m.tgt>0 && fill>=100 ? " ✓" : ""}
+                  </span>
+                </div>
+                <div style={{ height:"7px", borderRadius:"4px", overflow:"hidden", background:"var(--border)" }}>
+                  <div style={{ width:`${fill}%`, height:"100%", borderRadius:"4px",
+                    background: over ? "var(--orange)" : m.color, transition:"width .3s ease" }} />
+                </div>
+              </div>
+            );
+          })}
+          <div style={{fontSize:".65rem",color:"var(--muted)",marginTop:"2px",textAlign:"center"}}>
+            {((dailyLog.protein||0)*4 + (dailyLog.carbs||0)*4 + (dailyLog.fat||0)*9).toLocaleString()} cal from macros · targets are estimates
           </div>
         </div>
       )}
