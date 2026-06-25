@@ -82,6 +82,25 @@ enabled (Blaze has no default spending cap).
 
 ## Current state (built)
 
+> **RESUME-HERE SUMMARY (keep this updated; it's the fast path for a fresh chat).**
+> _Last updated: Session 41._
+> - **Brand redesign (Tailwind + "pro" theme): DONE.** Every screen is on-brand near-black + cyan
+>   (`#08DCE0`). Client/Trainer dashboards, All-clients, the wizard, and the in-plan Results/Daily
+>   Dashboard are all migrated (Tailwind for the rebuilt screens; the in-plan screens use the old
+>   `:root` CSS vars which were retuned to brand values in S31, headings unified to Sora in S32).
+> - **Nutrition tier (free self-log): DONE (S36–40).** Per-food macros + daily totals, macro targets +
+>   progress bars, **editable** macro targets (coach or client, `data.macroTargets`), one-tap re-add of
+>   recent foods (`caliq-foods-{planId}`), and a weekly averages card ("This Week").
+> - **Trainer analytics dashboard: DONE (S34).** Side-menu 📊 Dashboard = `TrainerAnalytics` (needs-
+>   attention, open requests, aggregate progress). `homeTab` is `"dashboard"|"analytics"|"clients"`.
+> - **Key gotcha:** the `.page-transition` wrapper keeps a CSS transform → it becomes the containing
+>   block for `position:fixed`. Modals + `BottomNav` are rendered via `createPortal(…, document.body)`
+>   to escape it (S27/S30). Any new fixed overlay must do the same.
+> - **Still NON-Blaze roadmap:** calendar enhancements, more trainer tools, deeper nutrition.
+>   **Blaze-gated (not yet):** AI coaching/photo meal tracking, client→trainer messaging/requests,
+>   notifications, Stripe. See the roadmap section below.
+> - **In progress now:** general calendar + trainer-tools improvements (Kevin gave open-ended latitude).
+
 - Session 1: Vite project, app moved in, deployed to Vercel.
 - Session 2: Firebase Auth + Firestore; storage migrated from localStorage to Firestore;
   login gate; per-user data isolation.
@@ -833,3 +852,16 @@ enabled (Blaze has no default spending cap).
   `sec-title`, grouping it with the Recent Activity feed (the display/insight area) and separating it from the
   entry controls. Pure UI; no logic/data change. Verified live (Test Client): pill + prominent add buttons
   render, This Week sits under Progress & Insights. No `firestore.rules` change.
+- Session 42: **Calendar — per-day calorie-adherence tinting (month view).** The calendar (`CalendarView`,
+  S22) showed indicator dots but no sense of whether a day hit its calorie goal. Each month-view day cell is
+  now tinted by adherence: **green** (`rgba(47,224,168,.13)`) if that day's logged calories were at/under
+  target, **amber** (`rgba(251,191,36,.13)`) if over (>target×1.05); untinted if nothing logged; selected day
+  keeps its cyan bg. Target = `computeClientCalories(data).target` (same formula as dashboard/Results). New
+  `dayCals` state + an effect that reads logged-day calorie totals **for the visible month only** (bounded ≤31
+  reads, cached so re-visiting a month doesn't re-read) via the remote-aware `onReadDay`. Added the two tint
+  swatches to the legend (only when a target exists) and a per-cell tooltip ("X cal · target Y"). Verified
+  live (Test Client): the under-target logged day tinted green with its food dot; legend shows the swatches.
+  No `firestore.rules` change. Also (same session): added a **RESUME-HERE SUMMARY** block at the top of this
+  "Current state" section — a fast-path digest (brand redesign done, nutrition tier done, analytics done, the
+  page-transition/createPortal gotcha, Blaze line) so a fresh chat can get oriented without reading every
+  session entry. Keep it updated.

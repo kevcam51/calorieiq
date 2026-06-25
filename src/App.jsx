@@ -6216,9 +6216,28 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
   const [sel, setSel] = useState(todayKey);               // selected day
   const [loggedDays, setLoggedDays] = useState([]);       // dates with a log entry
   const [dayLog, setDayLog] = useState(null);             // selected day's log
+  const [dayCals, setDayCals] = useState({});             // date -> logged calories (month view tinting)
+
+  // Daily calorie target — same formula the dashboard/Results use, for adherence tinting.
+  const calTarget = (computeClientCalories(data) || {}).target || null;
 
   useEffect(() => { (async () => setLoggedDays(await onListLoggedDays()))(); }, []);
   useEffect(() => { (async () => setDayLog(await onReadDay(sel)))(); }, [sel]);
+  // Load logged-day calorie totals for the visible month (bounded to logged days
+  // in that month; cached so re-visiting a month doesn't re-read).
+  useEffect(() => {
+    if (!calTarget) return;
+    (async () => {
+      const prefix = `${cur.y}-${String(cur.m + 1).padStart(2, "0")}-`;
+      const need = loggedDays.filter((k) => k.startsWith(prefix) && !(k in dayCals));
+      if (need.length === 0) return;
+      const entries = await Promise.all(need.map(async (k) => {
+        try { const d = await onReadDay(k); return [k, d && d.calories ? d.calories : 0]; }
+        catch { return [k, 0]; }
+      }));
+      setDayCals((prev) => { const next = { ...prev }; entries.forEach(([k, v]) => { next[k] = v; }); return next; });
+    })();
+  }, [cur, loggedDays, calTarget]);
 
   // Check-in lookup by date (weight / workout / mood).
   const ciByDate = {};
@@ -6286,11 +6305,19 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
   );
 
   const legend = (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", fontSize: ".68rem", color: "var(--muted)", marginTop: 10 }}>
-      <span><span style={{ color: "var(--green)" }}>●</span> food</span>
-      <span><span style={{ color: "var(--blue)" }}>●</span> weigh-in</span>
-      <span><span style={{ color: "var(--orange)" }}>●</span> workout</span>
-      <span><span style={{ color: "var(--muted)" }}>◦</span> scheduled</span>
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", fontSize: ".68rem", color: "var(--muted)" }}>
+        <span><span style={{ color: "var(--green)" }}>●</span> food</span>
+        <span><span style={{ color: "var(--blue)" }}>●</span> weigh-in</span>
+        <span><span style={{ color: "var(--orange)" }}>●</span> workout</span>
+        <span><span style={{ color: "var(--muted)" }}>◦</span> scheduled</span>
+      </div>
+      {calTarget && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", fontSize: ".68rem", color: "var(--muted)", marginTop: 6 }}>
+          <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 3, background: "rgba(47,224,168,.5)", verticalAlign: "middle" }} /> at/under target</span>
+          <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 3, background: "rgba(251,191,36,.5)", verticalAlign: "middle" }} /> over target</span>
+        </div>
+      )}
     </div>
   );
 
@@ -6329,11 +6356,20 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
             if (!d) return <div key={i} />;
             const k = keyOf(cur.y, cur.m, d);
             const isToday = k === todayKey;
+            // Adherence tint: green if calories were at/under target, amber if over.
+            const cal = dayCals[k];
+            const over = calTarget && cal != null && cal > 0 && cal > calTarget * 1.05;
+            const onTrack = calTarget && cal != null && cal > 0 && !over;
+            const bg = k === sel ? "rgba(8,220,224,.12)"
+              : over ? "rgba(251,191,36,.13)"
+              : onTrack ? "rgba(47,224,168,.13)"
+              : "var(--surface)";
             return (
               <button key={i} onClick={() => { setSel(k); setView("day"); }}
+                title={cal != null && cal > 0 ? `${cal.toLocaleString()} cal${calTarget ? ` · target ${calTarget.toLocaleString()}` : ""}` : undefined}
                 style={{ aspectRatio: "1", borderRadius: 8, cursor: "pointer", padding: 2,
                   border: isToday ? "1px solid var(--accent)" : "1px solid var(--border)",
-                  background: k === sel ? "rgba(8,220,224,.12)" : "var(--surface)", color: "var(--text)",
+                  background: bg, color: "var(--text)",
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ fontSize: ".8rem", fontWeight: isToday ? 800 : 500 }}>{d}</span>
                 <DayDots k={k} />
