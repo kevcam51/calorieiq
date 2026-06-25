@@ -875,3 +875,12 @@ enabled (Blaze has no default spending cap).
   the OPEN REQUESTS tile. Verified live (Casey, 3 days): nudge → "✓ Nudged", tile 0→1, request listed under
   Open requests (and it'll appear on the client's home). No `firestore.rules` change (rides existing
   trainer↔client kv access).
+- Session 44: **Calendar week view — adherence accent + weekly calorie roll-up.** Completes the S42 month
+  adherence story in the week view. Each week-view day row now shows its logged calorie total (green if
+  at/under target, amber/`--yellow` if over) with a matching coloured **left-accent border**; days with no
+  calories keep the "🍽️ logged / — " summary. A footer **roll-up** shows "N/7 days logged · avg X cal/day ·
+  target Y". Refactored the month-only cals loader into a shared `loadCals(keys)` (reads only logged +
+  uncached dates, merges into `dayCals`); added a second effect that loads the visible week's 7 days (they
+  can cross a month boundary, so loaded separately from the month effect). Verified live (Test Client): Wed 24
+  shows "1,200 cal" green w/ accent, footer "1/7 day logged · avg 1,200 · target 2,365". No `firestore.rules`
+  change.

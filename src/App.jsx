@@ -6223,21 +6223,32 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
 
   useEffect(() => { (async () => setLoggedDays(await onListLoggedDays()))(); }, []);
   useEffect(() => { (async () => setDayLog(await onReadDay(sel)))(); }, [sel]);
-  // Load logged-day calorie totals for the visible month (bounded to logged days
-  // in that month; cached so re-visiting a month doesn't re-read).
+  // Read calorie totals for a set of dates (only logged + not-yet-cached), merge
+  // into dayCals. Used by both the month and week adherence views; cached so a
+  // month/week isn't re-read on revisit.
+  const loadCals = async (keys) => {
+    const need = keys.filter((k) => loggedDays.includes(k) && !(k in dayCals));
+    if (need.length === 0) return;
+    const entries = await Promise.all(need.map(async (k) => {
+      try { const d = await onReadDay(k); return [k, d && d.calories ? d.calories : 0]; }
+      catch { return [k, 0]; }
+    }));
+    setDayCals((prev) => { const next = { ...prev }; entries.forEach(([k, v]) => { next[k] = v; }); return next; });
+  };
+  // Visible-month logged days (bounded ≤31).
   useEffect(() => {
     if (!calTarget) return;
-    (async () => {
-      const prefix = `${cur.y}-${String(cur.m + 1).padStart(2, "0")}-`;
-      const need = loggedDays.filter((k) => k.startsWith(prefix) && !(k in dayCals));
-      if (need.length === 0) return;
-      const entries = await Promise.all(need.map(async (k) => {
-        try { const d = await onReadDay(k); return [k, d && d.calories ? d.calories : 0]; }
-        catch { return [k, 0]; }
-      }));
-      setDayCals((prev) => { const next = { ...prev }; entries.forEach(([k, v]) => { next[k] = v; }); return next; });
-    })();
+    const prefix = `${cur.y}-${String(cur.m + 1).padStart(2, "0")}-`;
+    loadCals(loggedDays.filter((k) => k.startsWith(prefix)));
   }, [cur, loggedDays, calTarget]);
+  // Visible week's 7 days (can cross a month boundary, so loaded separately).
+  useEffect(() => {
+    if (!calTarget || view !== "week") return;
+    const ws = weekStart || (() => { const off = (new Date(sel + "T00:00:00Z").getUTCDay() + 6) % 7; const p = sel.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] - off)).toISOString().slice(0, 10); })();
+    const wp = ws.split("-").map(Number);
+    const days = Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(wp[0], wp[1] - 1, wp[2] + i)).toISOString().slice(0, 10));
+    loadCals(days);
+  }, [weekStart, view, sel, loggedDays, calTarget]);
 
   // Check-in lookup by date (weight / workout / mood).
   const ciByDate = {};
@@ -6398,16 +6409,24 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {days.map((k) => {
             const ci = ciByDate[k]; const isToday = k === todayKey;
+            const cal = dayCals[k];
+            const over = calTarget && cal != null && cal > 0 && cal > calTarget * 1.05;
+            const onTrack = calTarget && cal != null && cal > 0 && !over;
+            // Left accent conveys calorie adherence (green at/under, amber over).
+            const accent = over ? "var(--yellow)" : onTrack ? "var(--green)" : null;
             return (
               <button key={k} onClick={() => { setSel(k); setView("day"); }}
                 style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, cursor: "pointer",
-                  border: isToday ? "1px solid var(--accent)" : "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", textAlign: "left" }}>
+                  border: isToday ? "1px solid var(--accent)" : "1px solid var(--border)",
+                  borderLeft: accent ? `4px solid ${accent}` : (isToday ? "1px solid var(--accent)" : "1px solid var(--border)"),
+                  background: "var(--surface)", color: "var(--text)", textAlign: "left" }}>
                 <div style={{ width: 42 }}>
                   <div style={{ fontSize: ".66rem", color: "var(--muted)", textTransform: "uppercase" }}>{DAY_SHORT[mondayIdx(k)]}</div>
                   <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>{parseKey(k).d}</div>
                 </div>
                 <div style={{ flex: 1, fontSize: ".78rem", color: "var(--muted)", display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {loggedDays.includes(k) && <span style={{ color: "var(--green)" }}>🍽️ logged</span>}
+                  {cal != null && cal > 0 && <span style={{ color: over ? "var(--yellow)" : "var(--green)", fontWeight: 700 }}>{cal.toLocaleString()} cal</span>}
+                  {loggedDays.includes(k) && !(cal > 0) && <span style={{ color: "var(--green)" }}>🍽️ logged</span>}
                   {ci && ci.weight && <span style={{ color: "var(--blue)" }}>⚖️ {ci.weight}</span>}
                   {ci && ci.workedOut && <span style={{ color: "var(--orange)" }}>🏋️ done</span>}
                   {scheduledFor(k) > 0 && <span>◦ {scheduledFor(k)} scheduled</span>}
@@ -6417,6 +6436,25 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
             );
           })}
         </div>
+        {/* Weekly calorie roll-up */}
+        {(() => {
+          const logged = days.filter((k) => dayCals[k] != null && dayCals[k] > 0);
+          if (logged.length === 0) return null;
+          const totalCal = logged.reduce((s, k) => s + dayCals[k], 0);
+          const avg = Math.round(totalCal / logged.length);
+          return (
+            <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, background: "var(--s2)", border: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <span style={{ fontSize: ".74rem", color: "var(--muted)" }}>
+                {logged.length}/7 day{logged.length !== 1 ? "s" : ""} logged
+              </span>
+              <span style={{ fontSize: ".82rem", fontWeight: 700 }}>
+                avg <span style={{ color: "var(--accent)" }}>{avg.toLocaleString()}</span> cal/day
+                {calTarget ? <span style={{ color: "var(--muted)", fontWeight: 400 }}> · target {calTarget.toLocaleString()}</span> : null}
+              </span>
+            </div>
+          );
+        })()}
       </>
     );
   };
