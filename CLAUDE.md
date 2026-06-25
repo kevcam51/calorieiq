@@ -48,7 +48,16 @@ unified platform that complements and eventually replaces these.
   `getMyClients`, `getMySubTrainers`, `myInviteCode`, `ROLES`).
 - `firestore.rules` — security rules (access control). Tested by `npm run test:rules`.
 - `docs/BLAZE_MIGRATION.md` — the planned upgrade path to Firebase custom claims (future).
-- `.env.local` — Firebase config; **gitignored**, never commit. Vercel has its own copy.
+- `docs/BLAZE_ROADMAP.md` — the product/infra game plan for the Blaze move (what to enable + build order).
+- `glide-ai-meal-logging-spec.md` — **the canonical spec for the AI chat / conversational meal-logging +
+  coaching-assistant layer** (Kevin-authored). When building the AI Chat, follow this: Anthropic API via
+  Cloud Functions (Blaze-gated), `claude-sonnet-4-6`, role-based system prompts + tools, per-user daily token
+  budgets, function-calling for data-aware queries, photo logging (paid tier), SSE streaming, custom React
+  chat component. **Reconcile its richer meal schema (`components`/`totals`/`giEstimate`, top-level docs) with
+  the app's current kv meal storage (`meals[]` inside `caliq-log-{id}-{date}`) so AI-logged meals show up in
+  the existing dashboard / calendar / weekly cards.**
+- `.env.local` — Firebase config (+ optional `VITE_USDA_API_KEY` for food search); **gitignored**, never
+  commit. Vercel has its own copy.
 
 ## Data model
 
