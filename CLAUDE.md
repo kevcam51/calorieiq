@@ -905,3 +905,20 @@ enabled (Blaze has no default spending cap).
   America/New_York, `now_local`=2026-06-24 vs `now_utc`=2026-06-25): Daily Dashboard header reads
   "WEDNESDAY, JUNE 24" and the month calendar outlines **24** as today (pre-fix it outlined 25); `npm run
   build` passes, no console errors. No `firestore.rules` change.
+- Session 46: **UI polish + Coaching Dashboard tools (non-Blaze).** (1) **UI polish:** on the trainer home
+  the "📋 Local Plans" actions had inverted weight — the *primary* "+ Plan" was a faint ghost while the
+  *secondary* "+ 🧪 Simulation" was a bold filled purple; now "+ Plan" is the filled cyan primary
+  (`mPrimaryCls`) and Simulation is a purple **outline** (keeps its sandbox-purple identity, reads as
+  secondary). Also pluralized count labels ("1 check-in"/"1 weigh-in" instead of "1 check-ins"/"1 weigh-ins")
+  in the `StreakBadges` bar and the `WeightChartModal` header. (2) **`TrainerAnalytics` (Coaching Dashboard):**
+  the "needs attention" threshold (`ATTENTION_DAYS`, was hardcoded 3) is now **coach-configurable** via
+  2/3/5/7-day chips, persisted to the trainer's OWN account under `caliq-coach-prefs` (`{attnDays}`, read in
+  `load()`, written by `saveAttn`) so it sticks across visits and drives the list + the "Need attention" tile +
+  the copy. And each needs-attention row now shows a **7-day logging-consistency strip** (`Last7` — 7 dots,
+  6 days ago → today, filled green = logged that day, today ringed) computed from the per-client logged-dates
+  already loaded (no extra reads, no schema change) so a coach sees HOW sparse the logging is before nudging.
+  Verified live (trainer.uitest → Coaching Dashboard): switching to 5d dropped Casey (logged 3 days ago) and
+  zeroed the tile; survived a reload; strip renders. `npm run build` passes; no console errors. **Note:** this
+  work was authored alongside the Session-45 timezone fix and got bundled into that single pushed commit
+  (`77bc27b`) by the background task that landed the date fix — it's live, just co-committed. No
+  `firestore.rules` change.
