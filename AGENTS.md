@@ -943,3 +943,19 @@ enabled (Blaze has no default spending cap).
   console errors; `npm run build` passes. **Deferred:** per-day **macro adherence** in the calendar (needs a
   per-day macro load alongside `dayCals`, a bigger change) and live-testing the "✗ missed"/`/N scheduled`
   branches (test client has no scheduled workouts; logic is build-verified). No `firestore.rules` change.
+- Session 48: **Calendar per-day macro (protein) adherence — the Session-47 deferred item (non-Blaze).**
+  The calendar week view now surfaces protein adherence alongside the calorie (S42/S44) and workout (S47)
+  views. New `dayProt` state (date → logged protein g) is filled by the SAME `loadCals` read that already
+  fetches per-day calories (one read, now returns `[k, calories, protein]`), so no extra Firestore reads.
+  A daily **protein target** `protTarget` mirrors the dashboard default (`data.macroTargets.protein` if set,
+  else ~1 g/lb bodyweight). UI: (1) each week-view day row shows a **🍗 {logged}g/{target}** chip when protein
+  was logged that day — green when at/over target, muted when under; (2) a **weekly protein roll-up** box
+  (avg logged protein/day vs target) sits directly below the calorie roll-up, green when the average meets
+  target. Month view left as calorie-tinted (a cell can only tint by one metric; the detailed macro/workout
+  breakdown lives in the week view). Verified live on the **local Test Client plan** (logged a 650-cal/55g
+  meal → day row showed "650 cal · 🍗 55g/200", protein roll-up "avg 50g/day · target 200g"); `npm run build`
+  passes, no console errors. **Known pre-existing limitation (NOT introduced here):** the calendar's
+  adherence roll-ups (calorie AND protein) don't populate when a **trainer views a REMOTE client's** calendar
+  — the per-day `loadCals` reads via `getForUser` don't surface in the week/month within a session (the
+  client's own calendar on local `window.storage` works fine; the Day view's single remote read works too).
+  This affects the S42/S44 calorie adherence the same way; flagged for a separate fix. No `firestore.rules` change.

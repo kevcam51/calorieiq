@@ -6225,9 +6225,14 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
   const [loggedDays, setLoggedDays] = useState([]);       // dates with a log entry
   const [dayLog, setDayLog] = useState(null);             // selected day's log
   const [dayCals, setDayCals] = useState({});             // date -> logged calories (month view tinting)
+  const [dayProt, setDayProt] = useState({});             // date -> logged protein g (week macro adherence)
 
   // Daily calorie target — same formula the dashboard/Results use, for adherence tinting.
   const calTarget = (computeClientCalories(data) || {}).target || null;
+  // Daily protein target — custom override, else the dashboard default (~1 g per lb bodyweight).
+  const protTarget = (data.macroTargets && data.macroTargets.protein != null)
+    ? Number(data.macroTargets.protein)
+    : (data.weightLbs ? Math.round(Number(data.weightLbs)) : null);
 
   useEffect(() => { (async () => setLoggedDays(await onListLoggedDays()))(); }, []);
   useEffect(() => { (async () => setDayLog(await onReadDay(sel)))(); }, [sel]);
@@ -6238,10 +6243,11 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
     const need = keys.filter((k) => loggedDays.includes(k) && !(k in dayCals));
     if (need.length === 0) return;
     const entries = await Promise.all(need.map(async (k) => {
-      try { const d = await onReadDay(k); return [k, d && d.calories ? d.calories : 0]; }
-      catch { return [k, 0]; }
+      try { const d = await onReadDay(k); return [k, d && d.calories ? d.calories : 0, d && d.protein ? d.protein : 0]; }
+      catch { return [k, 0, 0]; }
     }));
     setDayCals((prev) => { const next = { ...prev }; entries.forEach(([k, v]) => { next[k] = v; }); return next; });
+    setDayProt((prev) => { const next = { ...prev }; entries.forEach(([k, , p]) => { next[k] = p; }); return next; });
   };
   // Visible-month logged days (bounded ≤31).
   useEffect(() => {
@@ -6434,6 +6440,7 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
                 </div>
                 <div style={{ flex: 1, fontSize: ".78rem", color: "var(--muted)", display: "flex", flexWrap: "wrap", gap: 10 }}>
                   {cal != null && cal > 0 && <span style={{ color: over ? "var(--yellow)" : "var(--green)", fontWeight: 700 }}>{cal.toLocaleString()} cal</span>}
+                  {dayProt[k] > 0 && <span style={{ color: protTarget && dayProt[k] >= protTarget ? "var(--green)" : "var(--muted)" }}>🍗 {dayProt[k]}g{protTarget ? `/${protTarget}` : ""}</span>}
                   {loggedDays.includes(k) && !(cal > 0) && <span style={{ color: "var(--green)" }}>🍽️ logged</span>}
                   {ci && ci.weight && <span style={{ color: "var(--blue)" }}>⚖️ {ci.weight}</span>}
                   {ci && ci.workedOut && <span style={{ color: "var(--orange)" }}>🏋️ done</span>}
@@ -6463,6 +6470,23 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
               <span style={{ fontSize: ".82rem", fontWeight: 700 }}>
                 avg <span style={{ color: "var(--accent)" }}>{avg.toLocaleString()}</span> cal/day
                 {calTarget ? <span style={{ color: "var(--muted)", fontWeight: 400 }}> · target {calTarget.toLocaleString()}</span> : null}
+              </span>
+            </div>
+          );
+        })()}
+        {/* Weekly protein-adherence roll-up: avg logged protein vs target */}
+        {(() => {
+          const logged = days.filter((k) => dayProt[k] > 0);
+          if (logged.length === 0) return null;
+          const avgProt = Math.round(logged.reduce((s, k) => s + dayProt[k], 0) / logged.length);
+          const met = protTarget && avgProt >= protTarget;
+          return (
+            <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "var(--s2)", border: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <span style={{ fontSize: ".74rem", color: "var(--muted)" }}>🍗 Protein</span>
+              <span style={{ fontSize: ".82rem", fontWeight: 700 }}>
+                avg <span style={{ color: met ? "var(--green)" : "var(--accent)" }}>{avgProt}g</span>
+                {protTarget ? <span style={{ color: "var(--muted)", fontWeight: 400 }}>/day · target {protTarget}g</span> : <span style={{ color: "var(--muted)", fontWeight: 400 }}>/day</span>}
               </span>
             </div>
           );
