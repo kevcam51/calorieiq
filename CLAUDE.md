@@ -981,3 +981,22 @@ enabled (Blaze has no default spending cap).
   Prospect Pat** (complete plan, target 2,569) regression-checked — logged 250 cal showed green with the green
   left-accent and roll-up "avg 250 cal/day · target 2,569". Clean console (the dep-array warnings seen mid-edit
   were HMR buffer artifacts — gone after a fresh server start). `npm run build` passes. No `firestore.rules` change.
+- Session 50: **Food-database search + macro autofill in the meal log (non-Blaze — roadmap item).** Removes the
+  #1 self-logging friction (hand-typing calories + macros). New module-level `searchFoods(query)` calls the
+  **USDA FoodData Central** API (`api.nal.usda.gov/fdc/v1/foods/search`) — free, **CORS-enabled so it works
+  from the browser with no server**, good generic-food relevance. Key: `import.meta.env.VITE_USDA_API_KEY ||
+  "DEMO_KEY"` — works out of the box on the public DEMO_KEY (rate-limited ~30/hr/IP); set a free api.data.gov
+  key in `.env.local` + Vercel for production limits. The key is read-only food data so browser exposure is
+  low-risk; proxy it via a Cloud Function once on Blaze. `searchFoods` normalizes each hit to per-100g
+  `{name, brand, kcal, p, c, f}` (prefers the KCAL "Energy" entry over the kJ one; title-cases the ALL-CAPS
+  USDA descriptions; drops 0-kcal rows). **UI (in `MealLog`'s add-form, new entries only):** a "🔍 Search food
+  database" toggle → search box (Enter or button) → tappable results list (name · brand · "N cal · Pp/Cc/Ff
+  /100g"); tapping a result remembers its per-100g macros (`picked`) and fills the name + calories + macros at
+  a **serving size** (`grams`, default 100) via `applyServing(food, g)`; a grams input rescales live
+  (`setServing`). The user can still tweak the filled numbers or enter everything manually — search is purely
+  additive. New `MealLog` state: `searchOpen/searchQ/results/searching/searchErr/picked/grams`; `resetSearch`
+  folded into `resetFields`. Verified live (trainer.uitest → Casey's plan → Lunch): searched "grilled chicken
+  breast"/"salmon" → relevant USDA results with macros → picked Salmon (139cal/15p/3c/8f per 100g) → set serving
+  200g → form rescaled to 278cal/30p/6c/16f → Add logged "Salmon (30p/6c/16f)" + activity "added Lunch: Salmon
+  (278 cal)". No console errors; `npm run build` passes. **Note:** this is the manual/self-log tier of the
+  roadmap's "meal logging" — the AI photo auto-track tier still needs Blaze. No `firestore.rules` change.
