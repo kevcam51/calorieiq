@@ -35,9 +35,37 @@ export async function createProfile({ uid, email, role, displayName = "", firstN
     // a head trainer is the head of their own tree; clients have no head
     headTrainerId: role === ROLES.HEAD_TRAINER ? uid : null,
     createdAt: serverTimestamp(),
+    // Trial: both roles get a 30-day trial at signup. Soft/informational only
+    // (no hard lock) until billing (Stripe) lands with Blaze. Status moves to
+    // "active" once a paid subscription exists.
+    trialStartedAt: serverTimestamp(),
+    trialLengthDays: 30,
+    subscriptionStatus: "trial",
   };
   await setDoc(profileRef(uid), data, { merge: true });
   return data;
+}
+
+// Normalize a Firestore Timestamp / Date / number / ISO string to epoch ms.
+function toMillis(v) {
+  if (!v) return null;
+  if (typeof v === "number") return v;
+  if (typeof v.toMillis === "function") return v.toMillis();
+  if (typeof v.seconds === "number") return v.seconds * 1000;
+  const t = new Date(v).getTime();
+  return isNaN(t) ? null : t;
+}
+
+// Trial state for a profile, or null when there's no trial to show (paid/active,
+// admin, or a legacy account created before trials existed — no trialStartedAt).
+export function trialInfo(profile) {
+  if (!profile || profile.subscriptionStatus === "active" || profile.role === ROLES.ADMIN) return null;
+  const startMs = toMillis(profile.trialStartedAt);
+  if (!startMs) return null;
+  const lengthDays = profile.trialLengthDays || 30;
+  const endMs = startMs + lengthDays * 86400000;
+  const msLeft = endMs - Date.now();
+  return { lengthDays, startMs, endMs, daysLeft: Math.ceil(msLeft / 86400000), expired: msLeft <= 0, active: msLeft > 0 };
 }
 
 export async function getProfile(uid = auth.currentUser && auth.currentUser.uid) {

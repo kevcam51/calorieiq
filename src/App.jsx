@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setName, splitName, leaveTrainer } from "./profile.js";
+import { ROLES, getProfile, joinTrainer, getMyClients, ensureInviteCode, formatInviteCode, setName, splitName, leaveTrainer, trialInfo } from "./profile.js";
 import { getForUser, setForUser, deleteForUser, listForUser } from "./clientData.js";
 import { auth } from "./firebase.js";
 import { signOut } from "firebase/auth";
@@ -5813,6 +5813,33 @@ function TimelineTab({ data, tdee, totalBurn }) {
 // detailed (named food + macros + meal type) or as simple (just calories,
 // optionally tagged to a meal) as the user wants. This is the manual/free tier;
 // the food-library API (Blaze) will later auto-fill these same fields.
+// Food-database search via USDA FoodData Central (free, CORS-enabled, no server
+// needed). Uses the public DEMO_KEY by default (heavily rate-limited); set
+// VITE_USDA_API_KEY (a free api.data.gov key) for production-grade limits. The
+// key is read-only food data, so exposing it in the browser bundle is low-risk;
+// it can be proxied through a Cloud Function once on Blaze. Returns normalized
+// per-100g foods: { name, kcal, p, c, f }.
+async function searchFoods(query) {
+  const key = (import.meta.env && import.meta.env.VITE_USDA_API_KEY) || "DEMO_KEY";
+  const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key}` +
+    `&query=${encodeURIComponent(query)}&pageSize=8`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status === 429 ? "Search limit reached — try again shortly." : `Search failed (${r.status}).`);
+  const j = await r.json();
+  const tidy = (s) => (s || "Food").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return (j.foods || []).map((x) => {
+    const n = {};
+    (x.foodNutrients || []).forEach((z) => {
+      // "Energy" appears in both KCAL and kJ — keep only the kcal value.
+      if (z.nutrientName === "Energy" && z.unitName && z.unitName !== "KCAL") return;
+      n[z.nutrientName] = z.value;
+    });
+    return { name: tidy(x.description), brand: x.brandOwner || x.brandName || "",
+      kcal: Math.round(n["Energy"] || 0), p: Math.round(n["Protein"] || 0),
+      c: Math.round(n["Carbohydrate, by difference"] || 0), f: Math.round(n["Total lipid (fat)"] || 0) };
+  }).filter((f) => f.kcal > 0);
+}
+
 function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
   const [name, setName] = useState("");
   const [cals, setCals] = useState("");
@@ -5825,6 +5852,14 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
   const [addingTo, setAddingTo] = useState(null);
   const [editingId, setEditingId] = useState(null); // set when editing an existing entry
   const [open, setOpen] = useState(false); // the whole section is a collapsible dropdown
+  // Food-database search (USDA) within the add-form.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchErr, setSearchErr] = useState("");
+  const [picked, setPicked] = useState(null); // chosen food's per-100g macros, for serving rescale
+  const [grams, setGrams] = useState("100");
 
   const list = meals || [];
   const loggedTotal = list.reduce((s, m) => s + (m.calories || 0), 0);
@@ -5844,7 +5879,32 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
     </span>
   );
 
-  const resetFields = () => { setName(""); setCals(""); setProtein(""); setCarbs(""); setFat(""); setShowMacros(false); };
+  const resetSearch = () => { setSearchOpen(false); setSearchQ(""); setResults([]); setSearching(false); setSearchErr(""); setPicked(null); setGrams("100"); };
+  const resetFields = () => { setName(""); setCals(""); setProtein(""); setCarbs(""); setFat(""); setShowMacros(false); resetSearch(); };
+  // Run a USDA food search for the current query.
+  const runSearch = async () => {
+    const q = searchQ.trim();
+    if (q.length < 2) return;
+    setSearching(true); setSearchErr(""); setResults([]);
+    try { setResults(await searchFoods(q)); }
+    catch (e) { setSearchErr(e.message || "Search failed."); }
+    finally { setSearching(false); }
+  };
+  // Fill the form from a per-100g food scaled to a serving size (grams).
+  const applyServing = (food, g) => {
+    const factor = (parseFloat(g) || 0) / 100;
+    setCals(String(Math.round(food.kcal * factor) || ""));
+    setProtein(String(Math.round(food.p * factor) || ""));
+    setCarbs(String(Math.round(food.c * factor) || ""));
+    setFat(String(Math.round(food.f * factor) || ""));
+  };
+  // Pick a search result: remember its per-100g macros, fill the form at 100g.
+  const pickFood = (food) => {
+    setPicked(food); setGrams("100"); setName(food.name);
+    applyServing(food, "100"); setShowMacros(true);
+  };
+  // Adjust serving size after a pick — rescales the filled macros live.
+  const setServing = (g) => { setGrams(g); if (picked) applyServing(picked, g); };
   const openForm = (key) => { resetFields(); setEditingId(null); setAddingTo(key); };
   const closeForm = () => { resetFields(); setEditingId(null); setAddingTo(null); };
   // Open the form pre-filled to fix an existing entry.
@@ -5921,6 +5981,62 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
               </button>
             ))}
           </div>
+        </div>
+      )}
+      {/* Food-database search — find a food and auto-fill calories + macros (only when adding new) */}
+      {!editingId && (
+        <div>
+          <button onClick={() => { const n = !searchOpen; setSearchOpen(n); if (!n) resetSearch(); }}
+            style={{ border:"none", background:"transparent", color:"var(--accent)", cursor:"pointer",
+              fontSize:".74rem", fontWeight:700, padding:"0", textAlign:"left" }}>
+            {searchOpen ? "✕ Close food search" : "🔍 Search food database"}
+          </button>
+          {searchOpen && (
+            <div style={{ marginTop:"6px", display:"flex", flexDirection:"column", gap:"6px" }}>
+              <div style={{ display:"flex", gap:"6px" }}>
+                <input style={{ ...inp, flex:1 }} placeholder="Search foods (e.g. chicken breast)"
+                  value={searchQ} onChange={(e) => setSearchQ(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && runSearch()} />
+                <button onClick={runSearch} disabled={searching || searchQ.trim().length < 2}
+                  style={{ padding:"8px 14px", fontSize:".8rem", fontWeight:700, borderRadius:"8px",
+                    border:"none", background:"var(--accent)", color:"#0b0b12", cursor:"pointer",
+                    opacity: (searching || searchQ.trim().length < 2) ? .5 : 1 }}>
+                  {searching ? "…" : "Search"}
+                </button>
+              </div>
+              {searchErr && <div style={{ fontSize:".74rem", color:"var(--red)" }}>{searchErr}</div>}
+              {!searching && !searchErr && results.length === 0 && searchQ.trim().length >= 2 && (
+                <div style={{ fontSize:".74rem", color:"var(--muted)" }}>No matches — try a simpler term, or enter it manually below.</div>
+              )}
+              {results.length > 0 && (
+                <div style={{ display:"flex", flexDirection:"column", gap:"4px", maxHeight:"168px", overflowY:"auto" }}>
+                  {results.map((f, i) => (
+                    <button key={i} onClick={() => pickFood(f)}
+                      style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:"8px",
+                        padding:"7px 9px", borderRadius:"6px", cursor:"pointer", textAlign:"left",
+                        border:"1px solid " + (picked && picked.name === f.name ? "var(--accent)" : "var(--border)"),
+                        background: picked && picked.name === f.name ? "rgba(8,220,224,.08)" : "var(--s2)", color:"var(--text)" }}>
+                      <span style={{ flex:1, fontSize:".78rem", minWidth:0 }}>
+                        <span style={{ display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.name}</span>
+                        {f.brand && <span style={{ color:"var(--muted)", fontSize:".68rem" }}>{f.brand}</span>}
+                      </span>
+                      <span style={{ fontSize:".7rem", color:"var(--muted)", whiteSpace:"nowrap", textAlign:"right" }}>
+                        {f.kcal} cal<br />{f.p}p/{f.c}c/{f.f}f <span style={{ opacity:.7 }}>/100g</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {picked && (
+                <div style={{ display:"flex", alignItems:"center", gap:"8px", fontSize:".76rem", color:"var(--muted)" }}>
+                  <span>Serving:</span>
+                  <input style={{ ...inp, width:"72px", flex:"none", padding:"6px 8px" }} type="number" inputMode="numeric"
+                    value={grams} onChange={(e) => setServing(e.target.value)} />
+                  <span>g → fills below. Adjust then Add.</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
@@ -10303,7 +10419,7 @@ function describePlanChanges(prev, next) {
 // A hamburger (≡) opens a slide-out drawer with app navigation, inline name
 // editing, and sign-out. Rendered globally by App so it's on every screen.
 const ROLE_LABEL = { client: "Client", head_trainer: "Trainer", sub_trainer: "Trainer", admin: "Admin" };
-function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, onHome, onDashboard, onClients, onNameSaved }) {
+function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, onHome, onDashboard, onClients, onNameSaved }) {
   const [editing, setEditing] = useState(false);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
@@ -10378,6 +10494,29 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, onHome, onD
           )}
         </div>
 
+        {/* Trial status — soft/informational (no hard lock until billing exists) */}
+        {trial && (
+          <div style={{ padding: "10px 12px", borderRadius: 10, marginBottom: 12,
+            background: trial.expired ? "rgba(248,113,113,.10)" : trial.daysLeft <= 5 ? "rgba(251,191,36,.10)" : "rgba(8,220,224,.08)",
+            border: `1px solid ${trial.expired ? "var(--red)" : trial.daysLeft <= 5 ? "var(--yellow)" : "var(--accent)"}` }}>
+            {trial.expired ? (
+              <div style={{ fontSize: ".8rem", lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 700, color: "var(--red)" }}>⚠️ Your trial has ended.</span>
+                <div style={{ color: "var(--muted)", marginTop: 2 }}>
+                  {isTrainer ? "Reach out to keep your coaching workspace active." : "Contact your trainer to keep your plan going."}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: ".8rem", lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 700, color: trial.daysLeft <= 5 ? "var(--yellow)" : "var(--accent)" }}>
+                  ⏳ {trial.daysLeft} day{trial.daysLeft === 1 ? "" : "s"} left in your trial
+                </span>
+                <div style={{ color: "var(--muted)", marginTop: 2 }}>{trial.lengthDays}-day free trial</div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Navigation */}
         <button style={item} onClick={() => go(onHome)}>🏠 <span>Home</span></button>
         {isTrainer && <button style={item} onClick={() => go(onDashboard)}>📊 <span>Dashboard</span></button>}
@@ -10442,6 +10581,7 @@ export default function App() {
   const [meName, setMeName] = useState("");   // current user's display name
   const [meUid, setMeUid] = useState("");     // current user's uid
   const [meEmail, setMeEmail] = useState(""); // current user's email (for the menu)
+  const [meTrial, setMeTrial] = useState(null); // trial countdown state (or null)
   const [menuOpen, setMenuOpen] = useState(false); // side menu (Session 23)
 
   const goBack = () => {
@@ -10493,6 +10633,7 @@ export default function App() {
           setMeName(prof.displayName || prof.email || "Someone");
           setMeUid(prof.uid || "");
           setMeEmail(prof.email || "");
+          setMeTrial(trialInfo(prof));
         }
       } catch(e) {}
       setLoading(false);
@@ -11149,7 +11290,7 @@ export default function App() {
         ≡
       </button>
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} meName={meName} meEmail={meEmail}
-        isTrainer={isTrainerHome}
+        isTrainer={isTrainerHome} trial={meTrial}
         onHome={() => { if (isTrainerHome) setHomeTab("dashboard"); goToProfiles(); }}
         onDashboard={() => { setHomeTab("analytics"); goToProfiles(); }}
         onClients={() => { setHomeTab("clients"); goToProfiles(); }}

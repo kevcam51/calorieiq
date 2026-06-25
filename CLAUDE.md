@@ -1000,3 +1000,19 @@ enabled (Blaze has no default spending cap).
   200g → form rescaled to 278cal/30p/6c/16f → Add logged "Salmon (30p/6c/16f)" + activity "added Lunch: Salmon
   (278 cal)". No console errors; `npm run build` passes. **Note:** this is the manual/self-log tier of the
   roadmap's "meal logging" — the AI photo auto-track tier still needs Blaze. No `firestore.rules` change.
+- Session 51: **Trial periods (non-Blaze v1) — roadmap item.** Both roles now get a **30-day free trial** at
+  signup (Kevin's call to start both at 30; revisit per-role later). `createProfile` (profile.js) now sets the
+  reserved fields `trialStartedAt: serverTimestamp()`, `trialLengthDays: 30`, `subscriptionStatus: "trial"`.
+  New exported helper `trialInfo(profile)` → `{ lengthDays, startMs, endMs, daysLeft, expired, active }` or
+  **null** when there's no trial to show (paid `subscriptionStatus:"active"`, admin, or a **legacy account with
+  no `trialStartedAt`** — so existing/test accounts are grandfathered and show nothing). A `toMillis()` helper
+  normalizes Firestore Timestamp / Date / number / ISO. **UI:** the side menu (`SideMenu`) shows a soft,
+  **informational** trial banner under the identity card (new `trial` prop, fed from App's `meTrial` =
+  `trialInfo(prof)` set in the profile-load effect): during the trial "⏳ N days left in your trial · 30-day
+  free trial" (cyan, turns **amber** at ≤5 days); after expiry "⚠️ Your trial has ended" + a role-aware
+  "reach out / contact your trainer to continue" line (red). **Soft only — no hard lock or feature gating**
+  (per Kevin); real enforcement + upgrade flow waits for **Stripe/Blaze**. Verified live (trainer.uitest, via a
+  temporary forced mock since the test accounts predate the fields): both the active ("⏳ 23 days left") and
+  expired ("⚠️ Your trial has ended…") banners render on-brand in the menu; mock reverted. `npm run build`
+  passes. No `firestore.rules` change (the new fields are owner-written on the existing profile doc; reads use
+  the already-open profile access).
