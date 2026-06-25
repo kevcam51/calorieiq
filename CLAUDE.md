@@ -917,6 +917,9 @@ enabled (Blaze has no default spending cap).
   the copy. And each needs-attention row now shows a **7-day logging-consistency strip** (`Last7` — 7 dots,
   6 days ago → today, filled green = logged that day, today ringed) computed from the per-client logged-dates
   already loaded (no extra reads, no schema change) so a coach sees HOW sparse the logging is before nudging.
+  (3) **Progress pace:** each row in the 📈 Progress card now also shows the client's **observed weekly rate**
+  (e.g. "▼ 7.8/wk") next to net lbs lost + on-track badge, from the `weightTrend(checkIns).ratePerWeek` already
+  computed for the on-track calc (added `ratePerWeek` to the row; rendered when |rate| ≥ 0.05 lb/wk).
   Verified live (trainer.uitest → Coaching Dashboard): switching to 5d dropped Casey (logged 3 days ago) and
   zeroed the tile; survived a reload; strip renders. `npm run build` passes; no console errors. **Note:** this
   work was authored alongside the Session-45 timezone fix and got bundled into that single pushed commit

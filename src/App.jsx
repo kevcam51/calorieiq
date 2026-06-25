@@ -9114,6 +9114,7 @@ function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole
         ? `${data.firstName || ""} ${data.lastName || ""}`.trim()
         : (c.displayName || c.email || "Client");
       return { uid: c.uid, name: nm, hasPlan: !!data, cur, goal, start, lbsLost, onTrack,
+        ratePerWeek: trend ? trend.ratePerWeek : null,
         lastLogDate, daysSince, activeThisWeek, openReqs, last7 };
     }));
     setClients(rows);
@@ -9265,6 +9266,9 @@ function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole
                         <span className={c.lbsLost > 0 ? "text-success" : c.lbsLost < 0 ? "text-warn" : "text-muted"}>
                           {c.lbsLost > 0 ? `▼ ${c.lbsLost}` : c.lbsLost < 0 ? `▲ ${Math.abs(c.lbsLost)}` : "0"} lbs
                         </span>
+                        {c.ratePerWeek != null && Math.abs(c.ratePerWeek) >= 0.05 && (
+                          <span className="text-muted text-[.74rem]">{c.ratePerWeek < 0 ? "▼" : "▲"} {Math.abs(c.ratePerWeek).toFixed(1)}/wk</span>
+                        )}
                         {c.onTrack === true && <span className="text-success">✓ on track</span>}
                         {c.onTrack === false && <span className="text-warn">off track</span>}
                       </span>
