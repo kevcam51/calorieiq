@@ -1163,3 +1163,31 @@ enabled (Blaze has no default spending cap).
   (full backfill of the 4 existing users; the claims-into-rules substitution) were intentionally skipped as
   low-value — see Sessions 57/58. **Blaze server-side foundation + security hardening are now in place; next up
   is the AI chat** (per `glide-ai-meal-logging-spec.md`), which uses the working Cloud Functions infra.
+- Session 60: **AI chat Stage 1 — backend DEPLOYED & LIVE (text chat). ⭐ RESUME HERE.** Built the first AI
+  function per `glide-ai-meal-logging-spec.md`. **`functions/aichat.js`** exports the **`aiChat` callable**
+  (wired into `index.js` as `exports.aiChat = require("./aichat").aiChat`): verifies Firebase Auth → reads
+  `role` from the profile → selects a **role-based system prompt** (client vs trainer, topic-restricted to
+  health/fitness per the spec) → enforces a **per-user daily token budget** (`users/{uid}/aiUsage/{date}`,
+  tiers in `BUDGETS`: trial 10k / client 25k / assisted 40k / trainer 60k; blocks at 100%, returns a `warn`
+  flag at 80%) → calls Anthropic **`claude-sonnet-4-6`** (Sonnet per the spec, NOT Opus — cost) with the last
+  ≤10 exchanges → returns `{reply, usage}`. SDK: **`@anthropic-ai/sdk` ^0.106** in `functions/`. The
+  **`ANTHROPIC_API_KEY` is a Secret Manager secret** (Kevin set it via `firebase functions:secrets:set
+  ANTHROPIC_API_KEY --project calorieiq-29762`); deploy auto-granted the compute SA `secretAccessor` on it.
+  **Deployed** (`firebase deploy --only functions:aiChat`; the first 2nd-gen create attempt flaked on build
+  propagation as before — a retry succeeded; it's now `v2 callable us-central1`). Committed `d6d848d`.
+  **⚠️ NOT yet tested with a real call, and there is NO client UI yet.**
+  **NEXT SESSION — do in order:** (1) **Build the Stage-1 client chat panel** — a custom React component (the
+  spec wants it collapsible with a floating button; SSE streaming is a later stage, so Stage 1 just awaits the
+  full reply). The app does **not** currently import `firebase/functions` — add it (`getFunctions(app, 'us-central1')`
+  + `httpsCallable(functions, 'aiChat')`), calling with `{ messages: [{role:'user'|'assistant', content}] }`
+  and rendering `result.data.reply`. Wire it into `ClientHome` (client) and/or the trainer screens. Test it by
+  driving the preview as a signed-in user (callables need the Firebase Auth context, so the REST/functions-shell
+  tricks used for the claims work won't carry auth — use the actual app). Verify: a real reply comes back, the
+  off-topic redirect fires, and `users/{uid}/aiUsage/{date}.tokens` increments. (2) **Stage 2 — function-calling
+  tools** (`get_meal_logs`, `get_calorie_targets`, `get_trainer_clients`, `get_client_last_log` per the spec) so
+  it can answer "what did I eat this week?". (3) **Stage 3 — conversational meal logging:** parse → confirm card
+  → **write into the EXISTING `caliq-log-{id}-{date}` kv meal store** (reconcile the spec's richer
+  `components`/`totals`/`giEstimate` schema with the app's current `meals[]` so AI-logged meals show in the
+  dashboard/calendar/weekly cards). (4) **Stage 4 — SSE streaming** (needs an `onRequest` HTTP function, not the
+  callable), then **photo logging** (paid tier, vision). **Reminders:** firebase CLI reauth if creds expire =
+  `firebase login --reauth --no-localhost`; rules-test Java at `~/.glide-jdk` (S57); model id `claude-sonnet-4-6`.
