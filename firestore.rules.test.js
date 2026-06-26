@@ -115,6 +115,8 @@ await check("create profile where uid field != docId DENIED", assertFails(setDoc
 
 console.log("\nPROFILE — read access (scoped):");
 await check("owner reads own profile", assertSucceeds(getDoc(prof(c1, C1))));
+await check("brand-new user reads own (not-yet-created) profile — signup path", assertSucceeds(getDoc(prof(ctx("fresh_signup_uid"), "fresh_signup_uid"))));
+await check("signed-in user CANNOT read a stranger's non-existent profile", assertFails(getDoc(prof(c1, "nonexistent_other_uid"))));
 await check("trainer reads own client's profile", assertSucceeds(getDoc(prof(head, C1))));
 await check("client reads their trainer's profile (directory)", assertSucceeds(getDoc(prof(c1, H))));
 await check("any signed-in user reads a trainer's profile (join directory)", assertSucceeds(getDoc(prof(c3, T2))));
