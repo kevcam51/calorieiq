@@ -1144,3 +1144,22 @@ enabled (Blaze has no default spending cap).
   trainer read, ClientHome trainer-name read, getMyClients, getMySubTrainers, dashboards) and cover each with
   emulator allow-tests + cross-client/attack denials; then Kevin PUBLISHES. Steps (a)/(b) are safe to leave live
   indefinitely without (c).
+- Session 59: **Profile-read lockdown — step (c) DONE, PUBLISHED & verified live (hardening complete).**
+  The `users` read rule is no longer `allow read: if isSignedIn()`. Now scoped to: **owner** + **admin** +
+  **trainer directory** (`resource.data.role in ['head_trainer','sub_trainer']` — trainer profiles stay
+  readable so a client can resolve/validate a trainer at join + show their trainer's name, and so
+  `getMySubTrainers` lists) + **a trainer's direct clients** (`resource.data.assignedTrainerId == request.auth.uid`
+  — powers `getMyClients`) + **a head's tree** (`resource.data.headTrainerId == request.auth.uid`). Uses
+  `resource.data` (NOT `get()`) so the constrained `list` queries stay valid. **Net win: a client can no longer
+  read another client's profile.** `joinTrainer` now guards its profile reads in try/catch (a denied read on the
+  scoped rules falls through to the friendly "didn't match" error). **Emulator: 47 pass** (added scoped-read +
+  list-query allow/deny cases incl. cross-client read denial, cross-trainer list denial, unconstrained-list
+  denial). **Rules PUBLISHED** (`firebase deploy --only firestore:rules`). **Verified LIVE in prod** (authed
+  REST + the running app): trainer dashboard's Connected Clients still loads Casey (getMyClients ✓), ClientHome
+  loads (own + trainer reads ✓), client→trainer read 200, trainer→own-client read 200, **client unconstrained
+  `users` list → 403**, no console errors either side, `npm run build` passes. Committed `1a80b24`. **Profile-read
+  hardening (a+b+c) is complete.** (Note: the admin account's profile is role `head_trainer`, so it's a readable
+  directory entry — not a client-data leak; expected.) The custom-claims migration's optional remaining bits
+  (full backfill of the 4 existing users; the claims-into-rules substitution) were intentionally skipped as
+  low-value — see Sessions 57/58. **Blaze server-side foundation + security hardening are now in place; next up
+  is the AI chat** (per `glide-ai-meal-logging-spec.md`), which uses the working Cloud Functions infra.
