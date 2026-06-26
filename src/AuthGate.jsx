@@ -91,6 +91,13 @@ export default function AuthGate({ children }) {
     return () => { cancelled = true; };
   }, [user]);
 
+  // Force a one-time ID-token refresh on sign-in so any custom claims set
+  // server-side (role + linkage — see functions/syncRoleClaims) are present in
+  // this session's token without requiring a re-login. Cheap; runs once per load.
+  useEffect(() => {
+    if (user) user.getIdToken(true).catch(() => {});
+  }, [user]);
+
   if (user === undefined) {
     return <div style={S.center}>Loading…</div>;
   }
