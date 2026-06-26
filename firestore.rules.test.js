@@ -15,7 +15,7 @@ import {
   assertSucceeds,
   assertFails,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 const ADMIN_UID = "G7QUZ8Kat1fgyoMjdGKz4DYoVHi1";
 
@@ -113,10 +113,26 @@ await check("create profile with role=sub_trainer DENIED", assertFails(setDoc(pr
 await check("create profile for a DIFFERENT uid DENIED", assertFails(setDoc(prof(ctx("evil3"), "someone_else"), { uid: "someone_else", email: "e3@x.co", role: "client", assignedTrainerId: null, headTrainerId: null })));
 await check("create profile where uid field != docId DENIED", assertFails(setDoc(prof(ctx("evil4"), "evil4"), { uid: "not_evil4", email: "e4@x.co", role: "client", assignedTrainerId: null, headTrainerId: null })));
 
-console.log("\nPROFILE — read / update / delete:");
+console.log("\nPROFILE — read access (scoped):");
+await check("owner reads own profile", assertSucceeds(getDoc(prof(c1, C1))));
+await check("trainer reads own client's profile", assertSucceeds(getDoc(prof(head, C1))));
+await check("client reads their trainer's profile (directory)", assertSucceeds(getDoc(prof(c1, H))));
+await check("any signed-in user reads a trainer's profile (join directory)", assertSucceeds(getDoc(prof(c3, T2))));
+await check("head reads their sub-trainer's profile", assertSucceeds(getDoc(prof(head, S))));
+await check("client CANNOT read another client's profile", assertFails(getDoc(prof(c1, C2))));
+await check("unrelated trainer CANNOT read a client they don't train", assertFails(getDoc(prof(t2, C1))));
+await check("signed-out cannot read any profile", assertFails(getDoc(prof(anon, C1))));
+await check("signed-out cannot read a trainer profile", assertFails(getDoc(prof(anon, H))));
+
+console.log("\nPROFILE — list queries:");
+const usersCol = (db) => collection(db, "users");
+await check("trainer lists own clients (assignedTrainerId==me)", assertSucceeds(getDocs(query(usersCol(head), where("assignedTrainerId", "==", H)))));
+await check("head lists own sub-trainers (headTrainerId==me)", assertSucceeds(getDocs(query(usersCol(head), where("headTrainerId", "==", H)))));
+await check("trainer CANNOT list another trainer's clients", assertFails(getDocs(query(usersCol(t2), where("assignedTrainerId", "==", H)))));
+await check("client CANNOT list all users (unconstrained)", assertFails(getDocs(usersCol(c1))));
+
+console.log("\nPROFILE — update / delete:");
 await check("client sets own assignedTrainerId (joins a trainer)", assertSucceeds(updateDoc(prof(c3, C3), { assignedTrainerId: H })));
-await check("any signed-in user reads a profile", assertSucceeds(getDoc(prof(c1, C2))));
-await check("signed-out cannot read a profile", assertFails(getDoc(prof(anon, C1))));
 await check("non-admin cannot delete a profile", assertFails(deleteDoc(prof(c1, C1))));
 await check("admin can change anyone's role", assertSucceeds(updateDoc(prof(admin, S), { role: "head_trainer" })));
 await check("admin can delete a profile", assertSucceeds(deleteDoc(prof(admin, C3))));

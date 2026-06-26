@@ -55,9 +55,23 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      // READ: any signed-in user (MVP simplification so join + client-list
-      // queries work). Tighten later per docs/BLAZE_MIGRATION.md.
-      allow read: if isSignedIn();
+      // READ: scoped (hardening — was "any signed-in user").
+      //  • owner reads own; admin reads any
+      //  • TRAINER profiles (head/sub) are a readable directory — needed so a
+      //    client can resolve/validate a trainer at join time and show the
+      //    trainer's name, and so getMySubTrainers (headTrainerId==me) lists work
+      //  • a trainer reads their DIRECT clients (assignedTrainerId==me) — powers
+      //    the getMyClients list query
+      //  • a head reads profiles where they're the head (headTrainerId==me)
+      // Uses resource.data (NOT get()) so the constrained list queries stay valid.
+      // Net effect: a client can no longer read another client's profile.
+      allow read: if isSignedIn() && (
+        request.auth.uid == uid
+        || isAdmin()
+        || resource.data.role in ['head_trainer', 'sub_trainer']
+        || resource.data.assignedTrainerId == request.auth.uid
+        || resource.data.headTrainerId == request.auth.uid
+      );
 
       // CREATE: only your own uid; role must be client or head_trainer ONLY
       // (never admin / sub_trainer); uid field must equal the doc id.

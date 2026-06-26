@@ -179,10 +179,14 @@ export async function joinTrainer(input) {
     }
   }
 
-  // 2) Fallback: treat the input as a raw trainer uid.
+  // 2) Fallback: treat the input as a raw trainer uid. With profile reads now
+  // scoped, reading a non-trainer/unknown uid is denied (throws) — treat that as
+  // "not found" and fall through to the friendly error.
   if (!trainerUid) {
-    const tSnap = await getDoc(profileRef(raw));
-    if (tSnap.exists()) trainerUid = raw;
+    try {
+      const tSnap = await getDoc(profileRef(raw));
+      if (tSnap.exists()) trainerUid = raw;
+    } catch (e) { /* denied/unknown — fall through */ }
   }
 
   if (!trainerUid) {
@@ -192,8 +196,10 @@ export async function joinTrainer(input) {
     throw new Error("You can't link to your own account.");
   }
 
-  // Confirm the target is a trainer before linking.
-  const tProf = (await getDoc(profileRef(trainerUid))).data();
+  // Confirm the target is a trainer before linking. Trainer profiles are readable
+  // (the directory); a denied/failed read means it isn't a valid trainer.
+  let tProf = null;
+  try { tProf = (await getDoc(profileRef(trainerUid))).data(); } catch (e) { /* denied */ }
   if (!tProf || (tProf.role !== ROLES.HEAD_TRAINER && tProf.role !== ROLES.SUB_TRAINER)) {
     throw new Error("That code doesn't belong to a trainer account.");
   }
