@@ -1274,3 +1274,33 @@ enabled (Blaze has no default spending cap).
   `components`/`totals`/`giEstimate` with the app's `meals[]` so AI-logged meals show in the dashboard/calendar/weekly
   cards). Then Stage 4 — SSE streaming (needs an `onRequest` HTTP fn, not the callable) — and photo logging (paid/
   vision). Same reminders: model `claude-sonnet-4-6`; firebase reauth = `firebase login --reauth --no-localhost`.
+- Session 63: **AI chat Stage 3 — conversational meal LOGGING (the AI can now WRITE meals). DEPLOYED & LIVE.**
+  The headline feature: a user describes food in plain language, the AI estimates macros, shows the breakdown,
+  confirms, then writes it straight into the existing daily-log store so it shows on the dashboard/calendar/weekly
+  cards — no form. New **`log_meal`** tool in `functions/aitools.js` (both roles): inputs `name, mealType
+  (breakfast|lunch|dinner|snack), calories, protein, carbs, fat, date?, clientId?`. It appends a meal item with the
+  EXACT shape `App.onAddMeal` uses (`{id, name, type, calories, protein, carbs, fat}`) to `caliq-log-{activePlan}-
+  {date}.meals[]`, rolls the values into the day's `calories/protein/carbs/fat` totals (Option-A additive, matching
+  the app), and best-effort appends an activity-feed event to `caliq-history-{plan}` with the same `{id,uid,role,
+  name,action,ts}` shape so AI logs show in the feed. Date defaults to **today in `America/New_York`** (passed as
+  `ctx.today` from `aichat.js`) to match the S45 local-date keys. New kv helper `kvSetJSON` (mirrors storage.js
+  `{k,value}`). **Security is the same server-side model as the read tools:** a client logs only to their OWN account
+  (no `clientId`); a trainer may log FOR a client only after `resolveTargetUid` verifies the client is theirs — so a
+  trainer can log on a client's behalf (the manual-entry tier) and nobody can write into a stranger's log.
+  **Confirm-before-write:** the system prompt instructs the AI to estimate → show the breakdown → get an explicit
+  go-ahead → ONLY THEN call `log_meal` (and to support corrections first, e.g. "make it one egg"). Verified it does
+  NOT write prematurely. **Live refresh:** the callable now returns `wrote: true` when a `log_meal` succeeded;
+  `AIChatPanel` gained an `onDataChanged` prop, and `ClientHome` passes `() => load(activePlanId)` so the dashboard
+  behind the chat reloads and shows the new meal immediately. (Trainer screens mount the panel without the callback —
+  fine; their own loaders refresh on next view.) **Frontend changed → `npm run build` passes; pushing redeploys
+  Vercel.** Backend `firebase deploy --only functions:aiChat` done. **VERIFIED LIVE end-to-end as client.uitest
+  (Casey):** "I had grilled chicken + a cup of rice + broccoli for lunch" → AI estimated ~520 cal / 48p/55c/6f, showed
+  it, asked to confirm (no write yet); "yes, log it as lunch" → AI called `log_meal` → "Logged! ✅". **Independently
+  confirmed through the app's OWN read path** (not the AI): the in-plan Daily Dashboard shows **"520 LOGGED SO FAR"**,
+  target 1,200, **"680 CAL REMAINING"**, and the Meals & Food Today card lists the chicken meal with 48g/55g/6g — so
+  the AI write landed exactly where the dashboard/calendar/weekly cards read. No console or tool errors. Committed
+  (this session).
+  **NEXT:** Stage 4 — SSE streaming (replies word-by-word; needs an `onRequest` HTTP fn + EventSource client, not the
+  callable) and **photo meal logging** (paid tier: base64 image → Anthropic vision → macro estimate → same `log_meal`
+  confirm/write path). Optional polish: a UI **Accept/Edit confirm card** (the spec's §9 card) instead of the current
+  conversational confirm; richer meal schema (`components`/`giEstimate`) if wanted. Model `claude-sonnet-4-6`.

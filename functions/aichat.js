@@ -127,10 +127,15 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
 
 Today's date is ${todayLocal()} (use it to resolve "today", "yesterday", "this week", etc.).
 
-You have tools to read the user's real logged data — use them whenever a question depends on actual numbers (what they ate, their targets, client activity) rather than guessing. Call get_nutrition_targets to know the goals before judging whether a day was over/under. Don't expose internal ids to the user; refer to clients by name.`;
+You have tools to read the user's real logged data — use them whenever a question depends on actual numbers (what they ate, their targets, client activity) rather than guessing. Call get_nutrition_targets to know the goals before judging whether a day was over/under. Don't expose internal ids to the user; refer to clients by name.
 
+You can also LOG meals with log_meal. When the user describes food they ate: estimate the calories + protein/carbs/fat, show them the breakdown clearly, ask which meal it is if unclear (breakfast/lunch/dinner/snack), and ONLY call log_meal once they confirm. Support corrections before saving ("make it one egg not two"). After saving, confirm it's logged and where it landed. Never log without an explicit go-ahead.`;
+
+  const callerName = profile.displayName
+    || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+    || profile.email || (isTrainer ? "Coach" : "Client");
   const tools = buildTools(role);
-  const toolCtx = { callerUid: uid, role, isTrainer };
+  const toolCtx = { callerUid: uid, role, isTrainer, today: todayLocal(), callerName };
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
 
   // Function-calling loop: the model may call tools (which read Firestore with
@@ -140,6 +145,7 @@ You have tools to read the user's real logged data — use them whenever a quest
   const MAX_TOOL_ROUNDS = 5;
   const convo = messages.slice();
   let spent = 0;
+  let wrote = false; // a meal was logged this turn → tell the client to refresh
   let resp;
   try {
     resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
@@ -152,7 +158,8 @@ You have tools to read the user's real logged data — use them whenever a quest
       for (const tu of toolUses) {
         let out;
         try { out = await runTool(tu.name, tu.input || {}, toolCtx); }
-        catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That lookup failed." }; }
+        catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That action failed." }; }
+        if (tu.name === "log_meal" && out && out.ok) wrote = true;
         results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 60000) });
       }
       convo.push({ role: "assistant", content: resp.content });
@@ -172,6 +179,7 @@ You have tools to read the user's real logged data — use them whenever a quest
   const totalUsed = used + spent;
   return {
     reply: text,
+    wrote,
     usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8 },
   };
 });

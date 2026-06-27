@@ -29,6 +29,10 @@ async function kvGetJSON(db, uid, key) {
     return null;
   }
 }
+async function kvSetJSON(db, uid, key, obj) {
+  await kvDocRef(db, uid, key).set({ k: key, value: JSON.stringify(obj) });
+}
+function randId(p) { return `${p}${Date.now()}${Math.floor(Math.random() * 1000)}`; }
 
 // ── plan resolution (mirrors the multi-plan manifest; default plan id "self"). ─
 async function activePlanId(db, uid) {
@@ -130,6 +134,28 @@ function buildTools(role) {
         properties: { ...clientIdProp },
       },
     },
+    {
+      name: "log_meal",
+      description:
+        "Save a meal to the daily food log (it appears on the dashboard, calendar, and weekly totals). "
+        + "ONLY call this AFTER you have shown the user the estimated calories + macros and they have confirmed. "
+        + "Estimate calories/protein/carbs/fat yourself from the description before calling. "
+        + (isTrainer ? "Pass clientId (from list_clients) to log for a client; omit for yourself." : "Logs to YOUR own food log."),
+      input_schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Short food/meal name, e.g. '2 eggs & whole wheat toast'" },
+          mealType: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "Which meal" },
+          calories: { type: "number", description: "Total calories for this meal" },
+          protein: { type: "number", description: "Protein grams (0 if unknown)" },
+          carbs: { type: "number", description: "Carb grams (0 if unknown)" },
+          fat: { type: "number", description: "Fat grams (0 if unknown)" },
+          date: { type: "string", description: "Date YYYY-MM-DD. Omit for today." },
+          ...clientIdProp,
+        },
+        required: ["name", "mealType", "calories"],
+      },
+    },
   ];
 
   if (isTrainer) {
@@ -207,6 +233,53 @@ async function runTool(name, input, ctx) {
       note: t.calorieTarget == null
         ? "Calorie target unavailable — the plan is missing gender/age/height."
         : "Calorie target is the baseline diet target (excludes scheduled-exercise calories).",
+    };
+  }
+
+  if (name === "log_meal") {
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    const date = re.test(input.date || "") ? input.date : ctx.today;
+    const mealType = ["breakfast", "lunch", "dinner", "snack"].includes(input.mealType) ? input.mealType : "";
+    const meal = {
+      id: randId("m"),
+      name: String(input.name || "").slice(0, 120),
+      type: mealType,
+      calories: Math.max(0, Math.round(Number(input.calories) || 0)),
+      protein: Math.max(0, Math.round(Number(input.protein) || 0)),
+      carbs: Math.max(0, Math.round(Number(input.carbs) || 0)),
+      fat: Math.max(0, Math.round(Number(input.fat) || 0)),
+    };
+    const { id: planId } = await activePlanData(db, uid);
+    const logKey = `caliq-log-${planId}-${date}`;
+    const log = (await kvGetJSON(db, uid, logKey)) || {};
+    const updated = {
+      ...log,
+      meals: [...(Array.isArray(log.meals) ? log.meals : []), meal],
+      calories: (Number(log.calories) || 0) + meal.calories,
+      protein: (Number(log.protein) || 0) + meal.protein,
+      carbs: (Number(log.carbs) || 0) + meal.carbs,
+      fat: (Number(log.fat) || 0) + meal.fat,
+    };
+    await kvSetJSON(db, uid, logKey, updated);
+    // Mirror the activity feed (same shape as App.appendHistory), so AI-logged
+    // meals show up in the client's history just like manual ones.
+    try {
+      const histKey = `caliq-history-${planId}`;
+      const hist = (await kvGetJSON(db, uid, histKey)) || [];
+      const ev = {
+        id: randId("e"),
+        uid: ctx.callerUid,
+        role: ctx.role,
+        name: ctx.callerName || "AI assistant",
+        action: `logged ${mealType || "a meal"} via AI: ${meal.name} (${meal.calories} cal)`,
+        ts: Date.now(),
+      };
+      await kvSetJSON(db, uid, histKey, [ev, ...(Array.isArray(hist) ? hist : [])].slice(0, 250));
+    } catch (e) { /* history is best-effort */ }
+    return {
+      ok: true,
+      logged: { date, mealType, ...meal },
+      dayTotals: { calories: updated.calories, protein: updated.protein, carbs: updated.carbs, fat: updated.fat },
     };
   }
 

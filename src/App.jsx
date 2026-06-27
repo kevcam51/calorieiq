@@ -9510,7 +9510,7 @@ function RichText({ text }) {
   );
 }
 
-function AIChatPanel({ role }) {
+function AIChatPanel({ role, onDataChanged }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]); // {role:'user'|'assistant', content}
   const [draft, setDraft] = useState("");
@@ -9538,6 +9538,8 @@ function AIChatPanel({ role }) {
       const reply = (res.data && res.data.reply) || "";
       setMessages([...next, { role: "assistant", content: reply || "(no response)" }]);
       if (res.data && res.data.usage && res.data.usage.warn) setWarn(true);
+      // The AI logged a meal → refresh the screen behind the chat so it shows.
+      if (res.data && res.data.wrote && typeof onDataChanged === "function") onDataChanged();
     } catch (e) {
       // Firebase callable errors carry a `code` like "functions/resource-exhausted".
       const code = (e && e.code) || "";
@@ -10188,8 +10190,9 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
           onClose={() => setQuickReq(null)} />
       )}
 
-      {/* AI assistant — floating button + collapsible chat (Session 61). */}
-      <AIChatPanel role={role} />
+      {/* AI assistant — floating button + collapsible chat (Session 61).
+          onDataChanged reloads the plan/log when the AI logs a meal (Session 63). */}
+      <AIChatPanel role={role} onDataChanged={() => load(activePlanId)} />
     </div>
   );
 }
