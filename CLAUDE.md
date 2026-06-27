@@ -1378,3 +1378,24 @@ enabled (Blaze has no default spending cap).
   send client requests · STREAMING — all live. **Remaining (optional):** the spec §9 **Accept/Edit confirm card**
   (tappable card under a meal estimate instead of typing "yes"); **plan-structure builder** (deferred — Kevin's future
   idea: trainer dictates notes → AI drafts a program). Model `claude-sonnet-4-6`.
+- Session 67: **AI chat — PROMPT CACHING (cut AI cost ~half, stretch the daily budget ~4×). DEPLOYED & LIVE.**
+  The fixed instruction+tools prefix (~2,300–2,400 tokens for clients, slightly more for trainers) was being re-sent at
+  full price on EVERY API call and every tool round, which is what drained the per-user daily token budget so fast.
+  Added Anthropic **prompt caching**: `setupChat` now returns `system` as a cacheable block array
+  `[{type:"text", text, cache_control:{type:"ephemeral"}}]` — tools render before system, so one breakpoint on the
+  system block caches **tools + system** together. Identical across calls within a day, so repeat messages + tool
+  rounds (within the 5-min cache TTL) pay ~10% for that prefix instead of full price. **Zero effect on output quality**
+  — the model receives the identical prompt; only billing/processing of the cached prefix changes (and TTFT is a touch
+  faster). New `addUsage()` accumulates the four token counts Anthropic reports (`input_tokens`, `output_tokens`,
+  `cache_creation_input_tokens`, `cache_read_input_tokens`); both the callable and the stream now log an `aiUsage` line
+  + return `usage.breakdown`. **Budget accounting updated:** `spent = input + output + cacheWrite` (cache READS bill at
+  ~10%, so excluded) — so cached messages barely dent the budget, which is why the daily allowance now stretches ~4×.
+  **Backend-only — no frontend change** (App.jsx net-unchanged; temporary `window.__gu` measurement hooks were added
+  then removed). **MEASURED LIVE** (trainer.uitest, 3-message batch: 1 plain Q + 2 tool queries, ~6 internal API rounds,
+  cache warm so cacheWrite=0): tokens were **input 3,988 · output 742 · cacheRead 13,908**. Cost compared apples-to-
+  apples from the SAME run (same prompts, billed both ways): **WITHOUT caching ≈ 6.5¢** (the 13,908 cache-read tokens
+  would be full-price input) **vs WITH caching ≈ 2.7¢ → ~58% cheaper** for this tool-heavy batch (~45% with a cold-start
+  cache write amortized in). Budget tokens for the batch dropped from ~18,600 → ~4,700 (**~4× less**), so the
+  "almost at your limit" warning now fires far later. **Note for later (trial periods):** the hard daily cap + caching
+  keeps even a long AI-using trial bounded to ~$1–2/user over a 30-day trial — revisit trial length per-role when
+  Stripe lands, but cost runaway is structurally prevented. Model `claude-sonnet-4-6`.

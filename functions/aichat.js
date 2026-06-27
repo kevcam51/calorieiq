@@ -159,12 +159,24 @@ async function setupChat(uid) {
   const callerName = profile.displayName
     || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
     || profile.email || (isTrainer ? "Coach" : "Client");
+  // Cache the stable prefix (tools render before system, so a cache_control
+  // breakpoint on the system block caches tools + system together). This part is
+  // identical across calls within a day, so repeat messages + tool rounds pay
+  // ~10% for it instead of full price (Session 67). No effect on output quality.
+  const system = [{ type: "text", text: buildSystemPrompt(role, isTrainer), cache_control: { type: "ephemeral" } }];
   return {
-    role, isTrainer, budget, usageRef, used,
-    system: buildSystemPrompt(role, isTrainer),
+    role, isTrainer, budget, usageRef, used, system,
     tools: buildTools(role),
     toolCtx: { callerUid: uid, role, isTrainer, today: todayLocal(), callerName },
   };
+}
+
+// Accumulate the four token counts Anthropic reports (with caching split out).
+function addUsage(agg, u) {
+  agg.input += (u && u.input_tokens) || 0;
+  agg.output += (u && u.output_tokens) || 0;
+  agg.cacheWrite += (u && u.cache_creation_input_tokens) || 0;
+  agg.cacheRead += (u && u.cache_read_input_tokens) || 0;
 }
 
 // Execute one round of tool calls (server-side access checks live in runTool).
@@ -199,12 +211,12 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
   const convo = messages.slice();
-  let spent = 0;
+  const agg = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 };
   let wrote = false; // a plan-changing write happened this turn → client should refresh
   let resp;
   try {
     resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
-    spent += (resp.usage && (resp.usage.input_tokens + resp.usage.output_tokens)) || 0;
+    addUsage(agg, resp.usage);
     let rounds = 0;
     while (resp.stop_reason === "tool_use" && rounds < MAX_TOOL_ROUNDS) {
       rounds++;
@@ -214,13 +226,16 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
       convo.push({ role: "assistant", content: resp.content });
       convo.push({ role: "user", content: r.results });
       resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
-      spent += (resp.usage && (resp.usage.input_tokens + resp.usage.output_tokens)) || 0;
+      addUsage(agg, resp.usage);
     }
   } catch (e) {
     console.error("aiChat Anthropic error:", e && e.message);
     throw new HttpsError("internal", "The AI assistant is temporarily unavailable. Please try again.");
   }
 
+  // Budget counts full-price tokens (cache reads bill at ~10%, so excluded).
+  const spent = agg.input + agg.output + agg.cacheWrite;
+  console.log("aiUsage", JSON.stringify({ fn: "aiChat", ...agg, spent }));
   await usageRef.set({ tokens: admin.firestore.FieldValue.increment(spent),
     updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
@@ -229,7 +244,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
   return {
     reply: text,
     wrote,
-    usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8 },
+    usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8, breakdown: agg },
   };
 });
 
@@ -278,7 +293,7 @@ exports.aiChatStream = onRequest(
 
     const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
     const convo = messages.slice();
-    let spent = 0;
+    const agg = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 };
     let wrote = false;
     try {
       let rounds = 0;
@@ -287,7 +302,7 @@ exports.aiChatStream = onRequest(
         const stream = client.messages.stream({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
         stream.on("text", (delta) => { if (delta) sse("delta", { text: delta }); });
         const msg = await stream.finalMessage();
-        spent += (msg.usage && (msg.usage.input_tokens + msg.usage.output_tokens)) || 0;
+        addUsage(agg, msg.usage);
         if (msg.stop_reason === "tool_use" && rounds < MAX_TOOL_ROUNDS) {
           rounds++;
           const toolUses = (msg.content || []).filter((b) => b.type === "tool_use");
@@ -306,11 +321,13 @@ exports.aiChatStream = onRequest(
       return;
     }
 
+    const spent = agg.input + agg.output + agg.cacheWrite;
+    console.log("aiUsage", JSON.stringify({ fn: "aiChatStream", ...agg, spent }));
     await usageRef.set({ tokens: admin.firestore.FieldValue.increment(spent),
       updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
     const totalUsed = used + spent;
-    sse("done", { wrote, usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8 } });
+    sse("done", { wrote, usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8, breakdown: agg } });
     res.end();
   }
 );
