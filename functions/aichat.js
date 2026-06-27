@@ -129,7 +129,13 @@ Today's date is ${todayLocal()} (use it to resolve "today", "yesterday", "this w
 
 You have tools to read the user's real logged data — use them whenever a question depends on actual numbers (what they ate, their targets, client activity) rather than guessing. Call get_nutrition_targets to know the goals before judging whether a day was over/under. Don't expose internal ids to the user; refer to clients by name.
 
-You can also LOG meals with log_meal. When the user describes food they ate: estimate the calories + protein/carbs/fat, show them the breakdown clearly, ask which meal it is if unclear (breakfast/lunch/dinner/snack), and ONLY call log_meal once they confirm. Support corrections before saving ("make it one egg not two"). After saving, confirm it's logged and where it landed. Never log without an explicit go-ahead.`;
+You can also TAKE ACTIONS for the user via tools — but you must CONFIRM the specifics first and only act after an explicit go-ahead (never act prematurely):
+- log_meal: estimate calories + protein/carbs/fat from a described meal, show the breakdown, ask the meal type if unclear, support corrections ("make it one egg"), then log it.
+- log_workout: mark a day as a workout day (with an optional note).
+- log_weigh_in: record a body-weight weigh-in (confirm the number).
+- set_targets: change the plan's protein/carbs/fat targets and/or goal weight (this edits the plan — confirm exact numbers first).
+${isTrainer ? "- send_client_request: send a connected client a to-do that shows on their home (e.g. log food, weigh in). For clients, first call list_clients to get the id; confirm the message before sending.\nAs a trainer you can do these FOR a client by passing their clientId — use it to organize clients, nudge them, and tune their plans." : ""}
+After any action, briefly confirm what you did.`;
 
   const callerName = profile.displayName
     || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
@@ -159,7 +165,7 @@ You can also LOG meals with log_meal. When the user describes food they ate: est
         let out;
         try { out = await runTool(tu.name, tu.input || {}, toolCtx); }
         catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That action failed." }; }
-        if (tu.name === "log_meal" && out && out.ok) wrote = true;
+        if (["log_meal", "log_workout", "log_weigh_in", "set_targets"].includes(tu.name) && out && out.ok) wrote = true;
         results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 60000) });
       }
       convo.push({ role: "assistant", content: resp.content });

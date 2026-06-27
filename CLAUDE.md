@@ -1304,3 +1304,30 @@ enabled (Blaze has no default spending cap).
   callable) and **photo meal logging** (paid tier: base64 image → Anthropic vision → macro estimate → same `log_meal`
   confirm/write path). Optional polish: a UI **Accept/Edit confirm card** (the spec's §9 card) instead of the current
   conversational confirm; richer meal schema (`components`/`giEstimate`) if wanted. Model `claude-sonnet-4-6`.
+- Session 64: **AI chat — coaching-assistant ACTION tools (workout / weigh-in / targets / client requests). DEPLOYED & LIVE.**
+  Extended the AI from "logs meals" to "does the trainer's busywork" by adding four write tools to `functions/aitools.js`,
+  all following the SAME confirm-before-write + server-side access model as `log_meal` (clients act only on themselves;
+  a trainer acts on a client only after `resolveTargetUid` verifies the client is theirs). New tools:
+  • **`log_workout`** (both roles) — marks a day as a workout day (find-or-create today's `data.checkIns` entry, set
+    `workedOut=true` + optional note); feeds the streak/calendar. • **`log_weigh_in`** (both roles) — records a weigh-in
+    (replace-by-date check-in, updates `data.weightLbs` + `startWeightLbs`), mirroring `ClientHome.logWeight` exactly.
+  • **`set_targets`** (both roles, mainly trainers) — edits the plan's `data.macroTargets` (protein/carbs/fat g, merged
+    over current/computed defaults) and/or `data.goalWeight`. • **`send_client_request`** (trainers only) — writes a
+    `{id,fromUid,fromName,type,prompt,status:"open",createdAt,doneAt}` item to the client's `caliq-requests` (+ a
+    `caliq-history-self` note), exactly like `TrainerDashboard.sendRequest`, so it pops up on the client's home.
+  New helpers in aitools: `loadPlanWrap` (read-modify-write the full `caliq-{plan}` `{data,step}` wrapper),
+  `appendHistory` (shared activity-feed writer), `checkInTimestamp`. All check-in/target writes go through the plan
+  wrapper; meal writes still go to `caliq-log-{plan}-{date}`. `aichat.js`: the `wrote:true` refresh flag now also fires
+  for `log_workout`/`log_weigh_in`/`set_targets` (so the client's dashboard reloads); system prompt expanded to list the
+  action tools with a hard "confirm specifics, then act — never prematurely" rule, plus trainer guidance to use
+  `clientId` to act on a client's behalf. **Backend-only — no frontend change, no Vercel rebuild.** Deploy needed a
+  `firebase login --reauth --no-localhost` (token expired). **VERIFIED LIVE end-to-end:** as client.uitest (Casey)
+  "I weighed 186 + did an upper-body workout" → confirmed → both logged; **app's own dashboard independently showed
+  weight 188→186** ("Previous: 188 lbs (−2 lbs)"). As trainer.uitest "set Casey's protein to 200g + send her a dinner
+  request" → it called `list_clients`, confirmed, did both; **independently confirmed:** Casey's home showed the
+  "🍽️ Please log your dinner tonight" request, and a fresh read of her plan returned protein target **200g**. Access
+  control held (trainer→Casey allowed because she's their client). No console/tool errors. Committed (this session).
+  **DEFERRED (Kevin's call):** full plan-STRUCTURE editing (create/rebuild programs) — future idea is "trainer dictates
+  notes for a client → AI drafts a program from them"; not needed now. **Reminders:** model `claude-sonnet-4-6`;
+  firebase reauth = `firebase login --reauth --no-localhost`; the AI's powers = the tool set, each new ability is one
+  contained, access-checked tool.

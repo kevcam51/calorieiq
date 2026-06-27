@@ -44,6 +44,27 @@ async function activePlanData(db, uid) {
   const wrap = await kvGetJSON(db, uid, `caliq-${id}`);
   return { id, data: (wrap && wrap.data) || {} };
 }
+// Full plan wrapper ({data, step}) for read-modify-write of plan fields.
+async function loadPlanWrap(db, uid) {
+  const id = await activePlanId(db, uid);
+  const wrap = (await kvGetJSON(db, uid, `caliq-${id}`)) || { data: {}, step: 0 };
+  if (!wrap.data) wrap.data = {};
+  return { id, wrap };
+}
+function checkInTimestamp(date) {
+  return new Date(date + "T12:00:00").getTime();
+}
+// Append an activity-feed event to the plan's history (best-effort), same
+// shape as App.appendHistory so AI actions show in the Recent Activity feed.
+async function appendHistory(db, uid, planId, ctx, action) {
+  try {
+    const key = `caliq-history-${planId}`;
+    const hist = (await kvGetJSON(db, uid, key)) || [];
+    const ev = { id: randId("e"), uid: ctx.callerUid, role: ctx.role,
+      name: ctx.callerName || "AI assistant", action, ts: Date.now() };
+    await kvSetJSON(db, uid, key, [ev, ...(Array.isArray(hist) ? hist : [])].slice(0, 250));
+  } catch (e) { /* best-effort */ }
+}
 
 // ── calorie/macro targets (matches src/App.jsx computeClientCalories +
 // the dashboard macro defaults). The scheduled-exercise add-back is omitted —
@@ -156,6 +177,52 @@ function buildTools(role) {
         required: ["name", "mealType", "calories"],
       },
     },
+    {
+      name: "log_workout",
+      description:
+        "Record that a workout was completed on a day (marks the day as a workout day; feeds the streak and calendar). Add a short note for what they did if mentioned. "
+        + "Confirm with the user first. " + (isTrainer ? "Pass clientId to record for a client." : "Records for YOU."),
+      input_schema: {
+        type: "object",
+        properties: {
+          note: { type: "string", description: "Optional note, e.g. 'Push day — felt strong'" },
+          date: { type: "string", description: "Date YYYY-MM-DD. Omit for today." },
+          ...clientIdProp,
+        },
+      },
+    },
+    {
+      name: "log_weigh_in",
+      description:
+        "Record a body-weight weigh-in. Updates current weight and the progress chart. Confirm the number with the user first. "
+        + (isTrainer ? "Pass clientId to record for a client." : "Records for YOU."),
+      input_schema: {
+        type: "object",
+        properties: {
+          weightLbs: { type: "number", description: "Body weight in pounds" },
+          date: { type: "string", description: "Date YYYY-MM-DD. Omit for today." },
+          ...clientIdProp,
+        },
+        required: ["weightLbs"],
+      },
+    },
+    {
+      name: "set_targets",
+      description:
+        "Update the plan's nutrition targets and/or goal weight. Set any of protein/carbs/fat target grams, or goal weight in pounds. "
+        + "This CHANGES the plan — always confirm the specific numbers with the user before calling. "
+        + (isTrainer ? "Pass clientId to tune a client's plan." : "Updates YOUR plan."),
+      input_schema: {
+        type: "object",
+        properties: {
+          proteinTarget: { type: "number", description: "Daily protein target, grams" },
+          carbsTarget: { type: "number", description: "Daily carb target, grams" },
+          fatTarget: { type: "number", description: "Daily fat target, grams" },
+          goalWeightLbs: { type: "number", description: "Goal body weight, pounds" },
+          ...clientIdProp,
+        },
+      },
+    },
   ];
 
   if (isTrainer) {
@@ -164,6 +231,20 @@ function buildTools(role) {
       description:
         "List your connected clients. Returns each client's id, name, last log date, and days since they last logged. Use the returned id with the other tools.",
       input_schema: { type: "object", properties: {} },
+    });
+    tools.push({
+      name: "send_client_request",
+      description:
+        "Send a connected client a short to-do that appears on their home screen (e.g. ask them to log food, weigh in, or record a workout). Confirm the message with the trainer before sending.",
+      input_schema: {
+        type: "object",
+        properties: {
+          clientId: { type: "string", description: "The client's id from list_clients." },
+          message: { type: "string", description: "The request text the client will see, e.g. 'Please log today's dinner.'" },
+          type: { type: "string", enum: ["log_food", "weigh_in", "log_workout", "enter_info", "custom"], description: "Request type (drives the client's quick-action). Default custom." },
+        },
+        required: ["clientId", "message"],
+      },
     });
   }
   return tools;
@@ -281,6 +362,92 @@ async function runTool(name, input, ctx) {
       logged: { date, mealType, ...meal },
       dayTotals: { calories: updated.calories, protein: updated.protein, carbs: updated.carbs, fat: updated.fat },
     };
+  }
+
+  if (name === "log_workout") {
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    const date = re.test(input.date || "") ? input.date : ctx.today;
+    const note = String(input.note || "").slice(0, 300);
+    const loggedBy = (ctx.isTrainer && uid !== ctx.callerUid) ? "trainer" : "client";
+    const { id: planId, wrap } = await loadPlanWrap(db, uid);
+    const d = wrap.data;
+    if (!Array.isArray(d.checkIns)) d.checkIns = [];
+    const ci = d.checkIns.find((c) => c.date === date);
+    if (ci) { ci.workedOut = true; if (note) ci.notes = note; }
+    else d.checkIns.push({ date, timestamp: checkInTimestamp(date), weight: null, calories: null,
+      hitTarget: null, workedOut: true, mood: null, notes: note, bodyFat: null, loggedBy, isFuturePlan: false });
+    await kvSetJSON(db, uid, `caliq-${planId}`, wrap);
+    await appendHistory(db, uid, planId, ctx, note ? `recorded a workout: "${note}"` : "recorded a workout");
+    return { ok: true, date, note: note || null };
+  }
+
+  if (name === "log_weigh_in") {
+    const v = Math.round((Number(input.weightLbs) || 0) * 10) / 10;
+    if (!v || v <= 0) return { error: "Provide a weight greater than 0." };
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    const date = re.test(input.date || "") ? input.date : ctx.today;
+    const loggedBy = (ctx.isTrainer && uid !== ctx.callerUid) ? "trainer" : "client";
+    const { id: planId, wrap } = await loadPlanWrap(db, uid);
+    const d = wrap.data;
+    if (!Array.isArray(d.checkIns)) d.checkIns = [];
+    const prev = Number(d.weightLbs) || v;
+    if (d.startWeightLbs == null || d.startWeightLbs === "") d.startWeightLbs = prev;
+    d.weightLbs = v;
+    d.checkIns = d.checkIns.filter((c) => c.date !== date);
+    d.checkIns.push({ date, timestamp: checkInTimestamp(date), weight: v, calories: null, hitTarget: null,
+      workedOut: null, mood: null, notes: "", bodyFat: null, loggedBy, isFuturePlan: false });
+    await kvSetJSON(db, uid, `caliq-${planId}`, wrap);
+    await appendHistory(db, uid, planId, ctx, `logged weight: ${v} lbs`);
+    return { ok: true, date, weightLbs: v };
+  }
+
+  if (name === "set_targets") {
+    const { id: planId, wrap } = await loadPlanWrap(db, uid);
+    const d = wrap.data;
+    const changes = [];
+    if (input.proteinTarget != null || input.carbsTarget != null || input.fatTarget != null) {
+      const base = nutritionTargets(d);
+      const cur = d.macroTargets || {};
+      const pick = (inv, curv, basev) => inv != null ? Math.max(0, Math.round(Number(inv)))
+        : (curv != null ? curv : (basev != null ? basev : 0));
+      const protein = pick(input.proteinTarget, cur.protein, base.proteinTarget);
+      const carbs = pick(input.carbsTarget, cur.carbs, base.carbsTarget);
+      const fat = pick(input.fatTarget, cur.fat, base.fatTarget);
+      d.macroTargets = { protein, carbs, fat };
+      changes.push(`macros to ${protein}g protein / ${carbs}g carbs / ${fat}g fat`);
+    }
+    if (input.goalWeightLbs != null) {
+      const g = Math.round(Number(input.goalWeightLbs) * 10) / 10;
+      if (g > 0) { d.goalWeight = g; changes.push(`goal weight to ${g} lbs`); }
+    }
+    if (changes.length === 0) return { error: "Provide at least one of protein/carbs/fat target or goal weight." };
+    await kvSetJSON(db, uid, `caliq-${planId}`, wrap);
+    await appendHistory(db, uid, planId, ctx, `updated ${changes.join(" and ")}`);
+    return { ok: true, updated: { macroTargets: d.macroTargets || null, goalWeightLbs: d.goalWeight != null ? d.goalWeight : null } };
+  }
+
+  if (name === "send_client_request") {
+    if (!ctx.isTrainer) return { error: "Only trainers can send client requests." };
+    if (!input.clientId) return { error: "clientId is required (from list_clients)." };
+    const check = await resolveTargetUid(db, { clientId: input.clientId }, ctx);
+    if (check && check.error) return check;
+    if (check === ctx.callerUid) return { error: "Pick a client, not yourself." };
+    const clientId = check;
+    const msg = String(input.message || "").trim().slice(0, 500);
+    if (!msg) return { error: "Provide the request message." };
+    const type = ["log_food", "weigh_in", "log_workout", "enter_info", "custom"].includes(input.type) ? input.type : "custom";
+    const now = Date.now();
+    const cur = (await kvGetJSON(db, clientId, "caliq-requests")) || [];
+    const req = { id: randId("r"), fromUid: ctx.callerUid, fromName: ctx.callerName || "Your trainer",
+      type, prompt: msg, status: "open", createdAt: now, doneAt: null };
+    await kvSetJSON(db, clientId, "caliq-requests", [req, ...(Array.isArray(cur) ? cur : [])].slice(0, 100));
+    try { // history note in the client's account (matches the app's sendRequest)
+      const hist = (await kvGetJSON(db, clientId, "caliq-history-self")) || [];
+      const ev = { id: randId("e"), uid: ctx.callerUid, role: ctx.role,
+        name: ctx.callerName || "Your trainer", action: `sent a request: "${msg}"`, ts: now };
+      await kvSetJSON(db, clientId, "caliq-history-self", [ev, ...(Array.isArray(hist) ? hist : [])].slice(0, 250));
+    } catch (e) { /* best-effort */ }
+    return { ok: true, sentTo: clientId, message: msg, type };
   }
 
   if (name === "get_nutrition_log") {
