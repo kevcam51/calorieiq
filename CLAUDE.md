@@ -1351,3 +1351,30 @@ enabled (Blaze has no default spending cap).
   **NEXT (AI roadmap remaining):** Stage 4 **SSE streaming** (replies word-by-word; needs an `onRequest` HTTP fn +
   EventSource client, not the callable) and the optional **Accept/Edit confirm card** (spec §9) instead of the
   conversational confirm. Plan-structure builder still deferred. Model `claude-sonnet-4-6`.
+- Session 66: **AI chat Stage 4 — SSE STREAMING (replies appear word-by-word). DEPLOYED & LIVE.** Replaced the
+  "Thinking… then full reply" wait with token-by-token streaming. **New `aiChatStream` HTTP function** (`onRequest`,
+  `cors:true`, in `functions/aichat.js`, exported via `index.js`) — callables can't stream, so this is a plain HTTP/SSE
+  endpoint. It **verifies the Firebase ID token manually** from the `Authorization: Bearer` header (callables do this
+  automatically; onRequest must), then runs the SAME role/budget/tools logic and **streams** via
+  `client.messages.stream()` → writes `event: delta` SSE frames on each text chunk, runs the tool loop between turns,
+  and ends with `event: done {wrote, usage}` (or `event: error {code}`). Refactored the shared bits out of the callable
+  into `buildSystemPrompt` / `setupChat` / `runToolRound` so `aiChat` (callable) and `aiChatStream` share one code path;
+  the callable is KEPT as an automatic fallback. **Frontend (`App.jsx`):** module-level `AI_STREAM_URL`
+  (`https://us-central1-${VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/aiChatStream`) + `streamAiChat(apiMsgs,{onDelta,
+  onDone})` — uses `fetch` + `response.body.getReader()` (NOT EventSource, which can't set the auth header) and parses
+  SSE frames. `AIChatPanel.send()` now streams first (appending each delta to the in-progress assistant message) and
+  **falls back to the `aiChat` callable on any stream failure** (network/CORS/server), so it can never regress; the
+  daily-limit (`resource-exhausted`) case shows the limit message without falling back. "Thinking…" now hides once
+  streamed text starts. The `wrote` flag rides the `done` event → still triggers the `onDataChanged` dashboard refresh.
+  **Deploy: the NEW `aiChatStream` created cleanly with the public invoker set** (the Session-61 org-policy "Allow All"
+  override now lets new functions bind `allUsers` on create — no repeat of the S61 invoker saga). **Frontend changed →
+  `npm run build` passes; pushing redeploys Vercel.** **VERIFIED LIVE (client.uitest / Casey):** (1) plain Q ("3
+  high-protein breakfasts") streamed incrementally (text length grew 100→145→239→393→445 across polls); (2) a
+  data-read ("what did I eat this week") called `get_nutrition_log` then streamed Casey's REAL week (Wed chicken bowl +
+  workout, Thu salmon, Fri grilled chicken, Today the photo egg+toast); (3) a write ("log a protein bar 200cal/20g") →
+  confirm-before-write held even on "just do it" → "yes" → logged, and the app's own Daily Dashboard refreshed to
+  "430 LOGGED SO FAR · 2 items · 28g protein". No console/function errors. Committed.
+  **AI roadmap status:** chat · read-data · log meals (typed + photo/vision) · log workouts/weigh-ins · set targets ·
+  send client requests · STREAMING — all live. **Remaining (optional):** the spec §9 **Accept/Edit confirm card**
+  (tappable card under a meal estimate instead of typing "yes"); **plan-structure builder** (deferred — Kevin's future
+  idea: trainer dictates notes → AI drafts a program). Model `claude-sonnet-4-6`.

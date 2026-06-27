@@ -9489,6 +9489,46 @@ function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole
 // awaits the full reply. Rendered via createPortal so its fixed positioning
 // escapes the .page-transition transform trap (same fix as the other modals).
 const callAiChat = httpsCallable(functions, "aiChat");
+// Streaming endpoint (Session 66) — replies arrive word-by-word via SSE. We POST
+// with the Firebase ID token (EventSource can't set headers, so we fetch+stream).
+const AI_STREAM_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/aiChatStream`;
+
+// Stream the AI reply. Calls onDelta(text) as chunks arrive and onDone({wrote,
+// usage}) at the end. Throws { code, message } on failure so send() can fall
+// back to the non-streaming callable.
+async function streamAiChat(apiMsgs, { onDelta, onDone }) {
+  const user = auth.currentUser;
+  if (!user) throw { code: "unauthenticated" };
+  const token = await user.getIdToken();
+  const resp = await fetch(AI_STREAM_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: apiMsgs }),
+  });
+  if (!resp.ok || !resp.body) throw { code: "http", status: resp.status };
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n\n")) >= 0) {
+      const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+      let event = "message", data = "";
+      for (const line of raw.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) data += line.slice(5).trim();
+      }
+      if (!data) continue;
+      let payload; try { payload = JSON.parse(data); } catch { continue; }
+      if (event === "delta") onDelta(payload.text || "");
+      else if (event === "done") onDone(payload || {});
+      else if (event === "error") throw { code: payload.code || "internal", message: payload.message };
+    }
+  }
+}
 
 // Lightweight markdown renderer for AI replies — handles **bold** and line
 // breaks so responses read cleanly in the narrow chat (full markdown/tables are
@@ -9576,33 +9616,46 @@ function AIChatPanel({ role, onDataChanged }) {
     setDraft("");
     setPendingImage(null);
     setBusy(true);
+    // Build the API payload. Send the image block only on the most recent
+    // message (older turns go as text) to bound vision token cost.
+    const apiMsgs = next.map((m, i) => {
+      if (m.image && i === next.length - 1) {
+        const blk = imageBlockFromDataUrl(m.image);
+        const content = [{ type: "text", text: m.content || "Here's a photo of my meal — estimate the calories and macros, then we can log it." }];
+        if (blk) content.push(blk);
+        return { role: m.role, content };
+      }
+      return { role: m.role, content: m.content || (m.image ? "(I sent a photo of my meal.)" : "") };
+    });
     try {
-      // Build the API payload. Send the image block only on the most recent
-      // message (older turns go as text) to bound vision token cost.
-      const apiMsgs = next.map((m, i) => {
-        if (m.image && i === next.length - 1) {
-          const blk = imageBlockFromDataUrl(m.image);
-          const content = [{ type: "text", text: m.content || "Here's a photo of my meal — estimate the calories and macros, then we can log it." }];
-          if (blk) content.push(blk);
-          return { role: m.role, content };
-        }
-        return { role: m.role, content: m.content || (m.image ? "(I sent a photo of my meal.)" : "") };
+      // Stream the reply (word-by-word). Fall back to the callable on failure.
+      let streamed = "";
+      let done = null;
+      await streamAiChat(apiMsgs, {
+        onDelta: (t) => { streamed += t; setMessages([...next, { role: "assistant", content: streamed }]); },
+        onDone: (p) => { done = p; },
       });
-      const res = await callAiChat({ messages: apiMsgs });
-      const reply = (res.data && res.data.reply) || "";
-      setMessages([...next, { role: "assistant", content: reply || "(no response)" }]);
-      if (res.data && res.data.usage && res.data.usage.warn) setWarn(true);
-      // The AI logged a meal → refresh the screen behind the chat so it shows.
-      if (res.data && res.data.wrote && typeof onDataChanged === "function") onDataChanged();
-    } catch (e) {
-      // Firebase callable errors carry a `code` like "functions/resource-exhausted".
-      const code = (e && e.code) || "";
-      if (code.includes("resource-exhausted")) {
+      setMessages([...next, { role: "assistant", content: streamed || "(no response)" }]);
+      if (done && done.usage && done.usage.warn) setWarn(true);
+      if (done && done.wrote && typeof onDataChanged === "function") onDataChanged();
+    } catch (streamErr) {
+      const sc = (streamErr && streamErr.code) || "";
+      if (sc.includes("resource-exhausted")) {
         setError("You've reached today's AI usage limit. It resets tomorrow.");
-      } else if (code.includes("unauthenticated")) {
-        setError("Please sign in again to use the assistant.");
       } else {
-        setError("The assistant is temporarily unavailable. Please try again.");
+        // Streaming unavailable (network/CORS/server) → non-streaming callable.
+        try {
+          const res = await callAiChat({ messages: apiMsgs });
+          const reply = (res.data && res.data.reply) || "";
+          setMessages([...next, { role: "assistant", content: reply || "(no response)" }]);
+          if (res.data && res.data.usage && res.data.usage.warn) setWarn(true);
+          if (res.data && res.data.wrote && typeof onDataChanged === "function") onDataChanged();
+        } catch (e) {
+          const code = (e && e.code) || "";
+          if (code.includes("resource-exhausted")) setError("You've reached today's AI usage limit. It resets tomorrow.");
+          else if (code.includes("unauthenticated")) setError("Please sign in again to use the assistant.");
+          else setError("The assistant is temporarily unavailable. Please try again.");
+        }
       }
     }
     setBusy(false);
@@ -9677,7 +9730,8 @@ function AIChatPanel({ role, onDataChanged }) {
                 </div>
               ))
             )}
-            {busy && <div className={bubbleAI + " text-muted"}>Thinking…</div>}
+            {busy && !(messages.length && messages[messages.length - 1].role === "assistant") &&
+              <div className={bubbleAI + " text-muted"}>Thinking…</div>}
             {error && <div className="self-stretch rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-[.82rem] text-danger">{error}</div>}
             {warn && !error && (
               <div className="self-stretch rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-[.78rem] text-warn">

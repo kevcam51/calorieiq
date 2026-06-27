@@ -9,7 +9,7 @@
 // The Anthropic key is a Secret Manager secret (never in the repo / VITE_*).
 // Model is claude-sonnet-4-6 per the spec (Sonnet, not Opus, for cost).
 
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
@@ -125,32 +125,12 @@ function capHistory(messages) {
   return clean.slice(-20);
 }
 
-exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", maxInstances: 10 }, async (request) => {
-  const uid = request.auth && request.auth.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Please sign in to use the AI assistant.");
+const MAX_TOOL_ROUNDS = 5;
 
-  const messages = capHistory(request.data && request.data.messages);
-  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
-    throw new HttpsError("invalid-argument", "Send at least one user message.");
-  }
-
-  const db = admin.firestore();
-  const profile = (await db.doc(`users/${uid}`).get()).data() || {};
-  const role = profile.role || "client";
-  const tier = tierFor(profile);
-  const budget = BUDGETS[tier] || BUDGETS.client;
-
-  // Daily token budget: read usage, block at 100%.
-  const usageRef = db.doc(`users/${uid}/aiUsage/${todayKey()}`);
-  const used = ((await usageRef.get()).data() || {}).tokens || 0;
-  if (used >= budget) {
-    throw new HttpsError("resource-exhausted",
-      "You've reached today's AI usage limit. It resets tomorrow.");
-  }
-
-  const isTrainer = role === "head_trainer" || role === "sub_trainer" || role === "admin";
+// Build the role-aware system prompt (shared by the callable + the stream fn).
+function buildSystemPrompt(role, isTrainer) {
   const baseSystem = (role === "client") ? SYSTEM_CLIENT : SYSTEM_TRAINER;
-  const system = `${baseSystem}
+  return `${baseSystem}
 
 Today's date is ${todayLocal()} (use it to resolve "today", "yesterday", "this week", etc.).
 
@@ -163,22 +143,64 @@ You can also TAKE ACTIONS for the user via tools — but you must CONFIRM the sp
 - set_targets: change the plan's protein/carbs/fat targets and/or goal weight (this edits the plan — confirm exact numbers first).
 ${isTrainer ? "- send_client_request: send a connected client a to-do that shows on their home (e.g. log food, weigh in). For clients, first call list_clients to get the id; confirm the message before sending.\nAs a trainer you can do these FOR a client by passing their clientId — use it to organize clients, nudge them, and tune their plans." : ""}
 After any action, briefly confirm what you did.`;
+}
 
+// Read the caller's profile → role, budget, today's usage, system prompt, tools,
+// and the tool-execution context. Shared by both entry points.
+async function setupChat(uid) {
+  const db = admin.firestore();
+  const profile = (await db.doc(`users/${uid}`).get()).data() || {};
+  const role = profile.role || "client";
+  const isTrainer = role === "head_trainer" || role === "sub_trainer" || role === "admin";
+  const tier = tierFor(profile);
+  const budget = BUDGETS[tier] || BUDGETS.client;
+  const usageRef = db.doc(`users/${uid}/aiUsage/${todayKey()}`);
+  const used = ((await usageRef.get()).data() || {}).tokens || 0;
   const callerName = profile.displayName
     || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
     || profile.email || (isTrainer ? "Coach" : "Client");
-  const tools = buildTools(role);
-  const toolCtx = { callerUid: uid, role, isTrainer, today: todayLocal(), callerName };
-  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+  return {
+    role, isTrainer, budget, usageRef, used,
+    system: buildSystemPrompt(role, isTrainer),
+    tools: buildTools(role),
+    toolCtx: { callerUid: uid, role, isTrainer, today: todayLocal(), callerName },
+  };
+}
 
-  // Function-calling loop: the model may call tools (which read Firestore with
-  // server-side access checks), we feed results back, repeat until it answers.
-  // Bounded by MAX_TOOL_ROUNDS to cap latency/cost; usage accumulates for the
-  // daily budget.
-  const MAX_TOOL_ROUNDS = 5;
+// Execute one round of tool calls (server-side access checks live in runTool).
+// Returns the tool_result blocks + whether a plan-changing write happened.
+async function runToolRound(toolUses, toolCtx) {
+  const results = [];
+  let wrote = false;
+  for (const tu of toolUses) {
+    let out;
+    try { out = await runTool(tu.name, tu.input || {}, toolCtx); }
+    catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That action failed." }; }
+    if (["log_meal", "log_workout", "log_weigh_in", "set_targets"].includes(tu.name) && out && out.ok) wrote = true;
+    results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 60000) });
+  }
+  return { results, wrote };
+}
+
+exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", maxInstances: 10 }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Please sign in to use the AI assistant.");
+
+  const messages = capHistory(request.data && request.data.messages);
+  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
+    throw new HttpsError("invalid-argument", "Send at least one user message.");
+  }
+
+  const { budget, usageRef, used, system, tools, toolCtx } = await setupChat(uid);
+  if (used >= budget) {
+    throw new HttpsError("resource-exhausted",
+      "You've reached today's AI usage limit. It resets tomorrow.");
+  }
+
+  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
   const convo = messages.slice();
   let spent = 0;
-  let wrote = false; // a meal was logged this turn → tell the client to refresh
+  let wrote = false; // a plan-changing write happened this turn → client should refresh
   let resp;
   try {
     resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
@@ -187,16 +209,10 @@ After any action, briefly confirm what you did.`;
     while (resp.stop_reason === "tool_use" && rounds < MAX_TOOL_ROUNDS) {
       rounds++;
       const toolUses = (resp.content || []).filter((b) => b.type === "tool_use");
-      const results = [];
-      for (const tu of toolUses) {
-        let out;
-        try { out = await runTool(tu.name, tu.input || {}, toolCtx); }
-        catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That action failed." }; }
-        if (["log_meal", "log_workout", "log_weigh_in", "set_targets"].includes(tu.name) && out && out.ok) wrote = true;
-        results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 60000) });
-      }
+      const r = await runToolRound(toolUses, toolCtx);
+      if (r.wrote) wrote = true;
       convo.push({ role: "assistant", content: resp.content });
-      convo.push({ role: "user", content: results });
+      convo.push({ role: "user", content: r.results });
       resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
       spent += (resp.usage && (resp.usage.input_tokens + resp.usage.output_tokens)) || 0;
     }
@@ -216,3 +232,85 @@ After any action, briefly confirm what you did.`;
     usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8 },
   };
 });
+
+// Streaming variant (Stage 4): same logic, but an HTTP endpoint that streams the
+// reply as Server-Sent Events so it appears word-by-word. Auth is verified from
+// the `Authorization: Bearer <idToken>` header (callables do this automatically;
+// onRequest must do it manually). The frontend uses this first and falls back to
+// the callable (aiChat) if streaming fails.
+exports.aiChatStream = onRequest(
+  { secrets: [ANTHROPIC_API_KEY], region: "us-central1", maxInstances: 10, cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") { res.status(405).json({ error: "Use POST." }); return; }
+
+    // Verify the Firebase ID token.
+    let uid;
+    try {
+      const m = /^Bearer (.+)$/.exec(req.get("authorization") || "");
+      if (!m) throw new Error("missing token");
+      uid = (await admin.auth().verifyIdToken(m[1])).uid;
+    } catch (e) {
+      res.status(401).json({ error: "unauthenticated" });
+      return;
+    }
+
+    const messages = capHistory(req.body && req.body.messages);
+    if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
+      res.status(400).json({ error: "Send at least one user message." });
+      return;
+    }
+
+    const { budget, usageRef, used, system, tools, toolCtx } = await setupChat(uid);
+
+    // SSE response headers.
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    if (res.flushHeaders) res.flushHeaders();
+    const sse = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+    if (used >= budget) {
+      sse("error", { code: "resource-exhausted", message: "You've reached today's AI usage limit. It resets tomorrow." });
+      res.end();
+      return;
+    }
+
+    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+    const convo = messages.slice();
+    let spent = 0;
+    let wrote = false;
+    try {
+      let rounds = 0;
+      // Stream each model turn; run tools between turns until it stops calling them.
+      for (;;) {
+        const stream = client.messages.stream({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
+        stream.on("text", (delta) => { if (delta) sse("delta", { text: delta }); });
+        const msg = await stream.finalMessage();
+        spent += (msg.usage && (msg.usage.input_tokens + msg.usage.output_tokens)) || 0;
+        if (msg.stop_reason === "tool_use" && rounds < MAX_TOOL_ROUNDS) {
+          rounds++;
+          const toolUses = (msg.content || []).filter((b) => b.type === "tool_use");
+          const r = await runToolRound(toolUses, toolCtx);
+          if (r.wrote) wrote = true;
+          convo.push({ role: "assistant", content: msg.content });
+          convo.push({ role: "user", content: r.results });
+          continue; // next turn streams
+        }
+        break;
+      }
+    } catch (e) {
+      console.error("aiChatStream error:", e && e.message);
+      sse("error", { code: "internal", message: "The AI assistant is temporarily unavailable. Please try again." });
+      res.end();
+      return;
+    }
+
+    await usageRef.set({ tokens: admin.firestore.FieldValue.increment(spent),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+    const totalUsed = used + spent;
+    sse("done", { wrote, usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8 } });
+    res.end();
+  }
+);
