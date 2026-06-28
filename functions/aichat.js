@@ -137,7 +137,7 @@ Today's date is ${todayLocal()} (use it to resolve "today", "yesterday", "this w
 You have tools to read the user's real logged data — use them whenever a question depends on actual numbers (what they ate, their targets, client activity) rather than guessing. Call get_nutrition_targets to know the goals before judging whether a day was over/under. Don't expose internal ids to the user; refer to clients by name.
 
 You can also TAKE ACTIONS for the user via tools — but you must CONFIRM the specifics first and only act after an explicit go-ahead (never act prematurely):
-- log_meal: estimate calories + protein/carbs/fat from a described meal, show the breakdown, ask the meal type if unclear, support corrections ("make it one egg"), then log it. If the user sends a PHOTO of food, identify the items and portions from the image, then estimate + confirm + log the same way (note out loud that photo estimates are approximate).
+- Logging food: when the user describes a meal (or sends a PHOTO of food — identify the items/portions from the image), estimate calories + protein/carbs/fat, note the estimate briefly in text, then call propose_meal to show them a tappable Accept/Edit card. The card saves it — do NOT also call log_meal. Ask the meal type if unclear, and support corrections ("make it one egg") by proposing again. For photos, mention the estimate is approximate. Only use log_meal directly if the user explicitly says to log without a confirmation card.
 - log_workout: mark a day as a workout day (with an optional note).
 - log_weigh_in: record a body-weight weigh-in (confirm the number).
 - set_targets: change the plan's protein/carbs/fat targets and/or goal weight (this edits the plan — confirm exact numbers first).
@@ -184,14 +184,16 @@ function addUsage(agg, u) {
 async function runToolRound(toolUses, toolCtx) {
   const results = [];
   let wrote = false;
+  let proposal = null; // a propose_meal call → relay the meal so the client shows a card
   for (const tu of toolUses) {
     let out;
     try { out = await runTool(tu.name, tu.input || {}, toolCtx); }
     catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That action failed." }; }
     if (["log_meal", "log_workout", "log_weigh_in", "set_targets"].includes(tu.name) && out && out.ok) wrote = true;
+    if (tu.name === "propose_meal" && out && out.meal) proposal = out.meal;
     results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 60000) });
   }
-  return { results, wrote };
+  return { results, wrote, proposal };
 }
 
 exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", maxInstances: 10 }, async (request) => {
@@ -213,6 +215,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
   const convo = messages.slice();
   const agg = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 };
   let wrote = false; // a plan-changing write happened this turn → client should refresh
+  let proposal = null; // a meal proposal to show as an Accept/Edit card
   let resp;
   try {
     resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
@@ -223,6 +226,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
       const toolUses = (resp.content || []).filter((b) => b.type === "tool_use");
       const r = await runToolRound(toolUses, toolCtx);
       if (r.wrote) wrote = true;
+      if (r.proposal) proposal = r.proposal;
       convo.push({ role: "assistant", content: resp.content });
       convo.push({ role: "user", content: r.results });
       resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
@@ -244,6 +248,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
   return {
     reply: text,
     wrote,
+    proposal,
     usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8, breakdown: agg },
   };
 });
@@ -308,6 +313,7 @@ exports.aiChatStream = onRequest(
           const toolUses = (msg.content || []).filter((b) => b.type === "tool_use");
           const r = await runToolRound(toolUses, toolCtx);
           if (r.wrote) wrote = true;
+          if (r.proposal) sse("proposal", r.proposal); // client shows an Accept/Edit card
           convo.push({ role: "assistant", content: msg.content });
           convo.push({ role: "user", content: r.results });
           continue; // next turn streams
@@ -331,3 +337,26 @@ exports.aiChatStream = onRequest(
     res.end();
   }
 );
+
+// Direct meal write for the Accept/Edit confirmation card (Session 68). The card
+// already has the macros (from propose_meal), so Accept saves WITHOUT another AI
+// call — instant and free of tokens. Reuses the same log_meal write + the same
+// server-side access checks (a client logs to themselves; a trainer to a verified
+// client). No Anthropic secret needed — this only touches Firestore.
+exports.logMeal = onCall({ region: "us-central1", maxInstances: 10 }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Please sign in to log a meal.");
+  const db = admin.firestore();
+  const profile = (await db.doc(`users/${uid}`).get()).data() || {};
+  const role = profile.role || "client";
+  const isTrainer = role === "head_trainer" || role === "sub_trainer" || role === "admin";
+  const callerName = profile.displayName
+    || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+    || profile.email || (isTrainer ? "Coach" : "Client");
+  const ctx = { callerUid: uid, role, isTrainer, today: todayLocal(), callerName };
+  let out;
+  try { out = await runTool("log_meal", request.data || {}, ctx); }
+  catch (e) { console.error("logMeal error:", e && e.message); throw new HttpsError("internal", "Couldn't save the meal."); }
+  if (out && out.error) throw new HttpsError("failed-precondition", out.error);
+  return out; // { ok, logged, dayTotals }
+});

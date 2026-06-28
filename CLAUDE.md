@@ -1399,3 +1399,25 @@ enabled (Blaze has no default spending cap).
   "almost at your limit" warning now fires far later. **Note for later (trial periods):** the hard daily cap + caching
   keeps even a long AI-using trial bounded to ~$1–2/user over a 30-day trial — revisit trial length per-role when
   Stripe lands, but cost runaway is structurally prevented. Model `claude-sonnet-4-6`.
+  **Kevin confirmed (S67):** keep the 30-day trial as-is — caching + the hard cap make AI-during-trial cost safe.
+- Session 68: **AI chat — Accept/Edit meal CARD (spec §9). DEPLOYED & LIVE.** Replaced "type yes to confirm" with a
+  tappable confirmation card under the AI's meal estimate. New **`propose_meal`** tool (in `aitools.js`, both roles):
+  it does NOT write — it normalizes + echoes the meal `{name,mealType,calories,protein,carbs,fat,date,clientId?}` so
+  the client renders a card; for a trainer+clientId it `resolveTargetUid`-verifies first. `runToolRound` now returns
+  `{results, wrote, proposal}`; the **callable** includes `proposal` in its response and the **stream** emits an SSE
+  `event: proposal`. New **`logMeal` callable** (no Anthropic secret — Firestore only) is the **Accept** button's
+  direct write: it rebuilds the tool ctx and calls `runTool("log_meal", …)`, reusing the SAME write + access checks —
+  so tapping Accept saves **instantly with zero AI tokens** (cheap, per the S67 cost focus). System prompt now tells
+  the AI to `propose_meal` for described/photo meals (card saves it; don't also `log_meal`) and reserve `log_meal` for
+  explicit "log it without a card". **Frontend (`AIChatPanel`):** `callLogMeal` callable; `streamAiChat` gained an
+  `onProposal` handler; new `proposal`/`editDraft` state; the card renders between the thread and composer with
+  **✓ Log it / Edit / ✕** — Edit opens pre-filled name + meal-type chips + cal/P/C/F number inputs → **Save & log**;
+  states are pending → saving → "✓ Logged"; a new message clears any pending card. `index.js` exports `logMeal`.
+  **Frontend changed → `npm run build` passes; pushing redeploys Vercel.** Functions deployed (logMeal created clean
+  with public invoker). **VERIFIED LIVE (trainer.uitest):** "turkey sandwich + apple for lunch" → AI estimated in text
+  AND a LUNCH card appeared (395 cal · 25P/55C/7F) with the three buttons; tapped **Edit** → inputs pre-filled →
+  changed calories 395→420 → **Save & log** → "✓ Logged"; **independently confirmed** by asking the AI to read today's
+  log → "Lunch — Turkey sandwich & apple — **420 cal**" (the EDITED value persisted). No console/function errors.
+  Committed. **AI roadmap: COMPLETE** — chat · read-data · log meals (typed + photo + **card confirm**) · workouts/
+  weigh-ins · targets · client requests · streaming · prompt caching. **Only future item:** the deferred plan-structure
+  builder (trainer notes → AI drafts a program). Model `claude-sonnet-4-6`.

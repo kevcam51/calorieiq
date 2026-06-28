@@ -9489,6 +9489,7 @@ function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole
 // awaits the full reply. Rendered via createPortal so its fixed positioning
 // escapes the .page-transition transform trap (same fix as the other modals).
 const callAiChat = httpsCallable(functions, "aiChat");
+const callLogMeal = httpsCallable(functions, "logMeal"); // Accept-card direct write (Session 68)
 // Streaming endpoint (Session 66) — replies arrive word-by-word via SSE. We POST
 // with the Firebase ID token (EventSource can't set headers, so we fetch+stream).
 const AI_STREAM_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/aiChatStream`;
@@ -9496,7 +9497,7 @@ const AI_STREAM_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJE
 // Stream the AI reply. Calls onDelta(text) as chunks arrive and onDone({wrote,
 // usage}) at the end. Throws { code, message } on failure so send() can fall
 // back to the non-streaming callable.
-async function streamAiChat(apiMsgs, { onDelta, onDone }) {
+async function streamAiChat(apiMsgs, { onDelta, onDone, onProposal }) {
   const user = auth.currentUser;
   if (!user) throw { code: "unauthenticated" };
   const token = await user.getIdToken();
@@ -9524,6 +9525,7 @@ async function streamAiChat(apiMsgs, { onDelta, onDone }) {
       if (!data) continue;
       let payload; try { payload = JSON.parse(data); } catch { continue; }
       if (event === "delta") onDelta(payload.text || "");
+      else if (event === "proposal") { if (onProposal) onProposal(payload); }
       else if (event === "done") onDone(payload || {});
       else if (event === "error") throw { code: payload.code || "internal", message: payload.message };
     }
@@ -9587,8 +9589,29 @@ function AIChatPanel({ role, onDataChanged }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [warn, setWarn] = useState(false); // ≥80% of daily budget used
+  const [proposal, setProposal] = useState(null); // pending meal card {…, status}
+  const [editDraft, setEditDraft] = useState(null); // edit-mode fields
   const scrollRef = useRef(null);
   const fileRef = useRef(null);
+
+  // Accept a proposed meal → save it directly (no extra AI call) via logMeal.
+  const acceptMeal = async (meal) => {
+    const p = meal || proposal;
+    if (!p) return;
+    setProposal((prev) => ({ ...prev, ...p, status: "saving" }));
+    try {
+      const input = { name: p.name, mealType: p.mealType, calories: Number(p.calories) || 0,
+        protein: Number(p.protein) || 0, carbs: Number(p.carbs) || 0, fat: Number(p.fat) || 0, date: p.date };
+      if (p.clientId) input.clientId = p.clientId;
+      await callLogMeal(input);
+      setEditDraft(null);
+      setProposal((prev) => ({ ...prev, ...p, status: "logged" }));
+      if (typeof onDataChanged === "function") onDataChanged();
+    } catch (e) {
+      setProposal((prev) => ({ ...prev, status: "pending" }));
+      setError("Couldn't save the meal. Try again.");
+    }
+  };
 
   const pickImage = () => { if (fileRef.current) fileRef.current.click(); };
   const onFile = async (e) => {
@@ -9615,6 +9638,8 @@ function AIChatPanel({ role, onDataChanged }) {
     setMessages(next);
     setDraft("");
     setPendingImage(null);
+    setProposal(null); // a new message supersedes any pending meal card
+    setEditDraft(null);
     setBusy(true);
     // Build the API payload. Send the image block only on the most recent
     // message (older turns go as text) to bound vision token cost.
@@ -9633,6 +9658,7 @@ function AIChatPanel({ role, onDataChanged }) {
       let done = null;
       await streamAiChat(apiMsgs, {
         onDelta: (t) => { streamed += t; setMessages([...next, { role: "assistant", content: streamed }]); },
+        onProposal: (meal) => setProposal({ ...meal, status: "pending" }),
         onDone: (p) => { done = p; },
       });
       setMessages([...next, { role: "assistant", content: streamed || "(no response)" }]);
@@ -9649,6 +9675,7 @@ function AIChatPanel({ role, onDataChanged }) {
           const reply = (res.data && res.data.reply) || "";
           setMessages([...next, { role: "assistant", content: reply || "(no response)" }]);
           if (res.data && res.data.usage && res.data.usage.warn) setWarn(true);
+          if (res.data && res.data.proposal) setProposal({ ...res.data.proposal, status: "pending" });
           if (res.data && res.data.wrote && typeof onDataChanged === "function") onDataChanged();
         } catch (e) {
           const code = (e && e.code) || "";
@@ -9739,6 +9766,68 @@ function AIChatPanel({ role, onDataChanged }) {
               </div>
             )}
           </div>
+
+          {/* Meal confirmation card (Session 68) — tap to log, no typing "yes". */}
+          {proposal && (
+            <div className="border-t border-border bg-surface2 px-3 py-3">
+              {proposal.status === "logged" ? (
+                <div className="flex items-center gap-2 text-[.88rem]">
+                  <span className="font-bold text-success">✓ Logged</span>
+                  <span className="text-muted truncate">{proposal.name} · {proposal.calories} cal</span>
+                  <button onClick={() => setProposal(null)} aria-label="Dismiss" className="ml-auto px-2 text-muted hover:text-fg">✕</button>
+                </div>
+              ) : editDraft ? (
+                <div className="flex flex-col gap-2">
+                  <div className="text-[.7rem] uppercase tracking-[.5px] text-primary">Edit meal</div>
+                  <input value={editDraft.name} onChange={e => setEditDraft({ ...editDraft, name: e.target.value })}
+                    placeholder="Food name"
+                    className="w-full box-border rounded-lg border border-border bg-surface px-3 py-2 text-[.85rem] text-fg outline-none" />
+                  <div className="flex flex-wrap gap-1.5">
+                    {["breakfast", "lunch", "dinner", "snack"].map(t => (
+                      <button key={t} onClick={() => setEditDraft({ ...editDraft, mealType: t })}
+                        className={`rounded-full border px-2.5 py-1 text-[.74rem] ${editDraft.mealType === t ? "border-primary bg-primary text-primaryfg" : "border-border text-muted"}`}>
+                        {t.replace(/^./, c => c.toUpperCase())}</button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[["calories", "cal"], ["protein", "P g"], ["carbs", "C g"], ["fat", "F g"]].map(([k, lbl]) => (
+                      <label key={k} className="flex flex-col text-[.6rem] uppercase tracking-[.3px] text-muted">{lbl}
+                        <input type="number" inputMode="numeric" value={editDraft[k]}
+                          onChange={e => setEditDraft({ ...editDraft, [k]: e.target.value })}
+                          className="mt-0.5 w-full box-border rounded-md border border-border bg-surface px-2 py-1.5 text-[.85rem] text-fg outline-none" />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => acceptMeal(editDraft)} className="flex-1 rounded-lg bg-primary px-3 py-2 text-[.85rem] font-bold text-primaryfg">Save &amp; log</button>
+                    <button onClick={() => setEditDraft(null)} className="rounded-lg border border-border px-3 py-2 text-[.85rem] text-fg">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="rounded-full bg-[rgba(8,220,224,.14)] px-2 py-0.5 text-[.68rem] uppercase tracking-[.5px] text-primary">
+                      {(proposal.mealType || "snack").replace(/^./, c => c.toUpperCase())}</span>
+                    <span className="truncate text-[.9rem] font-semibold text-fg">{proposal.name}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 text-fg">
+                    <span className="font-display text-xl leading-none">{proposal.calories}</span>
+                    <span className="text-[.8rem] text-muted">cal</span>
+                    <span className="ml-2 text-[.8rem] text-muted">{proposal.protein}g P · {proposal.carbs}g C · {proposal.fat}g F</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button disabled={proposal.status === "saving"} onClick={() => acceptMeal()}
+                      className="flex-1 rounded-lg bg-primary px-3 py-2 text-[.88rem] font-bold text-primaryfg disabled:opacity-60">
+                      {proposal.status === "saving" ? "Saving…" : "✓ Log it"}</button>
+                    <button disabled={proposal.status === "saving"} onClick={() => setEditDraft({ ...proposal })}
+                      className="rounded-lg border border-border px-3 py-2 text-[.88rem] text-fg disabled:opacity-60">Edit</button>
+                    <button disabled={proposal.status === "saving"} onClick={() => setProposal(null)} aria-label="Dismiss"
+                      className="rounded-lg border border-border px-2.5 py-2 text-[.88rem] text-muted disabled:opacity-60">✕</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Composer */}
           <div className="border-t border-border bg-surface px-3 py-3">

@@ -156,11 +156,33 @@ function buildTools(role) {
       },
     },
     {
+      name: "propose_meal",
+      description:
+        "Show the user a tappable confirmation CARD for a meal you've estimated (from their description or a photo). "
+        + "This is the PREFERRED way to log food: estimate the macros, then call propose_meal — the user taps Accept on "
+        + "the card to save it (or Edit to adjust). Do NOT also call log_meal for the same meal; the card saves it. "
+        + "Briefly note your estimate in text too. " + (isTrainer ? "Pass clientId to propose for a client." : ""),
+      input_schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Short food/meal name, e.g. '2 eggs & whole wheat toast'" },
+          mealType: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "Which meal" },
+          calories: { type: "number", description: "Total calories" },
+          protein: { type: "number", description: "Protein grams (0 if unknown)" },
+          carbs: { type: "number", description: "Carb grams (0 if unknown)" },
+          fat: { type: "number", description: "Fat grams (0 if unknown)" },
+          date: { type: "string", description: "Date YYYY-MM-DD. Omit for today." },
+          ...clientIdProp,
+        },
+        required: ["name", "mealType", "calories"],
+      },
+    },
+    {
       name: "log_meal",
       description:
-        "Save a meal to the daily food log (it appears on the dashboard, calendar, and weekly totals). "
-        + "ONLY call this AFTER you have shown the user the estimated calories + macros and they have confirmed. "
-        + "Estimate calories/protein/carbs/fat yourself from the description before calling. "
+        "Save a meal to the food log DIRECTLY (no card). Prefer propose_meal instead — only use log_meal when the user "
+        + "explicitly says to log without confirming (e.g. 'just log it, no card'). It appears on the dashboard, calendar, "
+        + "and weekly totals. "
         + (isTrainer ? "Pass clientId (from list_clients) to log for a client; omit for yourself." : "Logs to YOUR own food log."),
       input_schema: {
         type: "object",
@@ -315,6 +337,27 @@ async function runTool(name, input, ctx) {
         ? "Calorie target unavailable — the plan is missing gender/age/height."
         : "Calorie target is the baseline diet target (excludes scheduled-exercise calories).",
     };
+  }
+
+  if (name === "propose_meal") {
+    // No write — normalize the meal and echo it back so the client renders an
+    // Accept/Edit card. The actual save happens via the logMeal callable (Accept).
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    const meal = {
+      name: String(input.name || "").slice(0, 120),
+      mealType: ["breakfast", "lunch", "dinner", "snack"].includes(input.mealType) ? input.mealType : "snack",
+      calories: Math.max(0, Math.round(Number(input.calories) || 0)),
+      protein: Math.max(0, Math.round(Number(input.protein) || 0)),
+      carbs: Math.max(0, Math.round(Number(input.carbs) || 0)),
+      fat: Math.max(0, Math.round(Number(input.fat) || 0)),
+      date: re.test(input.date || "") ? input.date : ctx.today,
+    };
+    if (ctx.isTrainer && input.clientId) {
+      const t = await resolveTargetUid(db, { clientId: input.clientId }, ctx);
+      if (t && t.error) return t; // unauthorized client → tell the model
+      meal.clientId = input.clientId;
+    }
+    return { shown: true, meal };
   }
 
   if (name === "log_meal") {
