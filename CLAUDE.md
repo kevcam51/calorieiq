@@ -1483,6 +1483,23 @@ enabled (Blaze has no default spending cap).
   (**186 → 180 lbs**) and the Coaching Dashboard "lbs lost" (**16 → 12 → 10**) with no manual reload. **No console
   errors** anywhere; `npm run build` passes. No `firestore.rules` change (uses existing owner + trainer↔client kv
   read access).
+- Session 71: **Connected-clients to-do reminders — trainer toggle + timestamps (non-Blaze).** Two small UX asks
+  from Kevin on the TrainerDashboard "🔗 Your Connected Clients" card. (1) **Toggle the sent-to-do notifications
+  on/off:** a trainer found the per-client request reminders ("📬 Please log your dinner tonight") noisy on their
+  own dashboard, so a **"🔔 To-do reminders: On / 🔕 Off"** button (under the section subtitle) hides/shows the whole
+  sent-requests display on the client cards — the "📬 N open" badge, the open list, AND the "N completed" list — all
+  gated on a new `showReqs` state. Persisted to the trainer's own `caliq-coach-prefs` doc as `showRequests` (default
+  ON; only an explicit `false` hides). **Important:** both writers of that shared doc now **read-merge-write** —
+  `saveShowReqs` (new, TrainerDashboard) and `saveAttn` (TrainerAnalytics's attention-threshold, which previously
+  overwrote the whole doc with just `{attnDays}`) — so the two prefs don't clobber each other. (2) **Date/time
+  stamps:** completed requests now show **"Completed {Mon D, h:mm AM/PM}"** (from `doneAt`) and open requests show
+  **"Sent …"** (from `createdAt`), via a new module-level `fmtStamp(ts)` helper (`toLocaleString` month/day/time).
+  Trainer-side only (the client's own home to-do list is genuinely useful for the client, so it's unchanged — a
+  client-side toggle is an easy add later if wanted). Pure UI + the one pref field; no data-model/schema change, no
+  Blaze. **Verified live** (trainer.uitest): toggle Off hid the badge + lists, survived a reload (stored
+  `{attnDays:3, showRequests:false}` — attnDays preserved), toggling back On restored them; completed/open stamps
+  render ("Completed Jun 21, 3:39 PM", "Sent Jun 27, 4:51 PM"); no console errors; `npm run build` passes. No
+  `firestore.rules` change.
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a

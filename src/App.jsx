@@ -8583,6 +8583,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   const [reqDraft, setReqDraft] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
   const [showDoneFor, setShowDoneFor] = useState(null); // clientUid whose done-list is expanded
+  const [showReqs, setShowReqs] = useState(true); // show/hide the sent to-do notifications on client cards (persisted)
   const [convertSimFor, setConvertSimFor] = useState(null); // sim id awaiting convert confirm
   const [plansForClient, setPlansForClient] = useState(null);     // clientUid whose plans panel is open
   const [cpRenaming, setCpRenaming] = useState(null);             // {uid, planId} being renamed
@@ -8625,6 +8626,27 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   useEffect(() => { loadClients(); }, []);
   // Live-refresh the cards when a client (or the AI) logs/edits (see the hook).
   useClientLiveRefresh(clients, loadClients);
+  // Load the trainer's display prefs (shared coach-prefs doc). showRequests
+  // defaults ON; only an explicit false hides the to-do notifications.
+  useEffect(() => {
+    (async () => {
+      try {
+        const pr = await window.storage.get("caliq-coach-prefs");
+        const p = JSON.parse(pr.value || "{}");
+        if (p.showRequests === false) setShowReqs(false);
+      } catch { /* no prefs saved yet */ }
+    })();
+  }, []);
+  // Persist the to-do-notifications toggle. Merge so we don't wipe other
+  // coach-prefs (e.g. the Coaching Dashboard's attnDays).
+  const saveShowReqs = async (v) => {
+    setShowReqs(v);
+    try {
+      let p = {};
+      try { const pr = await window.storage.get("caliq-coach-prefs"); p = JSON.parse(pr.value || "{}"); } catch { /* none yet */ }
+      await window.storage.set("caliq-coach-prefs", JSON.stringify({ ...p, showRequests: v }));
+    } catch { /* best-effort */ }
+  };
 
   // Link one of the trainer's local plans into a client's account (the local
   // copy is then removed by onLinked).
@@ -8836,6 +8858,12 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
             <div className={`${subCls} mt-1 mb-2`}>
               Live data from each client's shared plan. Tap a card to open it.
             </div>
+            {/* Toggle the sent to-do notifications on the cards on/off (persisted). */}
+            <button onClick={() => saveShowReqs(!showReqs)}
+              title={showReqs ? "Hide the to-do reminders on each client card" : "Show the to-do reminders on each client card"}
+              className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold cursor-pointer border border-border bg-transparent text-muted hover:text-fg">
+              {showReqs ? "🔔 To-do reminders: On" : "🔕 To-do reminders: Off"}
+            </button>
             {clients.length > 1 && (
               <div className="flex gap-1.5 mb-3">
                 {[["attention", "Needs attention"], ["recent", "Last active"], ["name", "Name"]].map(([k, lbl]) => (
@@ -8863,7 +8891,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-[.95rem]">{c.name}</span>
                         <span className="flex gap-2 items-center">
-                          {openReqs.length > 0 && (
+                          {showReqs && openReqs.length > 0 && (
                             <span className="text-[.68rem] font-bold text-primaryfg bg-primary rounded-[10px] px-2 py-0.5">
                               📬 {openReqs.length} open
                             </span>
@@ -9044,12 +9072,15 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                       </div>
                     )}
 
-                    {/* Sent requests — open (with cancel) + collapsible done list */}
-                    {(openReqs.length > 0 || doneReqs.length > 0) && (
+                    {/* Sent requests — open (with cancel) + collapsible done list.
+                        Hidden entirely when the trainer turns to-do reminders off. */}
+                    {showReqs && (openReqs.length > 0 || doneReqs.length > 0) && (
                       <div className="mt-2.5 flex flex-col gap-1">
                         {openReqs.map((r) => (
-                          <div key={r.id} className="flex justify-between items-center gap-2 text-sm px-2.5 py-1.5 rounded-md bg-[rgba(8,220,224,.06)] border border-[rgba(8,220,224,.18)]">
-                            <span className="text-fg">📬 {r.prompt}</span>
+                          <div key={r.id} className="flex justify-between items-start gap-2 text-sm px-2.5 py-1.5 rounded-md bg-[rgba(8,220,224,.06)] border border-[rgba(8,220,224,.18)]">
+                            <span className="text-fg">📬 {r.prompt}
+                              {r.createdAt ? <span className="block text-[.66rem] opacity-70 mt-0.5">Sent {fmtStamp(r.createdAt)}</span> : null}
+                            </span>
                             <button onClick={() => cancelRequest(c.uid, r.id)} disabled={reqBusy} title="Cancel this request"
                               className="bg-transparent border-none text-muted cursor-pointer text-[.9rem]">✕</button>
                           </div>
@@ -9061,8 +9092,10 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                               {showDoneFor === c.uid ? "▾" : "▸"} {doneReqs.length} completed
                             </button>
                             {showDoneFor === c.uid && doneReqs.map((r) => (
-                              <div key={r.id} className="flex justify-between items-center gap-2 text-[.78rem] px-2.5 py-1 rounded-md bg-surface2">
-                                <span className="text-muted">✓ {r.prompt}</span>
+                              <div key={r.id} className="flex justify-between items-start gap-2 text-[.78rem] px-2.5 py-1 rounded-md bg-surface2">
+                                <span className="text-muted">✓ {r.prompt}
+                                  {r.doneAt ? <span className="block text-[.66rem] opacity-70 mt-0.5">Completed {fmtStamp(r.doneAt)}</span> : null}
+                                </span>
                                 <button onClick={() => cancelRequest(c.uid, r.id)} disabled={reqBusy} title="Remove"
                                   className="bg-transparent border-none text-muted cursor-pointer text-[.9rem]">✕</button>
                               </div>
@@ -9236,7 +9269,11 @@ function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole
   // between visits (their own window.storage — no cross-account access needed).
   const saveAttn = async (d) => {
     setAttnDays(d);
-    try { await window.storage.set("caliq-coach-prefs", JSON.stringify({ attnDays: d })); } catch { /* best-effort */ }
+    try {
+      let p = {};
+      try { const pr = await window.storage.get("caliq-coach-prefs"); p = JSON.parse(pr.value || "{}"); } catch { /* none yet */ }
+      await window.storage.set("caliq-coach-prefs", JSON.stringify({ ...p, attnDays: d }));
+    } catch { /* best-effort */ }
   };
 
   // One-tap "nudge": send a "log today's food" request straight to a client from
@@ -10846,6 +10883,14 @@ function timeAgo(ts) {
   const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24); if (d < 7) return `${d}d ago`;
   return new Date(ts).toLocaleDateString();
+}
+
+// Absolute date + time stamp, e.g. "Jun 28, 3:45 PM" — used for completed
+// request timestamps where an exact moment is clearer than a relative "2d ago".
+function fmtStamp(ts) {
+  if (!ts) return "";
+  try { return new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+  catch { return ""; }
 }
 
 // Describe meaningful plan-structure changes between two data snapshots, as a
