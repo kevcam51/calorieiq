@@ -1458,16 +1458,22 @@ enabled (Blaze has no default spending cap).
   **Clobber guards** so the trainer's own edits aren't lost: the `data` listener skips applying a snapshot while a
   local edit is mid-debounce (`saveTimer.current`, now nulled in autoSave's `finally`) and ignores the trainer's own
   echoed write (new `lastRemoteWriteRef`, set in autoSave's remote branch); it also advances `lastSnapshotRef` so
-  the live update generates **no phantom history**. `reloadPlanLive` (the manual Refresh, still wired for the client
-  side / as a fallback) was completed to ALSO reload `data` (it previously didn't). **Scope:** trainer→client view
-  only — the explicit S69 pain point; the client's own ClientHome (separate component, own loaders + AI
-  `onDataChanged`) and the trainer dashboard *summaries* (load once on mount) are unchanged (possible follow-ups).
-  No new Firestore reads of note (3 listeners per open plan; real-time is standard/cheap — no meaningful cost, no
-  Blaze billing concern). **Verified live** (preview, signed in as trainer.uitest viewing Casey via the actual app):
-  a concurrent write to Casey's today-log via `setForUser` made the Daily Dashboard go **0 → 450 "logged so far"
-  with no Refresh click**; a concurrent `goalWeight` 172→165 change recomputed "21.0 lbs to go" **live**; deletion/
-  restore reflected live too; recent history showed **no phantom trainer entry**; **no console errors**;
-  `npm run build` passes. No `firestore.rules` change (uses the existing trainer↔client kv read access).
+  the live update generates **no phantom history**. `reloadPlanLive` (the manual Refresh, kept as a fallback) was
+  completed to ALSO reload `data` (it previously didn't). **The client side got the symmetric treatment:**
+  `ClientHome` now subscribes to its OWN account (`subscribeForUser(meUid, …)`) for the active plan's wrapper, today's
+  log, and `caliq-requests` — so when the trainer/AI edits a client's plan, sends a to-do, or logs for them, the
+  client's home updates live too (a new trainer request appears instantly). Echo-suppression there uses three
+  `lastSelf*Write` refs (data/log/requests) set at each client write site — important because it stops an echo from
+  resetting the race-sensitive `planWrapRef` mid weight-log. **Still unchanged (possible follow-ups):** the trainer
+  dashboard *summary cards* (TrainerDashboard/TrainerAnalytics load once on mount). No new Firestore reads of note
+  (≤3 listeners per open plan; real-time is standard/cheap — no meaningful cost, no Blaze billing concern).
+  **Verified live** (preview, via the actual app): (trainer viewing Casey) a concurrent today-log write → Daily
+  Dashboard **0 → 450 "logged so far" with no Refresh**, a concurrent `goalWeight` 172→165 recomputed "21.0 lbs to
+  go" **live**, deletion/restore reflected live, **no phantom trainer history**; (client Casey's own home) a
+  concurrent `goalWeight` 172→160 **live**, a concurrent new request **2 → 3 to-dos live**, removals reflected; and
+  the client's OWN calorie logging still writes + persists and is **not reverted** by the echo (900 cal logged via
+  the UI). **No console errors** either side; `npm run build` passes. No `firestore.rules` change (uses existing
+  owner + trainer↔client kv read access).
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a

@@ -101,11 +101,15 @@ trainer only their own verified clients (enforced **server-side**, not by the mo
    the listener effect + a completed `reloadPlanLive` (now also reloads `data`) in `App.jsx`. Guards:
    skips applying snapshots during the trainer's own debounced edit (`saveTimer.current`) and ignores
    the trainer's own echoed write (`lastRemoteWriteRef`); advances the diff baseline so no phantom
-   history. Verified live (trainer viewing Casey: a concurrent log write → "0 → 450 logged" live; a
-   concurrent goal change 172→165 → recomputed live; no phantom history; no console errors).
-   _Possible follow-ups:_ live-sync the **client's own** ClientHome view (separate component; today it
-   uses its own loaders + the AI `onDataChanged`), and `onSnapshot` the trainer **dashboard summaries**
-   (TrainerDashboard/TrainerAnalytics still load once on mount).
+   history. **The client's own ClientHome view got the symmetric treatment too** — it subscribes to its
+   own account (`subscribeForUser(meUid, …)`) for the active plan, today's log, and `caliq-requests`, so a
+   trainer/AI edit or a new to-do shows on the client's home instantly (echo-suppressed via three
+   `lastSelf*Write` refs). Verified live both directions (trainer viewing Casey: log "0 → 450" live, goal
+   172→165 live; client Casey: goal 172→160 live, requests 2 → 3 live, and her own calorie logging still
+   persists and isn't reverted; no phantom history; no console errors).
+   _Remaining follow-up:_ `onSnapshot` the trainer **dashboard summary cards**
+   (TrainerDashboard/TrainerAnalytics still load once on mount — the open-plan view and both home screens
+   are now live).
 2. **AI calendar management (in-app)** — back-date logs, schedule workouts by weekday, review by
    date. Same tool pattern (overlaps the plan-builder). NOT external Acuity/Google sync (separate
    bigger project). _Kevin: do later when the time comes._

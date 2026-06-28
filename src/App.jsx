@@ -9891,6 +9891,13 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   // appends to the latest in-memory copy (no Firestore round-trip per log, which
   // would race and drop points when logging quickly).
   const planWrapRef = useRef(null);
+  // The exact payloads we last wrote ourselves, so the live-sync listeners below
+  // can ignore our own echoed writes (vs. a real change from the trainer / AI)
+  // — and, for the plan wrapper, so an echo can't reset the race-sensitive
+  // planWrapRef mid-log.
+  const lastSelfDataWrite = useRef(null);
+  const lastSelfLogWrite = useRef(null);
+  const lastSelfReqWrite = useRef(null);
 
   const todayKey = ymdLocal();
   const logKey = planLogPrefix(activePlanId) + todayKey;
@@ -9920,6 +9927,38 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
     } catch { setRequests([]); }
   };
   useEffect(() => { load(); }, []);
+
+  // ── Live sync: the client's own home updates in real time ──
+  // When the trainer (or the AI on the client's behalf) edits the client's
+  // active plan, today's log, or sends a request, the home reflects it without a
+  // manual ↻ Refresh. Self-writes are echo-suppressed (the lastSelf* refs) so an
+  // echo can't reset the race-sensitive planWrapRef mid-log.
+  useEffect(() => {
+    if (!meUid || !activePlanId) return;
+    const pid = activePlanId;
+    const unsubs = [];
+    // Plan structure (weight, goal, targets, workout program, weigh-ins)
+    unsubs.push(subscribeForUser(meUid, planDataKey(pid), (value) => {
+      if (value == null) return;
+      if (value === lastSelfDataWrite.current) return; // our own echoed write
+      let obj; try { obj = JSON.parse(value) || {}; } catch { return; }
+      planWrapRef.current = obj;
+      setPlanData(obj.data || null);
+    }));
+    // Today's daily log
+    unsubs.push(subscribeForUser(meUid, planLogPrefix(pid) + todayKey, (value) => {
+      if (value === lastSelfLogWrite.current) return;
+      let parsed = {}; if (value) { try { parsed = JSON.parse(value) || {}; } catch { parsed = {}; } }
+      setLog(parsed);
+    }));
+    // Trainer → client requests (new to-dos appear instantly)
+    unsubs.push(subscribeForUser(meUid, REQUEST_KEY, (value) => {
+      if (value === lastSelfReqWrite.current) return;
+      let parsed = []; if (value) { try { parsed = JSON.parse(value) || []; } catch { parsed = []; } }
+      setRequests(parsed);
+    }));
+    return () => unsubs.forEach((u) => { try { u(); } catch { /* ignore */ } });
+  }, [meUid, activePlanId, todayKey]);
 
   // Switch the active plan (persists the choice in the manifest) and reload.
   const switchPlan = async (id) => {
@@ -9962,7 +10001,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
     const next = requests.map((r) => r.id === id
       ? { ...r, status: "done", doneAt: Date.now() } : r);
     setRequests(next);
-    try { await window.storage.set(REQUEST_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try { const s = JSON.stringify(next); lastSelfReqWrite.current = s; await window.storage.set(REQUEST_KEY, s); } catch { /* ignore */ }
     const done = requests.find((r) => r.id === id);
     if (done) await appendHistory(`completed request: "${done.prompt}"`);
   };
@@ -9983,7 +10022,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
 
   const writeLog = async (updated) => {
     setLog(updated);
-    try { await window.storage.set(logKey, JSON.stringify(updated)); } catch { /* ignore */ }
+    try { const s = JSON.stringify(updated); lastSelfLogWrite.current = s; await window.storage.set(logKey, s); } catch { /* ignore */ }
   };
   // Add (sign +1) or remove (sign -1) calories from today's running total,
   // clamped so it can't go below zero.
@@ -10022,7 +10061,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
         bodyFat: null, loggedBy: "client", isFuturePlan: false });
       planWrapRef.current = obj;   // update memory FIRST so the next log is consistent
       setPlanData(d);
-      await window.storage.set(planDataKey(activePlanId), JSON.stringify(obj));
+      { const _pw = JSON.stringify(obj); lastSelfDataWrite.current = _pw; await window.storage.set(planDataKey(activePlanId), _pw); }
     } catch { /* ignore */ }
     await appendHistory(`logged weight: ${v} lbs`);
     setWtDraft(""); setWtMsg(`Logged today's weight: ${v} lbs.`);
@@ -10048,7 +10087,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
       }
       planWrapRef.current = obj;
       setPlanData(d);
-      await window.storage.set(planDataKey(activePlanId), JSON.stringify(obj));
+      { const _pw = JSON.stringify(obj); lastSelfDataWrite.current = _pw; await window.storage.set(planDataKey(activePlanId), _pw); }
     } catch { return false; }
     await appendHistory(note ? `recorded a workout: "${note}"` : `recorded a workout`);
     return true;
@@ -10068,7 +10107,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
       else if (d.startWeightLbs) d.weightLbs = d.startWeightLbs;
       planWrapRef.current = obj;
       setPlanData(d);
-      await window.storage.set(planDataKey(activePlanId), JSON.stringify(obj));
+      { const _pw = JSON.stringify(obj); lastSelfDataWrite.current = _pw; await window.storage.set(planDataKey(activePlanId), _pw); }
       await appendHistory(`deleted a weigh-in${removed && removed.weight ? `: ${removed.weight} lbs` : ""}`);
     } catch { /* ignore */ }
   };
