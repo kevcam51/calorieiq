@@ -9721,11 +9721,14 @@ function AIChatPanel({ role, onDataChanged }) {
   const [workout, setWorkout] = useState(null); // pending workout-program card {…, status}
   const [recording, setRecording] = useState(false);     // mic actively recording
   const [transcribing, setTranscribing] = useState(false); // sending audio → text
+  const [liveText, setLiveText] = useState("");          // interim words (browser speech) while recording
   const scrollRef = useRef(null);
   const fileRef = useRef(null);
   const recRef = useRef(null);    // MediaRecorder instance
   const chunksRef = useRef([]);   // recorded audio chunks
   const streamRef = useRef(null); // mic MediaStream (to stop tracks after)
+  const waveRef = useRef(null);   // <canvas> for the live level meter
+  const recognitionRef = useRef(null); // browser SpeechRecognition (live interim words)
   const loadedRef = useRef(false); // guards persistence until the saved thread loads
 
   // Conversation persistence (Session 77): the chat thread is saved to the user's
@@ -9801,8 +9804,36 @@ function AIChatPanel({ role, onDataChanged }) {
   // Voice input (Session 79): record from the mic, transcribe via Whisper
   // (transcribeAudio callable), and drop the text into the composer for the user
   // to review and send. Stops the mic tracks after to release the device.
+  // Browser-native live interim words (best-effort) — instant feedback as you
+  // speak, shown as a caption. Whisper still produces the accurate final text on
+  // stop. Wrapped so a failure here NEVER breaks the core MediaRecorder→Whisper
+  // path (absent/limited on iOS Safari — there the waveform covers real-time).
+  const startLiveCaption = () => {
+    try {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return;
+      const sr = new SR();
+      sr.continuous = true; sr.interimResults = true; sr.lang = "en-US";
+      let finalT = "";
+      sr.onresult = (ev) => {
+        let interim = "";
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const r = ev.results[i];
+          if (r.isFinal) finalT += r[0].transcript; else interim += r[0].transcript;
+        }
+        setLiveText((finalT + " " + interim).trim());
+      };
+      sr.onerror = () => { /* best-effort */ };
+      recognitionRef.current = sr;
+      sr.start();
+    } catch (e) { /* best-effort */ }
+  };
+  const stopLiveCaption = () => {
+    try { if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null; } } catch (e) { /* ignore */ }
+  };
+
   const startRecording = async () => {
-    setError("");
+    setError(""); setLiveText("");
     if (typeof navigator === "undefined" || !navigator.mediaDevices || typeof MediaRecorder === "undefined") {
       setError("Voice input isn't supported on this browser."); return;
     }
@@ -9821,7 +9852,7 @@ function AIChatPanel({ role, onDataChanged }) {
         if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || mime || "audio/webm" });
         chunksRef.current = [];
-        if (!blob.size) return;
+        if (!blob.size) { setLiveText(""); return; }
         setTranscribing(true);
         try {
           const b64 = await blobToBase64(blob);
@@ -9834,19 +9865,55 @@ function AIChatPanel({ role, onDataChanged }) {
           if (code.includes("unauthenticated")) setError("Please sign in again to use voice.");
           else if (code.includes("invalid-argument")) setError("That recording couldn't be used — try a shorter clip.");
           else setError("Couldn't transcribe — please try again.");
-        } finally { setTranscribing(false); }
+        } finally { setTranscribing(false); setLiveText(""); }
       };
       rec.start();
+      startLiveCaption();
       setRecording(true);
     } catch (err) {
       setError("Microphone access was blocked. Enable it in your browser settings.");
     }
   };
   const stopRecording = () => {
+    stopLiveCaption();
     try { if (recRef.current && recRef.current.state !== "inactive") recRef.current.stop(); } catch (e) { /* ignore */ }
     setRecording(false);
   };
   const toggleMic = () => { if (recording) stopRecording(); else startRecording(); };
+
+  // Live level meter (waveform) — draws the mic's audio level on a canvas while
+  // recording, so you can see it's capturing your voice in real time. Set up when
+  // recording starts (the canvas is mounted by then) and torn down on stop.
+  useEffect(() => {
+    if (!recording || !streamRef.current) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    let ctx, raf;
+    try {
+      ctx = new AC();
+      const src = ctx.createMediaStreamSource(streamRef.current);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      src.connect(analyser);
+      const bins = analyser.frequencyBinCount;
+      const data = new Uint8Array(bins);
+      const draw = () => {
+        raf = requestAnimationFrame(draw);
+        const cv = waveRef.current; if (!cv) return;
+        analyser.getByteFrequencyData(data);
+        const c = cv.getContext("2d"); const W = cv.width, H = cv.height;
+        c.clearRect(0, 0, W, H);
+        const bw = W / bins;
+        c.fillStyle = "#08DCE0";
+        for (let i = 0; i < bins; i++) {
+          const h = Math.max(2, (data[i] / 255) * H);
+          c.fillRect(i * bw, (H - h) / 2, Math.max(1, bw * 0.6), h);
+        }
+      };
+      draw();
+    } catch (e) { /* waveform is best-effort */ }
+    return () => { if (raf) cancelAnimationFrame(raf); if (ctx) { try { ctx.close(); } catch (e) { /* ignore */ } } };
+  }, [recording]);
 
   // Auto-scroll to the newest message whenever the thread or busy state changes.
   useEffect(() => {
@@ -10113,6 +10180,17 @@ function AIChatPanel({ role, onDataChanged }) {
                 <span className="text-[.78rem] text-muted">Photo attached — add a note or just send.</span>
                 <button onClick={() => setPendingImage(null)} aria-label="Remove photo"
                   className="ml-auto rounded-md border-none bg-transparent px-2 py-1 text-muted cursor-pointer hover:text-fg">✕</button>
+              </div>
+            )}
+            {/* Live recording feedback: a waveform (reacts to your voice) + live
+                interim words where the browser supports it (Whisper finalizes on stop). */}
+            {(recording || transcribing) && (
+              <div className="mb-2 flex items-center gap-2.5 rounded-lg border border-border bg-surface2 px-2.5 py-2">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${recording ? "bg-danger animate-pulse" : "bg-muted"}`} />
+                <canvas ref={waveRef} width={96} height={26} className="shrink-0 rounded" />
+                <span className="min-w-0 flex-1 truncate text-[.8rem] text-fg">
+                  {liveText || (transcribing ? "Transcribing…" : "Listening… tap ⏹ when done")}
+                </span>
               </div>
             )}
             <div className="flex items-end gap-2">
