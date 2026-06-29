@@ -123,8 +123,10 @@ trainer only their own verified clients (enforced **server-side**, not by the mo
    by name with concrete recommendations). All confirm-before-write, all access-checked server-side. NOT
    account creation (sensitive). Remaining future idea: AI calendar management (item #2 above) and the
    plan-builder confirm CARD (item #4).
-4. **Plan-builder v2 polish** — a tappable program card (like the meal card) instead of the
-   conversational confirm; AI-set personal stats/activity as part of onboarding.
+4. ~~**Plan-builder v2 polish**~~ **DONE (S75):** the AI's drafted workout program now renders as a
+   tappable Accept card (`propose_workout` tool + `setWorkoutSchedule` Accept callable + an `AIChatPanel`
+   program card), mirroring the meal Accept card — saves in one tap, no typed "yes". Verified live for
+   both a trainer-for-client and a client-for-self. (AI-set personal stats onboarding was done in S72.)
 
 ## Remember: the AI is a LIVING system
 Its behavior (system prompt) and abilities (tools) are fully ours to change/extend anytime, and

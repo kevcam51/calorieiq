@@ -143,7 +143,7 @@ You can also TAKE ACTIONS for the user via tools — but you must CONFIRM the sp
 - set_targets: change the plan's protein/carbs/fat targets and/or goal weight (this edits the plan — confirm exact numbers first).
 - Onboarding / personal info: if a plan is missing the basics (the dashboard shows no calorie target), offer to set it up by chat. ALWAYS call get_profile FIRST and only ask for the fields it lists as "missing" — never ask for info that's already set (don't re-ask for their weight or goal if get_profile already has them). The full set is gender, age, height, current weight, everyday activity level, and goal weight. As the user provides values, call set_personal_info to save them (you can save what they've given so far, then ask for what's still missing). Once the profile is complete, tell them their daily calorie target. Only confirm first if you'd overwrite an existing value with a different one.
 - Plans / phases: a person can have several plans (e.g. a cut, a maintenance phase, a bulk), with one active. Use list_plans to see them, switch_plan to change which is active, and create_plan to START A NEW PHASE — create_plan carries over their personal stats by default so they don't re-enter them; pass goalWeightLbs for the phase's goal, then build its targets/workouts with the other tools. Confirm before creating or switching. Don't expose plan ids to the user — refer to plans by name.
-- Building a workout PROGRAM: when asked to create/draft/edit a training program (e.g. a trainer dictates what they want for a client, or "build me a 4-day split"), first call list_exercises to get the real exercise ids, design a sensible balanced week, LAY IT OUT for the user in plain text (days + exercises), get their OK, then call set_workout_schedule with the program. Keep it realistic for their experience and days available.
+- Building a workout PROGRAM: when asked to create/draft/edit a training program (e.g. a trainer dictates what they want for a client, or "build me a 4-day split"), first call list_exercises to get the real exercise ids, design a sensible balanced week, summarize it briefly in text, then call propose_workout — that shows the user a tappable Accept card to save it (don't also call set_workout_schedule for the same program). If they want changes, adjust and propose again. Only use set_workout_schedule directly if they say to set it without a card. Keep it realistic for their experience and days available.
 ${isTrainer ? "- send_client_request: send a connected client a to-do that shows on their home (e.g. log food, weigh in). For clients, first call list_clients to get the id; confirm the message before sending.\n- Proactive coaching: for cross-client questions ('who's stalled / falling behind this week?', 'who needs attention?', 'what should I change?'), call coach_summary ONCE to get every client's status (inactive / stalled / off_track / on_track / logging) with their adherence + weight trend — don't loop the per-client tools. Then call out who needs attention by NAME and give specific, concrete recommendations (e.g. nudge to log, adjust calories/protein, revisit the goal). Offer to send a to-do (send_client_request) where it helps.\nAs a trainer you can do these FOR a client by passing their clientId — use it to organize clients, nudge them, and tune their plans." : ""}
 After any action, briefly confirm what you did.`;
 }
@@ -188,15 +188,17 @@ async function runToolRound(toolUses, toolCtx) {
   const results = [];
   let wrote = false;
   let proposal = null; // a propose_meal call → relay the meal so the client shows a card
+  let workoutProposal = null; // a propose_workout call → relay the program for a card
   for (const tu of toolUses) {
     let out;
     try { out = await runTool(tu.name, tu.input || {}, toolCtx); }
     catch (e) { console.error("aiChat tool error:", tu.name, e && e.message); out = { error: "That action failed." }; }
     if (["log_meal", "log_workout", "log_weigh_in", "set_targets", "set_workout_schedule", "set_personal_info", "create_plan", "switch_plan"].includes(tu.name) && out && out.ok) wrote = true;
     if (tu.name === "propose_meal" && out && out.meal) proposal = out.meal;
+    if (tu.name === "propose_workout" && out && out.workout) workoutProposal = out.workout;
     results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 60000) });
   }
-  return { results, wrote, proposal };
+  return { results, wrote, proposal, workoutProposal };
 }
 
 exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", maxInstances: 10 }, async (request) => {
@@ -219,6 +221,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
   const agg = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 };
   let wrote = false; // a plan-changing write happened this turn → client should refresh
   let proposal = null; // a meal proposal to show as an Accept/Edit card
+  let workoutProposal = null; // a workout-program proposal to show as an Accept card
   let resp;
   try {
     resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
@@ -230,6 +233,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
       const r = await runToolRound(toolUses, toolCtx);
       if (r.wrote) wrote = true;
       if (r.proposal) proposal = r.proposal;
+      if (r.workoutProposal) workoutProposal = r.workoutProposal;
       convo.push({ role: "assistant", content: resp.content });
       convo.push({ role: "user", content: r.results });
       resp = await client.messages.create({ model: MODEL, max_tokens: 1024, system, tools, messages: convo });
@@ -252,6 +256,7 @@ exports.aiChat = onCall({ secrets: [ANTHROPIC_API_KEY], region: "us-central1", m
     reply: text,
     wrote,
     proposal,
+    workoutProposal,
     usage: { used: totalUsed, budget, warn: totalUsed >= budget * 0.8, breakdown: agg },
   };
 });
@@ -317,6 +322,7 @@ exports.aiChatStream = onRequest(
           const r = await runToolRound(toolUses, toolCtx);
           if (r.wrote) wrote = true;
           if (r.proposal) sse("proposal", r.proposal); // client shows an Accept/Edit card
+          if (r.workoutProposal) sse("workoutProposal", r.workoutProposal); // program Accept card
           convo.push({ role: "assistant", content: msg.content });
           convo.push({ role: "user", content: r.results });
           continue; // next turn streams
@@ -362,4 +368,27 @@ exports.logMeal = onCall({ region: "us-central1", maxInstances: 10 }, async (req
   catch (e) { console.error("logMeal error:", e && e.message); throw new HttpsError("internal", "Couldn't save the meal."); }
   if (out && out.error) throw new HttpsError("failed-precondition", out.error);
   return out; // { ok, logged, dayTotals }
+});
+
+// Direct workout-program write for the Accept card (Session 75). The card holds
+// the validated program (from propose_workout); Accept writes it WITHOUT another
+// AI call. Reuses the same set_workout_schedule write + server-side access checks
+// (a client programs their own plan; a trainer a verified client's). No Anthropic
+// secret — Firestore only.
+exports.setWorkoutSchedule = onCall({ region: "us-central1", maxInstances: 10 }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Please sign in to set a workout program.");
+  const db = admin.firestore();
+  const profile = (await db.doc(`users/${uid}`).get()).data() || {};
+  const role = profile.role || "client";
+  const isTrainer = role === "head_trainer" || role === "sub_trainer" || role === "admin";
+  const callerName = profile.displayName
+    || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+    || profile.email || (isTrainer ? "Coach" : "Client");
+  const ctx = { callerUid: uid, role, isTrainer, today: todayLocal(), callerName };
+  let out;
+  try { out = await runTool("set_workout_schedule", request.data || {}, ctx); }
+  catch (e) { console.error("setWorkoutSchedule error:", e && e.message); throw new HttpsError("internal", "Couldn't save the program."); }
+  if (out && out.error) throw new HttpsError("failed-precondition", out.error);
+  return out; // { ok, replaced, updated, strengthDays, cardioDays }
 });

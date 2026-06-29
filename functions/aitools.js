@@ -18,6 +18,44 @@ const { CARDIO, STRENGTH, CARDIO_IDS, STRENGTH_IDS } = require("./exercises");
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+// id → display label (for rendering a proposed program on the confirmation card).
+const EX_LABEL = {};
+for (const e of CARDIO) EX_LABEL[e.id] = e.label;
+for (const e of STRENGTH) EX_LABEL[e.id] = e.label;
+
+// Build one validated week ({day:[{type,duration}]}) from a provided day-keyed
+// object — drops unknown ids (collected in `dropped`). Shared by the
+// set_workout_schedule write and the propose_workout card. replace=true sets the
+// whole week (unlisted days → rest []); replace=false merges over `existing`.
+function buildWorkoutWeek(provided, validSet, defDur, existing, replace, dropped) {
+  const clampDur = (v, def) => Math.max(5, Math.min(120, Math.round(Number(v) || def)));
+  const result = replace ? {} : { ...(existing || {}) };
+  for (const day of DAYS) {
+    const arr = provided && Array.isArray(provided[day]) ? provided[day] : null;
+    if (arr) {
+      const sessions = [];
+      for (const s of arr) {
+        const type = s && s.type;
+        if (validSet.has(type)) sessions.push({ type, duration: clampDur(s.duration, defDur) });
+        else if (type) dropped.push(type);
+      }
+      result[day] = sessions;
+    } else if (replace) {
+      result[day] = []; // unlisted day within a replaced category → rest
+    }
+  }
+  return result;
+}
+// Attach display labels to a built week for the confirmation card (skips rest days).
+function weekWithLabels(week) {
+  const r = {};
+  for (const day of DAYS) {
+    const arr = (week || {})[day] || [];
+    if (arr.length) r[day] = arr.map((s) => ({ type: s.type, label: EX_LABEL[s.type] || s.type, duration: s.duration }));
+  }
+  return r;
+}
+
 // ── kv access (mirrors src/storage.js: users/{uid}/kv/{encodeURIComponent(key)},
 // each doc has fields { k, value } where value is a JSON string). ──────────────
 function kvDocRef(db, uid, key) {
@@ -415,10 +453,28 @@ function buildTools(role) {
       input_schema: { type: "object", properties: {} },
     },
     {
+      name: "propose_workout",
+      description:
+        "Show the user a tappable confirmation CARD for a weekly workout PROGRAM you've designed (from list_exercises ids). "
+        + "This is the PREFERRED way to set a program: design it, then call propose_workout — the user taps Accept on the "
+        + "card to save it to their plan (or asks you in chat for changes). Do NOT also call set_workout_schedule for the "
+        + "same program; the card saves it. Briefly summarize the week in text too. Same shape as set_workout_schedule "
+        + "(cardio/strength day-keyed objects of { type: <id>, duration }). " + (isTrainer ? "Pass clientId to propose for a client." : ""),
+      input_schema: {
+        type: "object",
+        properties: {
+          cardio: { type: "object", description: "Per-day cardio, e.g. {\"Tuesday\":[{\"type\":\"incline_walk_8\",\"duration\":30}]}" },
+          strength: { type: "object", description: "Per-day strength, e.g. {\"Monday\":[{\"type\":\"bb_bench\",\"duration\":45},{\"type\":\"bb_row\",\"duration\":45}]}" },
+          replace: { type: "boolean", description: "Replace the whole week (unlisted days become rest). Default true." },
+          ...clientIdProp,
+        },
+      },
+    },
+    {
       name: "set_workout_schedule",
       description:
-        "Write a weekly workout PROGRAM into the plan (shows on the plan + calendar). Build it from list_exercises ids. "
-        + "Lay the program out for the user and get their OK before calling. "
+        "Write a weekly workout PROGRAM into the plan DIRECTLY (no card). Prefer propose_workout instead — only use this "
+        + "when the user explicitly says to set it without a confirmation card. Build it from list_exercises ids. "
         + "Provide cardio and/or strength as objects keyed by full day name (Monday…Sunday); each day is an array of "
         + "{ type: <exercise id>, duration: <minutes> }. Strength duration is usually 45; cardio 20–40. "
         + "replace=true (default) sets the whole week (unlisted days become rest). "
@@ -728,6 +784,34 @@ async function runTool(name, input, ctx) {
     return { shown: true, meal };
   }
 
+  if (name === "propose_workout") {
+    // No write — validate + build the week (with labels for display) and echo it
+    // back so the client renders an Accept card. Accept saves via the
+    // setWorkoutSchedule callable, which re-runs set_workout_schedule.
+    const replace = input.replace !== false;
+    const { data } = await activePlanData(db, uid); // for non-replace merge
+    const dropped = [];
+    const built = {};
+    if (input.strength && typeof input.strength === "object") {
+      built.strength = buildWorkoutWeek(input.strength, STRENGTH_IDS, 45, data.strength, replace, dropped);
+    }
+    if (input.cardio && typeof input.cardio === "object") {
+      built.cardio = buildWorkoutWeek(input.cardio, CARDIO_IDS, 30, data.cardio, replace, dropped);
+    }
+    if (!built.strength && !built.cardio) return { error: "Provide cardio and/or strength as day-keyed objects." };
+    // What the card shows (labels) and what Accept will write (raw ids), kept in sync.
+    const workout = { replace, droppedInvalidIds: [...new Set(dropped)], raw: { replace } };
+    if (built.strength) { workout.strength = weekWithLabels(built.strength); workout.raw.strength = built.strength; }
+    if (built.cardio) { workout.cardio = weekWithLabels(built.cardio); workout.raw.cardio = built.cardio; }
+    if (ctx.isTrainer && input.clientId) {
+      const t = await resolveTargetUid(db, { clientId: input.clientId }, ctx);
+      if (t && t.error) return t; // unauthorized client → tell the model
+      workout.clientId = input.clientId;
+      workout.raw.clientId = input.clientId;
+    }
+    return { shown: true, workout };
+  }
+
   if (name === "log_meal") {
     const re = /^\d{4}-\d{2}-\d{2}$/;
     const date = re.test(input.date || "") ? input.date : ctx.today;
@@ -842,31 +926,12 @@ async function runTool(name, input, ctx) {
     const { id: planId, wrap } = await loadPlanWrap(db, uid);
     const d = wrap.data;
     const dropped = [];
-    const clampDur = (v, def) => Math.max(5, Math.min(120, Math.round(Number(v) || def)));
-    const buildWeek = (provided, validSet, defDur, existing) => {
-      const result = replace ? {} : { ...(existing || {}) };
-      for (const day of DAYS) {
-        const arr = provided && Array.isArray(provided[day]) ? provided[day] : null;
-        if (arr) {
-          const sessions = [];
-          for (const s of arr) {
-            const type = s && s.type;
-            if (validSet.has(type)) sessions.push({ type, duration: clampDur(s.duration, defDur) });
-            else if (type) dropped.push(type);
-          }
-          result[day] = sessions;
-        } else if (replace) {
-          result[day] = []; // unlisted day within a replaced category → rest
-        }
-      }
-      return result;
-    };
     const changed = [];
     if (input.strength && typeof input.strength === "object") {
-      d.strength = buildWeek(input.strength, STRENGTH_IDS, 45, d.strength); changed.push("strength");
+      d.strength = buildWorkoutWeek(input.strength, STRENGTH_IDS, 45, d.strength, replace, dropped); changed.push("strength");
     }
     if (input.cardio && typeof input.cardio === "object") {
-      d.cardio = buildWeek(input.cardio, CARDIO_IDS, 30, d.cardio); changed.push("cardio");
+      d.cardio = buildWorkoutWeek(input.cardio, CARDIO_IDS, 30, d.cardio, replace, dropped); changed.push("cardio");
     }
     if (changed.length === 0) return { error: "Provide cardio and/or strength as day-keyed objects." };
     await kvSetJSON(db, uid, `caliq-${planId}`, wrap);

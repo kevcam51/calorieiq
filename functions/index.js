@@ -89,4 +89,5 @@ exports.backfillRoleClaims = onCall(async (request) => {
 // HTTP/SSE streaming endpoint (primary, replies appear word-by-word).
 exports.aiChat = require("./aichat").aiChat;
 exports.aiChatStream = require("./aichat").aiChatStream;
-exports.logMeal = require("./aichat").logMeal; // direct write for the Accept card
+exports.logMeal = require("./aichat").logMeal; // direct write for the meal Accept card
+exports.setWorkoutSchedule = require("./aichat").setWorkoutSchedule; // workout Accept card

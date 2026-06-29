@@ -9557,7 +9557,8 @@ function TrainerAnalytics({ onOpenClientPlan, onGoClients, meUid, meName, meRole
 // awaits the full reply. Rendered via createPortal so its fixed positioning
 // escapes the .page-transition transform trap (same fix as the other modals).
 const callAiChat = httpsCallable(functions, "aiChat");
-const callLogMeal = httpsCallable(functions, "logMeal"); // Accept-card direct write (Session 68)
+const callLogMeal = httpsCallable(functions, "logMeal"); // meal Accept-card direct write (Session 68)
+const callSetWorkout = httpsCallable(functions, "setWorkoutSchedule"); // workout Accept-card direct write (Session 75)
 // Streaming endpoint (Session 66) — replies arrive word-by-word via SSE. We POST
 // with the Firebase ID token (EventSource can't set headers, so we fetch+stream).
 const AI_STREAM_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/aiChatStream`;
@@ -9565,7 +9566,7 @@ const AI_STREAM_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJE
 // Stream the AI reply. Calls onDelta(text) as chunks arrive and onDone({wrote,
 // usage}) at the end. Throws { code, message } on failure so send() can fall
 // back to the non-streaming callable.
-async function streamAiChat(apiMsgs, { onDelta, onDone, onProposal }) {
+async function streamAiChat(apiMsgs, { onDelta, onDone, onProposal, onWorkoutProposal }) {
   const user = auth.currentUser;
   if (!user) throw { code: "unauthenticated" };
   const token = await user.getIdToken();
@@ -9594,6 +9595,7 @@ async function streamAiChat(apiMsgs, { onDelta, onDone, onProposal }) {
       let payload; try { payload = JSON.parse(data); } catch { continue; }
       if (event === "delta") onDelta(payload.text || "");
       else if (event === "proposal") { if (onProposal) onProposal(payload); }
+      else if (event === "workoutProposal") { if (onWorkoutProposal) onWorkoutProposal(payload); }
       else if (event === "done") onDone(payload || {});
       else if (event === "error") throw { code: payload.code || "internal", message: payload.message };
     }
@@ -9659,6 +9661,7 @@ function AIChatPanel({ role, onDataChanged }) {
   const [warn, setWarn] = useState(false); // ≥80% of daily budget used
   const [proposal, setProposal] = useState(null); // pending meal card {…, status}
   const [editDraft, setEditDraft] = useState(null); // edit-mode fields
+  const [workout, setWorkout] = useState(null); // pending workout-program card {…, status}
   const scrollRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -9678,6 +9681,21 @@ function AIChatPanel({ role, onDataChanged }) {
     } catch (e) {
       setProposal((prev) => ({ ...prev, status: "pending" }));
       setError("Couldn't save the meal. Try again.");
+    }
+  };
+
+  // Accept a proposed workout program → save it directly (no extra AI call) via
+  // the setWorkoutSchedule callable, using the validated raw program from propose_workout.
+  const acceptWorkout = async () => {
+    if (!workout || !workout.raw) return;
+    setWorkout((prev) => ({ ...prev, status: "saving" }));
+    try {
+      await callSetWorkout(workout.raw);
+      setWorkout((prev) => ({ ...prev, status: "saved" }));
+      if (typeof onDataChanged === "function") onDataChanged();
+    } catch (e) {
+      setWorkout((prev) => ({ ...prev, status: "pending" }));
+      setError("Couldn't save the program. Try again.");
     }
   };
 
@@ -9708,6 +9726,7 @@ function AIChatPanel({ role, onDataChanged }) {
     setPendingImage(null);
     setProposal(null); // a new message supersedes any pending meal card
     setEditDraft(null);
+    setWorkout(null); // …and any pending workout card
     setBusy(true);
     // Build the API payload. Send the image block only on the most recent
     // message (older turns go as text) to bound vision token cost.
@@ -9727,6 +9746,7 @@ function AIChatPanel({ role, onDataChanged }) {
       await streamAiChat(apiMsgs, {
         onDelta: (t) => { streamed += t; setMessages([...next, { role: "assistant", content: streamed }]); },
         onProposal: (meal) => setProposal({ ...meal, status: "pending" }),
+        onWorkoutProposal: (w) => setWorkout({ ...w, status: "pending" }),
         onDone: (p) => { done = p; },
       });
       setMessages([...next, { role: "assistant", content: streamed || "(no response)" }]);
@@ -9744,6 +9764,7 @@ function AIChatPanel({ role, onDataChanged }) {
           setMessages([...next, { role: "assistant", content: reply || "(no response)" }]);
           if (res.data && res.data.usage && res.data.usage.warn) setWarn(true);
           if (res.data && res.data.proposal) setProposal({ ...res.data.proposal, status: "pending" });
+          if (res.data && res.data.workoutProposal) setWorkout({ ...res.data.workoutProposal, status: "pending" });
           if (res.data && res.data.wrote && typeof onDataChanged === "function") onDataChanged();
         } catch (e) {
           const code = (e && e.code) || "";
@@ -9896,6 +9917,55 @@ function AIChatPanel({ role, onDataChanged }) {
               )}
             </div>
           )}
+
+          {/* Workout-program confirmation card (Session 75) — tap to save the
+              weekly program the AI drafted. For changes, ask in chat. */}
+          {workout && (() => {
+            const dayList = (sched) => DAYS.filter((d) => (sched && sched[d] && sched[d].length))
+              .map((d) => ({ day: d, items: sched[d] }));
+            const strDays = dayList(workout.strength);
+            const cardDays = dayList(workout.cardio);
+            const totalDays = new Set([...strDays, ...cardDays].map((x) => x.day)).size;
+            return (
+              <div className="border-t border-border bg-surface2 px-3 py-3">
+                {workout.status === "saved" ? (
+                  <div className="flex items-center gap-2 text-[.88rem]">
+                    <span className="font-bold text-success">✓ Program saved</span>
+                    <span className="text-muted truncate">{totalDays} training {totalDays === 1 ? "day" : "days"}/week</span>
+                    <button onClick={() => setWorkout(null)} aria-label="Dismiss" className="ml-auto px-2 text-muted hover:text-fg">✕</button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="rounded-full bg-[rgba(8,220,224,.14)] px-2 py-0.5 text-[.68rem] uppercase tracking-[.5px] text-primary">Workout program</span>
+                      <span className="text-[.8rem] text-muted">{totalDays} {totalDays === 1 ? "day" : "days"}/week</span>
+                    </div>
+                    <div className="max-h-44 overflow-y-auto flex flex-col gap-1.5">
+                      {[...strDays.map((x) => ({ ...x, kind: "💪" })), ...cardDays.map((x) => ({ ...x, kind: "🏃" }))]
+                        .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day))
+                        .map((row, i) => (
+                          <div key={i} className="text-[.8rem]">
+                            <span className="font-semibold text-fg">{row.kind} {row.day}</span>
+                            <span className="text-muted"> — {row.items.map((s) => s.label).join(", ")}</span>
+                          </div>
+                        ))}
+                    </div>
+                    {workout.droppedInvalidIds && workout.droppedInvalidIds.length > 0 && (
+                      <div className="text-[.7rem] text-warn">Some exercises couldn't be matched and were skipped.</div>
+                    )}
+                    <div className="flex gap-2">
+                      <button disabled={workout.status === "saving"} onClick={acceptWorkout}
+                        className="flex-1 rounded-lg bg-primary px-3 py-2 text-[.88rem] font-bold text-primaryfg disabled:opacity-60">
+                        {workout.status === "saving" ? "Saving…" : "✓ Save program"}</button>
+                      <button disabled={workout.status === "saving"} onClick={() => setWorkout(null)} aria-label="Dismiss"
+                        className="rounded-lg border border-border px-2.5 py-2 text-[.88rem] text-muted disabled:opacity-60">✕</button>
+                    </div>
+                    <div className="text-[.68rem] text-muted">Want changes? Just tell me in the chat.</div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Composer */}
           <div className="border-t border-border bg-surface px-3 py-3">

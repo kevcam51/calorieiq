@@ -1587,6 +1587,29 @@ enabled (Blaze has no default spending cap).
   specific recommendations and an offer to send a nudge. Function logs clean (no tool/index/permission errors); no
   console errors. **"Fuller AI profiles" is DONE:** onboarding (S72) + plan management (S73) + proactive coaching (S74).
   Model `claude-sonnet-4-6`.
+- Session 75: **AI plan-builder confirmation CARD — tappable Accept for a drafted workout program. DEPLOYED & LIVE.**
+  The remaining AI polish item (handoff #4): the program builder used a conversational "yes" confirm; now the AI's
+  drafted weekly program renders as a tappable Accept card (mirroring the S68 meal Accept card) so it saves in one tap.
+  **Backend (`functions/`):** new **`propose_workout`** tool (both roles) in `aitools.js` — validates + builds the week
+  (reusing the extracted module-level `buildWorkoutWeek` helper that `set_workout_schedule` now also uses; `EX_LABEL`
+  map + `weekWithLabels` attach display labels) and echoes back `{shown, workout:{strength,cardio (labeled), replace,
+  droppedInvalidIds, raw, clientId?}}` WITHOUT writing; `raw` is the validated id-only program the Accept callable
+  writes. New **`setWorkoutSchedule` callable** (`aichat.js`, exported in `index.js`) — the Accept write, runs
+  `runTool("set_workout_schedule", raw, ctx)` with the SAME server-side access checks (a client programs their own plan;
+  a trainer a `resolveTargetUid`-verified client) and **no Anthropic call** (instant, zero tokens). `runToolRound` relays
+  `workoutProposal`; the callable returns it and the stream emits an SSE `workoutProposal` event. System prompt: the
+  program-builder now calls `propose_workout` (card) instead of `set_workout_schedule` directly (kept for "set it without
+  a card"). **Frontend (`App.jsx`):** `callSetWorkout` callable; `streamAiChat` gained `onWorkoutProposal` + the
+  `workoutProposal` SSE branch; `AIChatPanel` gained a `workout` state + `acceptWorkout` handler + a program card (days
+  with 💪/🏃 + real exercise labels, scrollable, "N days/week", **✓ Save program** / dismiss, "want changes? tell me in
+  chat", dropped-id warning), cleared on a new message, with the non-stream fallback reading `res.data.workoutProposal`;
+  Accept → `callSetWorkout(raw)` → `onDataChanged` refresh. **Frontend changed → `npm run build` passes; push redeploys
+  Vercel.** Functions deployed (`setWorkoutSchedule` created clean with the public invoker — the S61 org-policy "Allow
+  All" holds). **Verified live BOTH entry points:** (trainer.uitest) "build Casey a 2-day full-body program" → card with
+  Mon/Thu (real exercises) → Save → **Casey's plan strength went Mon 6/Thu 6 → Mon 7/Thu 7** (written cross-account to
+  the verified client); (client.uitest / Casey) "build me a 3-day full body program, show the card" → 3-day card → Save →
+  her own plan strength became **Mon/Wed/Fri 6 each**. No console/function errors. **AI plan-builder is now card-confirmed
+  like meals.** Model `claude-sonnet-4-6`.
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a
