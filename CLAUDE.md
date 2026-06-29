@@ -781,12 +781,14 @@ enabled (Blaze has no default spending cap).
   later trainer-side events like "a client logged"). **Why (Kevin):** Glide should be a place people can
   use for *just one thing* — someone who only wants the AI chat for fitness advice shouldn't be nagged by
   food-tracking reminders. Granular control lets each user keep the features/nudges they want and silence
-  the rest. **Status:** a lightweight first slice shipped in S71 — independent client and trainer toggles
-  for the trainer to-do reminders (`caliq-client-prefs.showTrainerReminders` / `caliq-coach-prefs.showRequests`),
-  the only notification surface today. **Build path:** as more notification types are added, consolidate
-  these prefs into one `notificationPrefs` object (per-type booleans + a master) surfaced in a Notifications
-  screen (good home: the side menu). Pure display-pref toggles are **non-Blaze**; actual *push/delivery*
-  notifications (and the trainer-side "client joined/logged" events below) need **Blaze/Cloud Functions**.
+  the rest. **Status: BUILT — Session 76** (the central screen). The `SideMenu` "🔔 Notifications" section has a
+  **master switch + per-type toggles**, backed by one unified `caliq-notif-prefs` `{master, trainerReminders,
+  sentReminders}` lifted to App and synced with the inline home/dashboard toggles. (S71 shipped the first per-type
+  toggles; S76 consolidated them into the Notification Center + master, exactly the "consolidate into one
+  notificationPrefs object" build path.) **Only one notification TYPE exists today** (trainer to-dos) — adding more
+  (food-logging, weigh-in, AI nudges, later "client logged") is now just one new key + one row + one gate.
+  Pure display-pref toggles are **non-Blaze**; actual *push/delivery* notifications (and the trainer-side "client
+  joined/logged" events below) still need **Blaze/Cloud Functions**.
 - **Notification center (delivery side)** — notify a trainer when a client joins or leaves (and similar
   events). Deferred until Blaze/Cloud Functions: a client safely creating a notification on the trainer's
   side needs server-side logic (client-side writes would require opening up the rules unsafely).
@@ -1619,6 +1621,24 @@ enabled (Blaze has no default spending cap).
   **The AI roadmap is now fully worked through:** chat · data reads · meal logging (typed/photo/card) · workouts/weigh-ins/
   targets/requests · workout-program builder (card-confirmed) · streaming · prompt caching · onboarding · plan management ·
   proactive coaching · calendar/date-aware logging.
+- Session 76: **Notification Center — central master + per-type toggles in the side menu (non-Blaze).** Built the
+  Notification Center Kevin envisioned (S71): a **"🔔 Notifications"** section in the `SideMenu` with a **master
+  "All notifications" switch** + **per-type toggles**, so a user can silence everything or pick by type — the goal
+  being someone can use Glide for just one thing (e.g. only the AI chat) without unwanted nudges. **One unified pref
+  doc `caliq-notif-prefs` `{master, trainerReminders, sentReminders}` lifted to App** (state + `onSetNotifPrefs(patch)`
+  merge-writer + load in the profile effect), threaded to `SideMenu`, `ClientHome`, and `TrainerDashboard` so the
+  central screen AND the existing inline toggles read/write the SAME state and **stay in sync live** (no reload).
+  Replaced the S71 per-component prefs: ClientHome's `showReminders`/`caliq-client-prefs` and TrainerDashboard's
+  `showReqs`/`caliq-coach-prefs.showRequests` are gone — both now derive from `notifPrefs` (`master && trainerReminders`
+  for the client's "📬 From your trainer" card; `master && sentReminders` for the trainer's sent-to-do display). The
+  per-type toggle in the menu is disabled when master is off; the menu's master-off hides everything (even the client's
+  collapsed "N hidden" line). Inline re-enable also clears master (`{master:true, …:true}`). `attnDays` stays in
+  `caliq-coach-prefs` (untouched — separate doc). Only ONE notification type exists today (trainer to-dos), so the
+  master ≈ that type for now; the structure is ready for more (food/weigh-in/AI nudges) — each new type = one row +
+  one gate. Pure front-end display prefs (no Blaze); actual push/delivery still needs Blaze (see roadmap). **Verified
+  live BOTH roles** (client.uitest + trainer.uitest): menu toggles sync to the inline home/dashboard instantly and
+  vice-versa, master-off silences all, everything persists across reload, no console errors, `npm run build` passes.
+  No `firestore.rules` change.
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a

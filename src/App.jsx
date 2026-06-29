@@ -8561,7 +8561,7 @@ function computeClientCalories(d) {
   return { tdee, target };
 }
 
-function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan, onLinked, onCopyToLocal, onRename, onNewPlan, onNewSimulation, onConvertSimulation, onDeletePlan, meUid, meName, meRole }) {
+function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpenClientPlan, onLinked, onCopyToLocal, onRename, onNewPlan, onNewSimulation, onConvertSimulation, onDeletePlan, meUid, meName, meRole, notifPrefs, onSetNotifPrefs }) {
   const [details, setDetails] = useState({}); // id -> { tdee, target }
   const [lastLog, setLastLog] = useState({}); // id -> "YYYY-MM-DD"
   const [sort, setSort] = useState("attention");
@@ -8583,7 +8583,11 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   const [reqDraft, setReqDraft] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
   const [showDoneFor, setShowDoneFor] = useState(null); // clientUid whose done-list is expanded
-  const [showReqs, setShowReqs] = useState(true); // show/hide the sent to-do notifications on client cards (persisted)
+  // Whether the sent to-do reminders show on the client cards — driven by the
+  // shared notification prefs (master + per-type), lifted to App so the menu's
+  // Notification Center and this inline toggle stay in sync (Session 76).
+  const np = notifPrefs || { master: true, sentReminders: true };
+  const reqsOn = np.master && np.sentReminders;
   const [convertSimFor, setConvertSimFor] = useState(null); // sim id awaiting convert confirm
   const [plansForClient, setPlansForClient] = useState(null);     // clientUid whose plans panel is open
   const [cpRenaming, setCpRenaming] = useState(null);             // {uid, planId} being renamed
@@ -8626,27 +8630,6 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
   useEffect(() => { loadClients(); }, []);
   // Live-refresh the cards when a client (or the AI) logs/edits (see the hook).
   useClientLiveRefresh(clients, loadClients);
-  // Load the trainer's display prefs (shared coach-prefs doc). showRequests
-  // defaults ON; only an explicit false hides the to-do notifications.
-  useEffect(() => {
-    (async () => {
-      try {
-        const pr = await window.storage.get("caliq-coach-prefs");
-        const p = JSON.parse(pr.value || "{}");
-        if (p.showRequests === false) setShowReqs(false);
-      } catch { /* no prefs saved yet */ }
-    })();
-  }, []);
-  // Persist the to-do-notifications toggle. Merge so we don't wipe other
-  // coach-prefs (e.g. the Coaching Dashboard's attnDays).
-  const saveShowReqs = async (v) => {
-    setShowReqs(v);
-    try {
-      let p = {};
-      try { const pr = await window.storage.get("caliq-coach-prefs"); p = JSON.parse(pr.value || "{}"); } catch { /* none yet */ }
-      await window.storage.set("caliq-coach-prefs", JSON.stringify({ ...p, showRequests: v }));
-    } catch { /* best-effort */ }
-  };
 
   // Link one of the trainer's local plans into a client's account (the local
   // copy is then removed by onLinked).
@@ -8858,11 +8841,12 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
             <div className={`${subCls} mt-1 mb-2`}>
               Live data from each client's shared plan. Tap a card to open it.
             </div>
-            {/* Toggle the sent to-do notifications on the cards on/off (persisted). */}
-            <button onClick={() => saveShowReqs(!showReqs)}
-              title={showReqs ? "Hide the to-do reminders on each client card" : "Show the to-do reminders on each client card"}
+            {/* Toggle the sent to-do reminders on the cards (shared notification
+                prefs; also in ≡ menu → Notifications). Re-enabling clears master. */}
+            <button onClick={() => onSetNotifPrefs(reqsOn ? { sentReminders: false } : { master: true, sentReminders: true })}
+              title={reqsOn ? "Hide the to-do reminders on each client card" : "Show the to-do reminders on each client card"}
               className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold cursor-pointer border border-border bg-transparent text-muted hover:text-fg">
-              {showReqs ? "🔔 To-do reminders: On" : "🔕 To-do reminders: Off"}
+              {reqsOn ? "🔔 To-do reminders: On" : "🔕 To-do reminders: Off"}
             </button>
             {clients.length > 1 && (
               <div className="flex gap-1.5 mb-3">
@@ -8891,7 +8875,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-[.95rem]">{c.name}</span>
                         <span className="flex gap-2 items-center">
-                          {showReqs && openReqs.length > 0 && (
+                          {reqsOn && openReqs.length > 0 && (
                             <span className="text-[.68rem] font-bold text-primaryfg bg-primary rounded-[10px] px-2 py-0.5">
                               📬 {openReqs.length} open
                             </span>
@@ -9074,7 +9058,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
 
                     {/* Sent requests — open (with cancel) + collapsible done list.
                         Hidden entirely when the trainer turns to-do reminders off. */}
-                    {showReqs && (openReqs.length > 0 || doneReqs.length > 0) && (
+                    {reqsOn && (openReqs.length > 0 || doneReqs.length > 0) && (
                       <div className="mt-2.5 flex flex-col gap-1">
                         {openReqs.map((r) => (
                           <div key={r.id} className="flex justify-between items-start gap-2 text-sm px-2.5 py-1.5 rounded-md bg-[rgba(8,220,224,.06)] border border-[rgba(8,220,224,.18)]">
@@ -10004,7 +9988,7 @@ function AIChatPanel({ role, onDataChanged }) {
 // "caliq-self"). This is their landing screen: the role panel (their trainer
 // link) plus a button to open/edit their plan in the normal editor. The plan a
 // trainer "links" to them is the very same caliq-self, so both edit one copy.
-function ClientHome({ onOpenPlan, meUid, meName, role }) {
+function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPrefs }) {
   // The client's plan lives in their own account as "caliq-self"; today's log is
   // "caliq-log-self-{date}". The client is always on their own account (no remote
   // routing), so we read/write their own window.storage directly.
@@ -10018,7 +10002,11 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
   const [wtMsg, setWtMsg] = useState("");          // weight-log message
   const [requests, setRequests] = useState([]);    // trainer → client requests (Session 19)
   const [quickReq, setQuickReq] = useState(null);  // request being completed in the quick-action popup
-  const [showReminders, setShowReminders] = useState(true); // client can hide trainer to-do reminders (persisted)
+  // Whether the trainer to-do reminders show — driven by the shared notification
+  // prefs (master + per-type), lifted to App so the menu's Notification Center and
+  // this inline toggle stay in sync.
+  const np = notifPrefs || { master: true, trainerReminders: true };
+  const remindersOn = np.master && np.trainerReminders;
   // Multiple plans (Session 21): the client can hold several plans with one
   // active. Each plan's data/log/history is keyed by its id (default "self").
   const [plans, setPlans] = useState([{ id: "self", name: "Main plan", createdAt: 0 }]);
@@ -10066,28 +10054,6 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
     } catch { setRequests([]); }
   };
   useEffect(() => { load(); }, []);
-
-  // Client display prefs (the client's own account). showTrainerReminders
-  // defaults ON; only an explicit false hides the trainer to-do reminders — so
-  // someone who just wants the chat / one feature isn't nagged by to-dos.
-  useEffect(() => {
-    (async () => {
-      try {
-        const pr = await window.storage.get("caliq-client-prefs");
-        const p = JSON.parse(pr.value || "{}");
-        if (p.showTrainerReminders === false) setShowReminders(false);
-      } catch { /* no prefs saved yet */ }
-    })();
-  }, []);
-  // Persist the reminder toggle. Merge so we don't wipe other client prefs later.
-  const saveShowReminders = async (v) => {
-    setShowReminders(v);
-    try {
-      let p = {};
-      try { const pr = await window.storage.get("caliq-client-prefs"); p = JSON.parse(pr.value || "{}"); } catch { /* none yet */ }
-      await window.storage.set("caliq-client-prefs", JSON.stringify({ ...p, showTrainerReminders: v }));
-    } catch { /* best-effort */ }
-  };
 
   // ── Live sync: the client's own home updates in real time ──
   // When the trainer (or the AI on the client's behalf) edits the client's
@@ -10395,13 +10361,14 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
         {(() => {
           const openReqs = requests.filter((r) => r.status !== "done");
           if (openReqs.length === 0) return null;
-          if (!showReminders) {
+          if (!np.master) return null; // all notifications silenced (master off) → show nothing
+          if (!np.trainerReminders) {
             return (
               <div className="mb-4 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface2 border border-border">
                 <span className="text-muted text-xs">
                   🔕 {openReqs.length} trainer reminder{openReqs.length !== 1 ? "s" : ""} hidden
                 </span>
-                <button onClick={() => saveShowReminders(true)}
+                <button onClick={() => onSetNotifPrefs({ trainerReminders: true })}
                   className="border-0 bg-transparent text-primary cursor-pointer text-xs font-bold whitespace-nowrap">Show</button>
               </div>
             );
@@ -10411,7 +10378,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role }) {
               style={{ background: "color-mix(in srgb, var(--color-primary) 6%, var(--color-surface))" }}>
               <div className="flex justify-between items-start gap-2 mb-0.5">
                 <div className="font-display text-base tracking-wide text-primary uppercase">📬 From your trainer</div>
-                <button onClick={() => saveShowReminders(false)} title="Hide trainer reminders"
+                <button onClick={() => onSetNotifPrefs({ trainerReminders: false })} title="Hide trainer reminders"
                   className="border-0 bg-transparent text-muted cursor-pointer text-xs font-bold whitespace-nowrap">🔕 Hide</button>
               </div>
               <div className="text-muted text-sm mb-3">
@@ -11036,13 +11003,14 @@ function describePlanChanges(prev, next) {
 // A hamburger (≡) opens a slide-out drawer with app navigation, inline name
 // editing, and sign-out. Rendered globally by App so it's on every screen.
 const ROLE_LABEL = { client: "Client", head_trainer: "Trainer", sub_trainer: "Trainer", admin: "Admin" };
-function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, onHome, onDashboard, onClients, onNameSaved }) {
+function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, notifPrefs, onSetNotifPrefs, onHome, onDashboard, onClients, onNameSaved }) {
   const [editing, setEditing] = useState(false);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [busy, setBusy] = useState(false);
   const [invite, setInvite] = useState("");      // trainer invite code
   const [showInvite, setShowInvite] = useState(false);
+  const [showNotif, setShowNotif] = useState(false); // Notification Center section (Session 76)
   const [copied, setCopied] = useState("");       // "code" | "link" | ""
   useEffect(() => {
     if (open) {
@@ -11139,6 +11107,52 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, onHo
         {isTrainer && <button style={item} onClick={() => go(onDashboard)}>📊 <span>Dashboard</span></button>}
         {isTrainer && <button style={item} onClick={() => go(onClients)}>👥 <span>All clients</span></button>}
 
+        {/* Notification Center (Session 76) — master on/off + per-type toggles.
+            One notification type today (trainer to-dos); more slot in as features
+            are added. Backed by the shared notifPrefs (synced with inline toggles). */}
+        {(() => {
+          const npf = notifPrefs || { master: true, trainerReminders: true, sentReminders: true };
+          const typeKey = isTrainer ? "sentReminders" : "trainerReminders";
+          const typeOn = npf.master && npf[typeKey];
+          const Toggle = ({ on, disabled, onClick }) => (
+            <button onClick={onClick} disabled={disabled} aria-pressed={on}
+              style={{ width: 42, height: 24, borderRadius: 999, border: "none", flexShrink: 0,
+                cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1, transition: "background .2s",
+                background: on ? "var(--accent)" : "var(--s3,#28383a)", position: "relative" }}>
+              <span style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%",
+                background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,.3)", transition: "left .2s" }} />
+            </button>
+          );
+          const row = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 };
+          return (
+            <>
+              <button style={item} onClick={() => setShowNotif((v) => !v)}>
+                🔔 <span>Notifications</span>
+                <span style={{ marginLeft: "auto", color: "var(--muted)" }}>{showNotif ? "▾" : "▸"}</span>
+              </button>
+              {showNotif && (
+                <div style={{ padding: "4px 16px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ fontSize: ".74rem", color: "var(--muted)" }}>Choose which nudges &amp; reminders you get — turn everything off, or pick by type.</div>
+                  <div style={row}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: ".88rem" }}>All notifications</div>
+                      <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>Master switch for everything</div>
+                    </div>
+                    <Toggle on={npf.master} onClick={() => onSetNotifPrefs({ master: !npf.master })} />
+                  </div>
+                  <div style={row}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{isTrainer ? "Client to-do reminders" : "Trainer to-do reminders"}</div>
+                      <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>{isTrainer ? "Sent to-dos shown on client cards" : "To-dos your trainer sends you"}</div>
+                    </div>
+                    <Toggle on={typeOn} disabled={!npf.master} onClick={() => onSetNotifPrefs({ [typeKey]: !npf[typeKey] })} />
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
+
         {/* Invite clients (trainer) — moved here off the home screen */}
         {isTrainer && (
           <>
@@ -11200,6 +11214,20 @@ export default function App() {
   const [meEmail, setMeEmail] = useState(""); // current user's email (for the menu)
   const [meTrial, setMeTrial] = useState(null); // trial countdown state (or null)
   const [menuOpen, setMenuOpen] = useState(false); // side menu (Session 23)
+  // Notification preferences (Session 76) — a master on/off + per-type toggles,
+  // in one doc (caliq-notif-prefs), surfaced in the side-menu Notification Center
+  // AND the inline toggles (client home / trainer dashboard), so they stay in sync.
+  // Default everything ON; trainerReminders = the client's trainer to-do card,
+  // sentReminders = the trainer's sent-to-do display on connected-client cards.
+  const [notifPrefs, setNotifPrefs] = useState({ master: true, trainerReminders: true, sentReminders: true });
+  // Merge a partial patch and persist. Components call with e.g. { master:false }.
+  const onSetNotifPrefs = (patch) => {
+    setNotifPrefs((prev) => {
+      const np = { ...prev, ...patch };
+      try { window.storage.set("caliq-notif-prefs", JSON.stringify(np)); } catch (e) { /* best-effort */ }
+      return np;
+    });
+  };
 
   const goBack = () => {
     if (showDash && step === 5) {
@@ -11257,6 +11285,10 @@ export default function App() {
           setMeTrial(trialInfo(prof));
         }
       } catch(e) {}
+      try {
+        const np = await window.storage.get("caliq-notif-prefs");
+        if (np && np.value) setNotifPrefs((prev) => ({ ...prev, ...(JSON.parse(np.value) || {}) }));
+      } catch(e) { /* none saved yet → defaults (all on) */ }
       setLoading(false);
     })();
   }, []);
@@ -11962,6 +11994,7 @@ export default function App() {
       </button>
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} meName={meName} meEmail={meEmail}
         isTrainer={isTrainerHome} trial={meTrial}
+        notifPrefs={notifPrefs} onSetNotifPrefs={onSetNotifPrefs}
         onHome={() => { if (isTrainerHome) setHomeTab("dashboard"); goToProfiles(); }}
         onDashboard={() => { setHomeTab("analytics"); goToProfiles(); }}
         onClients={() => { setHomeTab("clients"); goToProfiles(); }}
@@ -11974,7 +12007,8 @@ export default function App() {
     // "caliq-self"), not a list of other people's profiles.
     if (role === ROLES.CLIENT) {
       return <>{chrome}<ClientHome onOpenPlan={() => selectProfile("self")}
-        meUid={meUid} meName={meName} role={role} /></>;
+        meUid={meUid} meName={meName} role={role}
+        notifPrefs={notifPrefs} onSetNotifPrefs={onSetNotifPrefs} /></>;
     }
     if (isTrainerHome && homeTab === "analytics") {
       return <>{chrome}<TrainerAnalytics
@@ -11995,6 +12029,7 @@ export default function App() {
         onConvertSimulation={convertSimulation}
         onDeletePlan={removeLocalProfileById}
         meUid={meUid} meName={meName} meRole={role}
+        notifPrefs={notifPrefs} onSetNotifPrefs={onSetNotifPrefs}
       /><AIChatPanel role={role} /></>;
     }
     return <>{chrome}<ProfileSelector
