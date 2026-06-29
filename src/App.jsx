@@ -9725,6 +9725,7 @@ function AIChatPanel({ role, onDataChanged }) {
   const [size, setSize] = useState("compact");           // "compact" corner card | "full" near-fullscreen
   const scrollRef = useRef(null);
   const fileRef = useRef(null);
+  const taRef = useRef(null);     // composer textarea (auto-grows with content)
   const recRef = useRef(null);    // MediaRecorder instance
   const chunksRef = useRef([]);   // recorded audio chunks
   const streamRef = useRef(null); // mic MediaStream (to stop tracks after)
@@ -9921,6 +9922,26 @@ function AIChatPanel({ role, onDataChanged }) {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, busy, open]);
+
+  // Auto-grow the composer like Claude's: the textarea height follows its content
+  // (from one line up to a max, then it scrolls). Runs on every draft change and
+  // when the panel opens, and resets after send (draft cleared).
+  const MAX_TA = 200; // px before the textarea starts scrolling instead of growing
+  const autoGrowTextarea = () => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto"; // collapse so scrollHeight reflects content, not the old height
+    // An EMPTY textarea reports a too-tall scrollHeight in some browsers (≈2 rows),
+    // which made the box shrink on the first keystroke. For empty content, leave it
+    // at the one-row "auto"/rows=1 height; only size to content when there's text.
+    if (el.value) {
+      el.style.height = Math.min(el.scrollHeight, MAX_TA) + "px";
+      el.style.overflowY = el.scrollHeight > MAX_TA ? "auto" : "hidden";
+    } else {
+      el.style.overflowY = "hidden";
+    }
+  };
+  useEffect(() => { autoGrowTextarea(); }, [draft, open]);
 
   const send = async () => {
     const text = draft.trim();
@@ -10233,10 +10254,10 @@ function AIChatPanel({ role, onDataChanged }) {
                     <line x1="8" y1="23" x2="16" y2="23" />
                   </svg>
                 )}</button>
-              <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={1}
+              <textarea ref={taRef} value={draft} onChange={e => setDraft(e.target.value)} rows={1}
                 placeholder={recording ? "Listening… tap ⏹ to stop" : transcribing ? "Transcribing…" : pendingImage ? "Add a note (optional)…" : "Message Glide AI…"}
                 style={{ fontFamily: "var(--font-sans)" }}
-                className="flex-1 resize-none box-border max-h-28 rounded-xl border border-border bg-surface2 px-3.5 py-2.5 text-[.95rem] text-fg outline-none placeholder:text-muted"
+                className="flex-1 resize-none box-border min-h-[48px] rounded-xl border border-border bg-surface2 px-3.5 py-3 text-[.95rem] leading-relaxed text-fg outline-none placeholder:text-muted"
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
               <button onClick={send} disabled={busy || recording || transcribing || (!draft.trim() && !pendingImage)} aria-label="Send"
                 className="rounded-xl border-none bg-primary px-3.5 py-2.5 text-[.9rem] font-bold text-primaryfg cursor-pointer disabled:opacity-50 disabled:cursor-default">
