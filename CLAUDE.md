@@ -1639,6 +1639,33 @@ enabled (Blaze has no default spending cap).
   live BOTH roles** (client.uitest + trainer.uitest): menu toggles sync to the inline home/dashboard instantly and
   vice-versa, master-off silences all, everything persists across reload, no console errors, `npm run build` passes.
   No `firestore.rules` change.
+- Session 77: **AI polish (knowledge base + chat persistence) + notification nudges + 100% AI profile coverage. LIVE.**
+  Four things, all shipped. (1) **Glide knowledge base** — new `functions/knowledge.js` exports `GLIDE_KNOWLEDGE`
+  (GI / resistant-starch context, rice GI tables, Smooth Training coaching principles), appended to the AI system
+  prompt **inside the cached prefix** in `aichat.js buildSystemPrompt`, so it adds **zero per-call token cost** and is
+  meant to grow over time (the "living system" idea — just add sections). Verified live: "does day-old reheated rice
+  affect blood sugar?" → the AI applied the resistant-starch knowledge and recommended **basmati** (the file's lower-GI
+  default). (2) **Conversation persistence** — `AIChatPanel` saves the thread to the user's own `caliq-ai-chat`
+  (text-only, photos stripped, capped 20) and restores it on reopen; a `loadedRef` guards against clobbering the saved
+  thread with the initial empty state. **No AI cost change** — `capHistory` already caps the API payload to the last
+  ~20 messages either way; persistence only adds a tiny Firestore read/write. Verified live (save + restore across a
+  full reload). (3) **Home notification nudges (client)** — three NEW notification TYPES on `ClientHome`: food-logging
+  reminder (nothing logged + past local noon), weigh-in reminder (7+ days since last weigh-in, or none yet), and a
+  rotating **daily AI coaching tip** (`COACH_TIPS`, picked by `getDate()`); each is a gentle dismissible card, gated by
+  `notifPrefs` (master + its type) + a session dismiss, shown only when relevant. The **Notification Center** (S76) now
+  renders these as per-type rows — client has 4 (trainer to-dos, food, weigh-in, coaching tips), trainer keeps 1 (sent
+  to-dos); `notifPrefs` defaults extended (`foodReminders/weighInReminders/coachingNudges`, default on via `!== false`).
+  Verified live (client.uitest): all three render, each gates by its toggle, master-off silences all. (4) **100% AI
+  profile coverage** — `set_personal_info` now also sets the optional **weight-range band** (`goalRangeLowLbs/HighLbs`,
+  auto-sorted low≤high) and **trainer notes** (`trainerNotes`); `get_profile`/`profileSummary` return them. Verified
+  live (trainer set Casey's range 165–172 + a coaching note via chat). **So the AI can now fill EVERY plan field the
+  app uses** — stats, goal, weight-range band, activity, body-fat, macro targets, the full workout program, and trainer
+  notes — entirely by conversation. **Custom exercises were intentionally SKIPPED:** `data.customExercises` is written
+  by the wizard's `CustomExerciseCreator` but **never read** by the schedule pickers (`<select>` lists only
+  `STRENGTH_EXERCISES`/`STRENGTH_GROUPS`) or the burn calc (`allStrEx = [REST_ST, ...STRENGTH_EXERCISES]`, no custom) —
+  so AI-writing it would be dead data; wiring custom exercises into the pickers + burn lookup (+ then the AI tool) is a
+  separate small task (see roadmap). Frontend verified + pushed; backend (`aiChat`+`aiChatStream`) deployed. No console
+  errors; `npm run build` passes. No `firestore.rules` change. Model `claude-sonnet-4-6`.
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a
@@ -1649,4 +1676,22 @@ enabled (Blaze has no default spending cap).
   - **The AI is a living system, not stagnant:** its behavior (system prompt) and abilities (tools) are fully ours to
     change/extend anytime; we can also feed it Glide-specific knowledge (the spec's GI tables, coaching methodology).
     Model upgrades are a one-line change as Anthropic ships better models. Framed for Kevin S68 — keep this in mind
-    when scoping future AI work.
+    when scoping future AI work. **The knowledge base now exists (`functions/knowledge.js`, S77) — keep growing it.**
+  - **Custom exercises — wire them end-to-end (S77 scoped, Kevin wants it).** Today `data.customExercises` is written
+    by the wizard's `CustomExerciseCreator` (StepStrength/StepCardio) but **read nowhere**: the schedule `<select>`s
+    list only `STRENGTH_EXERCISES`/`ALL_CARDIO`, and every burn calc uses `[REST_ST, ...STRENGTH_EXERCISES]` /
+    `ALL_CARDIO` (no custom). Plan: (a) merge `data.customExercises` into the pickers (add a "Custom" optgroup) AND the
+    burn-lookup arrays (`allStrEx`/`ALL_CARDIO` everywhere they're built — wizard StepStrength ~2377, the Results burn
+    calcs, the dashboard) so a custom id renders + computes a MET-based burn; (b) ensure the custom shape carries a
+    `met` (the creator already collects one) + a `cat`/type; (c) THEN add an AI `add_custom_exercise` tool + let
+    `set_workout_schedule`/`propose_workout` accept the plan's custom ids (load them into the valid-id set by type).
+    Small but touches several burn-calc sites — do (a)/(b) first (makes custom exercises actually work for everyone),
+    then (c) is the easy AI bolt-on. Non-Blaze.
+  - **Voice input for the AI chat (S77 scoped — NEXT TASK, premium upcharge).** Speak instead of type. Claude has no
+    speech-to-text, so add a transcription step. **Path B chosen (Claude-app quality):** browser `MediaRecorder` →
+    a new transcription Cloud Function → Whisper-class model → feed text into the existing chat. Cost is tiny
+    (~$0.006/min OpenAI Whisper; Groq whisper-large-v3 similar/cheaper) → ~$1–2/mo even for heavy users → great margin
+    as a premium feature. Build: a mic button + recording UI in `AIChatPanel`, a `transcribeAudio` Cloud Function
+    (onCall or onRequest), an OpenAI/Groq key as a Secret Manager secret. Needs Blaze (have it). Optional later: voice
+    OUTPUT (TTS) — also cheap. (Path A = browser Web Speech API: free but lower/inconsistent quality, flaky on iOS —
+    rejected for the premium feel.)
