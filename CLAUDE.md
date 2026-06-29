@@ -1689,6 +1689,30 @@ enabled (Blaze has no default spending cap).
   dropped the custom id on Accept (empty schedule, but "saved" shown). **When `aitools.js` changes, deploy ALL FOUR
   functions.** Frontend + backend both pushed/deployed. `npm run build` passes. No `firestore.rules` change. Model
   `claude-sonnet-4-6`.
+- Session 79: **Voice input for the AI chat — speak instead of type (Whisper; OpenAI now, Groq-ready). DEPLOYED & LIVE.**
+  A **🎤 mic button** in the chat composer records via the browser `MediaRecorder`, sends the audio to a new
+  **`transcribeAudio`** Cloud Function, and drops the transcribed text into the input for the user to review/send.
+  **`functions/transcribe.js`** (`transcribeAudio` onCall, secrets `OPENAI_API_KEY` + `GROQ_API_KEY`, auth required,
+  ~3-min/10MB-b64 size cap): **PROVIDER-AGNOSTIC** — OpenAI and Groq both expose an OpenAI-compatible
+  `/audio/transcriptions` multipart endpoint, so ONE code path serves both (only url/model/key differ). `VOICE_PRIMARY
+  = "openai"` (available now), `VOICE_FALLBACK = "groq"` (best-effort; Groq's PAID tier is currently gated by high
+  demand, so OpenAI is the day-one provider — flip `VOICE_PRIMARY` to "groq" when it reopens: cheaper + faster). Builds
+  the multipart `FormData`/`Blob` in Node 22 (global fetch/FormData/Blob) and returns `{text, provider}`. **Frontend
+  (`App.jsx` `AIChatPanel`):** `callTranscribe` callable; a mic button that toggles record/stop (picks a supported
+  mime via `MediaRecorder.isTypeSupported` — webm/mp4/ogg), `blobToBase64`, `recording`/`transcribing` states + a
+  pulsing red stop button, friendly errors (mic blocked / unsupported browser); on result `setDraft(prev + text)` so
+  the user reviews before sending; photo/send disabled while recording. New module helper `blobToBase64`. **Cost:**
+  ~$0.006/min (Whisper) — pennies; the transcribed text then runs through the normal **budgeted** chat, so the endpoint
+  itself just needs auth + the size cap. **Keys:** `OPENAI_API_KEY` + `GROQ_API_KEY` are Secret Manager secrets (Kevin
+  provided both; stored via `firebase functions:secrets:set`). **Deploy:** `firebase deploy --only
+  functions:transcribeAudio` (independent — doesn't share `aitools.js`). **Verified end-to-end:** a macOS `say`-generated
+  clip ("Hello, this is a Glide voice test, log my breakfast") → (1) direct `curl` to OpenAI Whisper transcribed it
+  exactly (key valid), (2) through the DEPLOYED `transcribeAudio` callable from the browser (real auth) → **HTTP 200,
+  exact text, provider "openai"** (validates the Node FormData→Whisper path + the provider abstraction); the mic button
+  renders in the composer. **Real mic capture is device-tested by Kevin** — the headless preview has no microphone, but
+  the recording path is standard `MediaRecorder` → the proven callable. `npm run build` passes. No `firestore.rules`
+  change. **Optional later:** voice OUTPUT (TTS — also cheap); a pro-plan gate (waits for Stripe); promote Groq to
+  primary when its paid tier reopens.
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a
@@ -1711,7 +1735,8 @@ enabled (Blaze has no default spending cap).
     `set_workout_schedule`/`propose_workout` accept the plan's custom ids (load them into the valid-id set by type).
     Small but touches several burn-calc sites — do (a)/(b) first (makes custom exercises actually work for everyone),
     then (c) is the easy AI bolt-on. Non-Blaze.
-  - **Voice input for the AI chat (S77 scoped — NEXT TASK, premium upcharge).** Speak instead of type. Claude has no
+  - ~~**Voice input for the AI chat**~~ **DONE — Session 79** (`transcribeAudio`, Whisper; OpenAI primary, Groq-ready).
+    _(Original scoping below.)_ Speak instead of type. Claude has no
     speech-to-text, so add a transcription step. **Path B chosen (Claude-app quality):** browser `MediaRecorder` →
     a new transcription Cloud Function → Whisper-class model → feed text into the existing chat. Cost is tiny
     (~$0.006/min OpenAI Whisper; Groq whisper-large-v3 similar/cheaper) → ~$1–2/mo even for heavy users → great margin
