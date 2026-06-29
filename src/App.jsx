@@ -9648,6 +9648,32 @@ function AIChatPanel({ role, onDataChanged }) {
   const [workout, setWorkout] = useState(null); // pending workout-program card {…, status}
   const scrollRef = useRef(null);
   const fileRef = useRef(null);
+  const loadedRef = useRef(false); // guards persistence until the saved thread loads
+
+  // Conversation persistence (Session 77): the chat thread is saved to the user's
+  // own account so it's still there when they reopen the panel. Stored TEXT-ONLY
+  // (photos' base64 is stripped — kept small) and capped to the last 20 messages.
+  // No effect on AI cost: the API payload is capped the same either way.
+  const CHAT_KEY = "caliq-ai-chat";
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await window.storage.get(CHAT_KEY);
+        const saved = r && r.value ? JSON.parse(r.value) : [];
+        if (Array.isArray(saved) && saved.length) setMessages(saved);
+      } catch { /* none saved yet */ }
+      loadedRef.current = true;
+    })();
+  }, []);
+  // Save when an exchange settles (busy=false) — not mid-stream. Skip until loaded
+  // so we never clobber the saved thread with the initial empty state.
+  useEffect(() => {
+    if (!loadedRef.current || busy) return;
+    try {
+      const slim = messages.slice(-20).map((m) => ({ role: m.role, content: m.content || "", hadImage: !!m.image }));
+      window.storage.set(CHAT_KEY, JSON.stringify(slim));
+    } catch { /* best-effort */ }
+  }, [busy, messages]);
 
   // Accept a proposed meal → save it directly (no extra AI call) via logMeal.
   const acceptMeal = async (meal) => {
@@ -9988,6 +10014,20 @@ function AIChatPanel({ role, onDataChanged }) {
 // "caliq-self"). This is their landing screen: the role panel (their trainer
 // link) plus a button to open/edit their plan in the normal editor. The plan a
 // trainer "links" to them is the very same caliq-self, so both edit one copy.
+// Rotating one-a-day coaching tips for the "AI coaching tips" nudge (Session 77).
+// Plain, on-brand fitness wisdom — picked by day so it changes daily, not naggy.
+const COACH_TIPS = [
+  "Protein first — aim for about 1g per pound of bodyweight to protect muscle.",
+  "Pair carbs with protein or fat to steady your energy and blunt blood-sugar spikes.",
+  "Day-old rice or potatoes, reheated, hit your blood sugar less than freshly cooked.",
+  "Consistency beats perfection — logging most days matters more than a perfect day.",
+  "Hydrate before meals; thirst often masquerades as hunger.",
+  "Basmati is a lower-GI rice choice if you're watching blood sugar.",
+  "A short walk after meals helps manage blood sugar and digestion.",
+  "Strength train to keep muscle while losing fat — it protects your metabolism.",
+  "Ask your AI coach to estimate a meal — just describe it or snap a photo.",
+];
+
 function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPrefs }) {
   // The client's plan lives in their own account as "caliq-self"; today's log is
   // "caliq-log-self-{date}". The client is always on their own account (no remote
@@ -10007,6 +10047,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
   // this inline toggle stay in sync.
   const np = notifPrefs || { master: true, trainerReminders: true };
   const remindersOn = np.master && np.trainerReminders;
+  const [nudgeDismiss, setNudgeDismiss] = useState({}); // session-only dismiss per nudge key
   // Multiple plans (Session 21): the client can hold several plans with one
   // active. Each plan's data/log/history is keyed by its id (default "self").
   const [plans, setPlans] = useState([{ id: "self", name: "Main plan", createdAt: 0 }]);
@@ -10418,6 +10459,47 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            {/* Notification nudges (Session 77) — gentle, gated by notifPrefs + a
+                session dismiss, and only shown when actually relevant. */}
+            {(() => {
+              const nudges = [];
+              const loggedToday = (Number(log.calories) || 0) > 0 || (Array.isArray(log.meals) && log.meals.length > 0);
+              const hour = new Date().getHours();
+              // Food-logging reminder — nothing logged yet and it's past midday.
+              if (np.master && np.foodReminders !== false && !nudgeDismiss.food && !loggedToday && hour >= 12) {
+                nudges.push({ key: "food", icon: "🍽️", text: "You haven't logged any food today.",
+                  cta: { label: "Log now", onClick: onOpenPlan } });
+              }
+              // Weigh-in reminder — no weigh-in in the last 7 days.
+              const weighIns = (planData.checkIns || []).filter((c) => c.weight && c.timestamp).sort((a, b) => b.timestamp - a.timestamp);
+              const daysSinceWeigh = weighIns.length ? Math.floor((Date.now() - weighIns[0].timestamp) / 86400000) : null;
+              if (np.master && np.weighInReminders !== false && !nudgeDismiss.weigh && (daysSinceWeigh === null || daysSinceWeigh >= 7)) {
+                nudges.push({ key: "weigh", icon: "⚖️",
+                  text: daysSinceWeigh === null ? "Log your first weigh-in to start tracking progress." : `It's been ${daysSinceWeigh} days since your last weigh-in.`,
+                  cta: { label: "Weigh in", onClick: () => setShowWt(true) } });
+              }
+              // AI coaching tip — one a day, rotating.
+              if (np.master && np.coachingNudges !== false && !nudgeDismiss.coach) {
+                const tip = COACH_TIPS[new Date().getDate() % COACH_TIPS.length];
+                nudges.push({ key: "coach", icon: "💡", text: tip });
+              }
+              if (!nudges.length) return null;
+              return (
+                <div className="flex flex-col gap-2">
+                  {nudges.map((n) => (
+                    <div key={n.key} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-surface2 border border-border">
+                      <span className="text-base shrink-0">{n.icon}</span>
+                      <span className="text-[.85rem] text-fg flex-1 min-w-0">{n.text}</span>
+                      {n.cta && (
+                        <button onClick={n.cta.onClick} className={`${miniBtnCls} shrink-0`}>{n.cta.label}</button>
+                      )}
+                      <button onClick={() => setNudgeDismiss((d) => ({ ...d, [n.key]: true }))} aria-label="Dismiss"
+                        className="shrink-0 border-0 bg-transparent text-muted cursor-pointer text-sm px-1">✕</button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             {/* Weight → goal HERO (Option 2: big number + stat tiles + progress bar) */}
             <div className={cardCls}>
               <div className="flex justify-between items-center gap-2 mb-1">
@@ -11111,9 +11193,17 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, noti
             One notification type today (trainer to-dos); more slot in as features
             are added. Backed by the shared notifPrefs (synced with inline toggles). */}
         {(() => {
-          const npf = notifPrefs || { master: true, trainerReminders: true, sentReminders: true };
-          const typeKey = isTrainer ? "sentReminders" : "trainerReminders";
-          const typeOn = npf.master && npf[typeKey];
+          const npf = notifPrefs || { master: true };
+          // Per-type rows are role-aware. Clients get the home nudge types;
+          // trainers get the sent-to-do display toggle.
+          const types = isTrainer
+            ? [{ key: "sentReminders", label: "Client to-do reminders", desc: "Sent to-dos shown on client cards" }]
+            : [
+                { key: "trainerReminders", label: "Trainer to-do reminders", desc: "To-dos your trainer sends you" },
+                { key: "foodReminders", label: "Food-logging reminders", desc: "Nudge when you haven't logged food" },
+                { key: "weighInReminders", label: "Weigh-in reminders", desc: "Nudge for a weekly weigh-in" },
+                { key: "coachingNudges", label: "AI coaching tips", desc: "Occasional tips from your AI coach" },
+              ];
           const Toggle = ({ on, disabled, onClick }) => (
             <button onClick={onClick} disabled={disabled} aria-pressed={on}
               style={{ width: 42, height: 24, borderRadius: 999, border: "none", flexShrink: 0,
@@ -11140,13 +11230,18 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, noti
                     </div>
                     <Toggle on={npf.master} onClick={() => onSetNotifPrefs({ master: !npf.master })} />
                   </div>
-                  <div style={row}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{isTrainer ? "Client to-do reminders" : "Trainer to-do reminders"}</div>
-                      <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>{isTrainer ? "Sent to-dos shown on client cards" : "To-dos your trainer sends you"}</div>
-                    </div>
-                    <Toggle on={typeOn} disabled={!npf.master} onClick={() => onSetNotifPrefs({ [typeKey]: !npf[typeKey] })} />
-                  </div>
+                  {types.map((ty) => {
+                    const val = npf[ty.key] !== false; // default on
+                    return (
+                      <div key={ty.key} style={row}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{ty.label}</div>
+                          <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>{ty.desc}</div>
+                        </div>
+                        <Toggle on={npf.master && val} disabled={!npf.master} onClick={() => onSetNotifPrefs({ [ty.key]: !val })} />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -11217,9 +11312,11 @@ export default function App() {
   // Notification preferences (Session 76) — a master on/off + per-type toggles,
   // in one doc (caliq-notif-prefs), surfaced in the side-menu Notification Center
   // AND the inline toggles (client home / trainer dashboard), so they stay in sync.
-  // Default everything ON; trainerReminders = the client's trainer to-do card,
-  // sentReminders = the trainer's sent-to-do display on connected-client cards.
-  const [notifPrefs, setNotifPrefs] = useState({ master: true, trainerReminders: true, sentReminders: true });
+  // Default everything ON. Types: trainerReminders = the client's trainer to-do
+  // card; sentReminders = the trainer's sent-to-do display; foodReminders /
+  // weighInReminders / coachingNudges = client home nudge cards (Session 77).
+  const [notifPrefs, setNotifPrefs] = useState({ master: true, trainerReminders: true, sentReminders: true,
+    foodReminders: true, weighInReminders: true, coachingNudges: true });
   // Merge a partial patch and persist. Components call with e.g. { master:false }.
   const onSetNotifPrefs = (patch) => {
     setNotifPrefs((prev) => {
