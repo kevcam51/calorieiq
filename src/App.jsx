@@ -242,7 +242,11 @@ body{
 .app{
   min-height:100vh;
   background:var(--bg);
-  padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));
+  /* Clear the fixed bottom nav (about 101px tall) at every width — the nav is
+     position fixed on all viewports, so the page always needs this gap or the
+     last controls sit behind it (the old desktop sticky-nav assumption is gone
+     since the nav was rebuilt with Tailwind fixed positioning). */
+  padding-bottom:calc(120px + env(safe-area-inset-bottom,0px));
 }
 
 /* ── Header — slim top bar (hamburger sits at the left; logo centered) ── */
@@ -1250,8 +1254,9 @@ body{
 
 /* ── Responsive desktop ── */
 @media(min-width:480px){
-  .bottom-nav{position:sticky;bottom:0;border-radius:0;border-top:1px solid var(--border)}
-  .app{padding-bottom:0}
+  /* NOTE: the bottom nav is position:fixed at all widths (Tailwind-rebuilt,
+     Session 30), so we keep the .app padding-bottom from the base rule here —
+     do NOT zero it, or the fixed nav covers the last controls on wider screens. */
   .dgrid{grid-template-columns:repeat(4,1fr)}
 }
 @media(min-width:640px){
