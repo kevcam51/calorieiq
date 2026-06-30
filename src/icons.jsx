@@ -33,6 +33,9 @@ const GLYPHS = {
   chart: (<><path d="M4 4v16h16" /><path d="m7 14 3.5-4 3 2.5L20 7" /></>),
   alert: (<><path d="M12 4 2.5 20.5h19z" /><path d="M12 10.5v4" /><path d="M12 17.4v.01" /></>),
   inbox: (<><path d="M3.5 13.5 6 6h12l2.5 7.5" /><path d="M3.5 13.5V18a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1v-4.5" /><path d="M3.5 13.5h4l1.5 2.5h6l1.5-2.5h4" /></>),
+  folder: (<path d="M4 6h4l1.6 2H19a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />),
+  meal: (<><path d="M6 3v4a2.5 2.5 0 0 0 5 0V3" /><path d="M8.5 9v12" /><path d="M17 3c-1.7.5-3 2.8-3 6.2 0 1.8 1 2.6 3 2.6" /><path d="M17 11.8V21" /></>),
+  clock: (<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>),
 };
 
 export function Icon({ name, size = 20, variant = "outline", color = "currentColor",

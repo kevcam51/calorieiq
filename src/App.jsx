@@ -10633,8 +10633,8 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
           <div className="mb-4">
             <button onClick={() => setShowPlans((s) => !s)}
               className="w-full flex justify-between items-center px-3.5 py-2.5 rounded-card border border-border bg-surface text-fg cursor-pointer">
-              <span className="font-semibold text-sm">
-                🗂️ {(plans.find((p) => p.id === activePlanId) || {}).name || "Main plan"}
+              <span className="font-semibold text-sm inline-flex items-center gap-1.5">
+                <Icon name="folder" size={15} color="var(--accent)" />{(plans.find((p) => p.id === activePlanId) || {}).name || "Main plan"}
                 {plans.length > 1 ? <span className="text-muted font-normal"> · {plans.length} plans</span> : ""}
               </span>
               <span className="text-muted">{showPlans ? "▴" : "▾"}</span>
@@ -10699,7 +10699,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
             <div className={`${cardCls} mb-4 border-primary`}
               style={{ background: "color-mix(in srgb, var(--color-primary) 6%, var(--color-surface))" }}>
               <div className="flex justify-between items-start gap-2 mb-0.5">
-                <div className="font-display text-base tracking-wide text-primary uppercase">📬 From your trainer</div>
+                <div className="font-display text-base tracking-wide text-primary uppercase flex items-center gap-2"><Icon name="inbox" size={18} color="var(--accent)" />From your trainer</div>
                 <button onClick={() => onSetNotifPrefs({ trainerReminders: false })} title="Hide trainer reminders"
                   className="border-0 bg-transparent text-muted cursor-pointer text-xs font-bold whitespace-nowrap">🔕 Hide</button>
               </div>
@@ -10784,7 +10784,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
             {/* Weight → goal HERO (Option 2: big number + stat tiles + progress bar) */}
             <div className={cardCls}>
               <div className="flex justify-between items-center gap-2 mb-1">
-                <div className="font-display text-base tracking-wide text-primary uppercase">🎯 Weight &amp; goal</div>
+                <div className="font-display text-base tracking-wide text-primary uppercase flex items-center gap-2"><Icon name="target" size={18} color="var(--accent)" />Weight &amp; goal</div>
                 <div className="flex gap-1.5">
                   <button className={miniBtnCls} onClick={() => setShowChart(true)} title="See your progress chart">📈 Progress</button>
                   <button className={showWt ? miniBtnActiveCls : miniBtnCls}
@@ -10851,7 +10851,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
 
             {/* Projected timeline from the actual logged trend */}
             <div className={cardCls}>
-              <div className="font-display text-base tracking-wide text-primary uppercase mb-2">⏳ Time to goal</div>
+              <div className="font-display text-base tracking-wide text-primary uppercase mb-2 flex items-center gap-2"><Icon name="clock" size={18} color="var(--accent)" />Time to goal</div>
               {!g ? (
                 <div className="text-muted text-sm">Set a goal weight to see your projected timeline.</div>
               ) : rate == null ? (
@@ -10894,7 +10894,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
 
             {/* Today's calories + quick-log */}
             <div className={cardCls}>
-              <div className="font-display text-base tracking-wide text-primary uppercase mb-2">🍽️ Today</div>
+              <div className="font-display text-base tracking-wide text-primary uppercase mb-2 flex items-center gap-2"><Icon name="meal" size={18} color="var(--accent)" />Today</div>
               {target != null ? (
                 <>
                   <div className="flex items-baseline gap-2 flex-wrap">
