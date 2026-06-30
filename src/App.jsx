@@ -8196,7 +8196,7 @@ CLIENT PROFILE:
         {!insights && (
           <button className="save-bar-btn" style={{flex:"0 0 auto",minHeight:"38px",padding:"0 16px",fontSize:".78rem",borderColor:"#b57bff",color:"#b57bff",background:"rgba(181,123,255,.06)"}}
             disabled={loading} onClick={generateInsights}>
-            {loading ? "Analyzing..." : "✨ Generate"}
+            {loading ? "Analyzing..." : <span style={{display:"inline-flex",alignItems:"center",gap:"6px"}}><Icon name="sparkle" variant="solid" size={14} color="#b57bff" />Generate</span>}
           </button>
         )}
       </div>
@@ -10049,7 +10049,7 @@ function AIChatPanel({ role, onDataChanged }) {
         <button onClick={() => setOpen(true)} aria-label="Open AI assistant"
           className="fixed z-[1000] flex items-center gap-2 rounded-full border-none bg-primary px-4 py-3 font-bold text-primaryfg shadow-lg cursor-pointer"
           style={{ right: "calc(16px + env(safe-area-inset-right,0px))", bottom: "calc(18px + env(safe-area-inset-bottom,0px))" }}>
-          <span className="text-[1.15rem]">✨</span>
+          <Icon name="sparkle" variant="solid" size={18} />
           <span className="text-[.9rem]">Ask Glide</span>
         </button>
       )}
@@ -10071,7 +10071,7 @@ function AIChatPanel({ role, onDataChanged }) {
           }}>
           {/* Header */}
           <div className="flex items-center gap-2 border-b border-border bg-surface2 px-4 py-3">
-            <span className="text-[1.15rem]">✨</span>
+            <Icon name="sparkle" variant="solid" size={18} color="var(--accent)" />
             <div className="flex flex-col leading-tight">
               <span className="font-display text-sm uppercase tracking-wide text-primary">Glide AI</span>
               <span className="text-[.68rem] text-muted">Nutrition &amp; fitness assistant</span>
