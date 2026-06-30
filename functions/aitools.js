@@ -86,6 +86,29 @@ async function kvSetJSON(db, uid, key, obj) {
 }
 function randId(p) { return `${p}${Date.now()}${Math.floor(Math.random() * 1000)}`; }
 
+// Normalize a clock time the user/AI gives for when a meal was eaten into a
+// canonical 24h "HH:MM" string (same format the frontend stores), so the AI can
+// later spot time-of-day trends. Accepts "8:30pm", "8pm", "20:30", "13:45", etc.
+// Falls back to the current local time (ctx.nowTime, America/New_York) when the
+// meal is being logged now with no stated time; "" if neither is available.
+function normMealTime(raw, ctx) {
+  const s = String(raw == null ? "" : raw).trim().toLowerCase();
+  if (s) {
+    const m = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+    if (m) {
+      let h = parseInt(m[1], 10);
+      const min = m[2] ? parseInt(m[2], 10) : 0;
+      const ap = m[3];
+      if (ap === "pm" && h < 12) h += 12;
+      if (ap === "am" && h === 12) h = 0;
+      if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
+        return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      }
+    }
+  }
+  return (ctx && ctx.nowTime) || "";
+}
+
 // ── plan resolution (mirrors the multi-plan manifest; default plan id "self"). ─
 async function activePlanId(db, uid) {
   const m = await kvGetJSON(db, uid, "caliq-plans");
@@ -389,6 +412,7 @@ function buildTools(role) {
           carbs: { type: "number", description: "Carb grams (0 if unknown)" },
           fat: { type: "number", description: "Fat grams (0 if unknown)" },
           date: { type: "string", description: "Date YYYY-MM-DD. Omit for today." },
+          time: { type: "string", description: "Clock time the meal was eaten, e.g. '8:30am' or '19:45'. Set it when the user mentions when they ate; omit to use now." },
           ...clientIdProp,
         },
         required: ["name", "mealType", "calories"],
@@ -411,6 +435,7 @@ function buildTools(role) {
           carbs: { type: "number", description: "Carb grams (0 if unknown)" },
           fat: { type: "number", description: "Fat grams (0 if unknown)" },
           date: { type: "string", description: "Date YYYY-MM-DD. Omit for today." },
+          time: { type: "string", description: "Clock time the meal was eaten, e.g. '8:30am' or '19:45'. Set it when the user mentions when they ate; omit to use now." },
           ...clientIdProp,
         },
         required: ["name", "mealType", "calories"],
@@ -818,6 +843,7 @@ async function runTool(name, input, ctx) {
       carbs: Math.max(0, Math.round(Number(input.carbs) || 0)),
       fat: Math.max(0, Math.round(Number(input.fat) || 0)),
       date: re.test(input.date || "") ? input.date : ctx.today,
+      time: normMealTime(input.time, ctx),
     };
     if (ctx.isTrainer && input.clientId) {
       const t = await resolveTargetUid(db, { clientId: input.clientId }, ctx);
@@ -870,6 +896,7 @@ async function runTool(name, input, ctx) {
       protein: Math.max(0, Math.round(Number(input.protein) || 0)),
       carbs: Math.max(0, Math.round(Number(input.carbs) || 0)),
       fat: Math.max(0, Math.round(Number(input.fat) || 0)),
+      time: normMealTime(input.time, ctx),
     };
     const { id: planId } = await activePlanData(db, uid);
     const logKey = `caliq-log-${planId}-${date}`;
@@ -1060,6 +1087,7 @@ async function runTool(name, input, ctx) {
         const meals = (Array.isArray(log.meals) ? log.meals : []).map((m) => ({
           name: m.name || "", type: m.type || "", calories: Number(m.calories) || 0,
           protein: Number(m.protein) || 0, carbs: Number(m.carbs) || 0, fat: Number(m.fat) || 0,
+          time: m.time || "", // local HH:MM the meal was eaten, when known — for time-of-day trends
         }));
         days.push({
           date,

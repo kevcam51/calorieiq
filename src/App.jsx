@@ -6016,6 +6016,9 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
             {"  "}({m.protein||0}p / {m.carbs||0}c / {m.fat||0}f)
           </span>
         ) : null}
+        {m.time ? (
+          <span style={{ color:"var(--muted)", fontSize:".72rem" }}>{"  · "}{fmtClock(m.time)}</span>
+        ) : null}
       </span>
       <span style={{ fontWeight:700, fontSize:".82rem" }}>{(m.calories||0).toLocaleString()} cal</span>
       <button onClick={() => openEdit(m)} title="Edit"
@@ -6390,6 +6393,18 @@ function ActivityFeed({ history, onRefresh }) {
 // "now → date key" computation so reads and writes agree on the local day.
 const ymdLocal = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Local clock time as 24h "HH:MM" — stamped on a meal when it's logged, so the
+// AI (and the user) can later see when meals were eaten for time-of-day trends.
+const hhmmLocal = (d = new Date()) =>
+  `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+// "HH:MM" (24h) → "h:mm AM/PM" for display; passes through anything unparseable.
+const fmtClock = (t) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || ""));
+  if (!m) return t || "";
+  let h = +m[1]; const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12;
+  return `${h}:${m[2]} ${ap}`;
+};
 
 // ─── Calendar view (Session 22) ──────────────────────────────────────────────
 // Month / week / day calendar over a plan's daily logs + check-ins. Each day
@@ -9766,6 +9781,7 @@ function AIChatPanel({ role, onDataChanged }) {
     try {
       const input = { name: p.name, mealType: p.mealType, calories: Number(p.calories) || 0,
         protein: Number(p.protein) || 0, carbs: Number(p.carbs) || 0, fat: Number(p.fat) || 0, date: p.date };
+      if (p.time) input.time = p.time;
       if (p.clientId) input.clientId = p.clientId;
       await callLogMeal(input);
       setEditDraft(null);
@@ -12143,7 +12159,8 @@ export default function App() {
   const onAddMeal = (meal) => {
     const m = { id:`m${Date.now()}${Math.floor(Math.random()*1000)}`,
       name: meal.name||"", type: meal.type||"", calories: Number(meal.calories)||0,
-      protein: Number(meal.protein)||0, carbs: Number(meal.carbs)||0, fat: Number(meal.fat)||0 };
+      protein: Number(meal.protein)||0, carbs: Number(meal.carbs)||0, fat: Number(meal.fat)||0,
+      time: meal.time || hhmmLocal() };
     upsertRecentFood(m);
     const updated = {
       ...dailyLog,

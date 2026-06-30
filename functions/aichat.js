@@ -90,6 +90,18 @@ function todayLocal() {
   }
 }
 
+// Current local clock time as 24h "HH:MM" (America/New_York) — passed into the
+// tool ctx as the default "when" stamped on a meal logged now (the AI omits the
+// time arg for "now"). Deliberately NOT injected into the cached system prompt:
+// a value that changes every minute would invalidate the prompt cache each call.
+function nowTimeLocal() {
+  try {
+    return new Date().toLocaleTimeString("en-GB", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false });
+  } catch (e) {
+    return new Date().toISOString().slice(11, 16);
+  }
+}
+
 // Allowed image media types + a base64 size cap (~7MB) for photo meal logging.
 const IMG_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_IMG_B64 = 7 * 1024 * 1024;
@@ -113,7 +125,6 @@ function sanitizeContent(content) {
   return blocks.length ? blocks : null;
 }
 
-// Keep only the last 10 exchanges (20 messages) to cap context cost (spec §6).
 // How many recent messages to re-send to the model. The whole window is
 // re-sent on every tool round, so this is the single biggest input-cost lever.
 // 10 messages = ~5 exchanges — plenty for meal corrections ("make it one egg")
@@ -143,6 +154,10 @@ function buildSystemPrompt(role, isTrainer) {
 Today's date is ${todayLocal()} (use it to resolve "today", "yesterday", "this week", etc.).
 
 Dates / calendar: you can log to PAST dates and review any date. When the user mentions a different day ("I ran yesterday", "I had this for lunch on Monday", "log my Saturday weigh-in"), resolve it to a YYYY-MM-DD date and pass it as the date argument to log_meal/propose_meal/log_workout/log_weigh_in — don't assume everything is today. To review or summarize history ("what did I eat last week?", "how was my Tuesday?"), use get_nutrition_log with the right start/end dates. Confirm the date if it's ambiguous.
+
+Meal times: each logged meal carries the clock time it was eaten (a "time" field like "19:45", when known). When the user tells you WHEN they ate ("had a snack around 9pm"), pass it as the time argument to log_meal/propose_meal; otherwise omit it and it defaults to now. get_nutrition_log returns these times, so you can spot time-of-day patterns (late-night snacking, skipped breakfasts) alongside day-of-week ones.
+
+Proactive coaching: when the user asks for advice or feedback (not just a quick log or a one-line fact) and their actual history would make the answer more specific, call get_nutrition_log for the recent week or two FIRST and tailor your guidance to the real patterns you see — meal timing, day-of-week habits, calorie/protein adherence, weight trend — instead of generic tips. Don't over-fetch for simple logging or quick questions; keep it brief.
 
 You have tools to read the user's real logged data — use them whenever a question depends on actual numbers (what they ate, their targets, client activity) rather than guessing. Call get_nutrition_targets to know the goals before judging whether a day was over/under. Don't expose internal ids to the user; refer to clients by name.
 
@@ -182,7 +197,7 @@ async function setupChat(uid) {
   return {
     role, isTrainer, budget, usageRef, used, system,
     tools: buildTools(role),
-    toolCtx: { callerUid: uid, role, isTrainer, today: todayLocal(), callerName },
+    toolCtx: { callerUid: uid, role, isTrainer, today: todayLocal(), nowTime: nowTimeLocal(), callerName },
   };
 }
 
@@ -374,7 +389,7 @@ exports.logMeal = onCall({ region: "us-central1", maxInstances: 10 }, async (req
   const callerName = profile.displayName
     || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
     || profile.email || (isTrainer ? "Coach" : "Client");
-  const ctx = { callerUid: uid, role, isTrainer, today: todayLocal(), callerName };
+  const ctx = { callerUid: uid, role, isTrainer, today: todayLocal(), nowTime: nowTimeLocal(), callerName };
   let out;
   try { out = await runTool("log_meal", request.data || {}, ctx); }
   catch (e) { console.error("logMeal error:", e && e.message); throw new HttpsError("internal", "Couldn't save the meal."); }
@@ -397,7 +412,7 @@ exports.setWorkoutSchedule = onCall({ region: "us-central1", maxInstances: 10 },
   const callerName = profile.displayName
     || [profile.firstName, profile.lastName].filter(Boolean).join(" ")
     || profile.email || (isTrainer ? "Coach" : "Client");
-  const ctx = { callerUid: uid, role, isTrainer, today: todayLocal(), callerName };
+  const ctx = { callerUid: uid, role, isTrainer, today: todayLocal(), nowTime: nowTimeLocal(), callerName };
   let out;
   try { out = await runTool("set_workout_schedule", request.data || {}, ctx); }
   catch (e) { console.error("setWorkoutSchedule error:", e && e.message); throw new HttpsError("internal", "Couldn't save the program."); }
