@@ -8956,24 +8956,25 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                         <span className="font-bold text-[.95rem]">{c.name}</span>
                         <span className="flex gap-2 items-center">
                           {reqsOn && openReqs.length > 0 && (
-                            <span className="text-[.68rem] font-bold text-primaryfg bg-primary rounded-[10px] px-2 py-0.5">
-                              📬 {openReqs.length} open
+                            <span className="text-[.68rem] font-bold text-primaryfg bg-primary rounded-[10px] px-2 py-0.5 inline-flex items-center gap-1">
+                              <Icon name="inbox" size={11} />{openReqs.length} open
                             </span>
                           )}
-                          <span className="text-[.7rem] text-primary font-bold">🔗 Shared</span>
+                          <span className="text-[.7rem] text-primary font-bold inline-flex items-center gap-1"><Icon name="link" size={12} />Shared</span>
                         </span>
                       </div>
                       {c.hasPlan ? (
                         <>
-                          <div className="text-[.95rem] text-fg font-semibold">
-                            ⚖️ {c.weight ? `${c.weight} lbs` : "—"}{c.goal ? ` → ${c.goal} lbs` : ""}
+                          <div className="text-[.95rem] text-fg font-semibold flex items-center gap-1.5">
+                            <Icon name="scale" size={15} color="var(--muted)" />
+                            <span>{c.weight ? `${c.weight} lbs` : "—"}{c.goal ? ` → ${c.goal} lbs` : ""}
                             {toGo !== null && toGo > 0
                               ? ` · ${toGo} lbs to go`
-                              : (toGo !== null && toGo <= 0 ? " · 🎯 at goal" : "")}
+                              : (toGo !== null && toGo <= 0 ? " · at goal" : "")}</span>
                           </div>
                           <div className="flex flex-wrap gap-3.5 text-sm text-muted mt-2">
-                            <span>🔥 {c.target != null ? `${c.target.toLocaleString()} cal/day` : "—"}</span>
-                            <span>🕑 {ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
+                            <span className="inline-flex items-center gap-1"><Icon name="flame" size={13} />{c.target != null ? `${c.target.toLocaleString()} cal/day` : "—"}</span>
+                            <span className="inline-flex items-center gap-1"><Icon name="clock" size={13} />{ds === null ? "no logs yet" : ds === 0 ? "active today" : ds === 1 ? "1 day ago" : `${ds} days ago`}</span>
                           </div>
                           <div className="text-[.72rem] text-primary mt-2">Tap to open plan →</div>
                         </>
@@ -12361,7 +12362,7 @@ export default function App() {
   const computedAvgBurn = Math.round(computedDayData.reduce((s,d)=>s+d.burned,0)/7);
 
   const LBLS = ["Personal","Goal Weight","Activity","Cardio","Strength","Results"];
-  const STEP_ICONS = ["👤","🎯","🏃","🔥","💪","📊"];
+  const STEP_ICONS = ["person", "target", "run", "flame", "dumbbell", "chart"];
 
   // Global navigation chrome (hamburger + slide-out menu), shown on every screen.
   const isTrainerHome = role === ROLES.HEAD_TRAINER || role === ROLES.SUB_TRAINER;
@@ -12463,7 +12464,7 @@ export default function App() {
             {step < LBLS.length - 1 && (
               <div className="flex justify-center gap-1 mb-2">
                 {LBLS.slice(0,-1).map((lbl,i)=>(
-                  <div key={lbl} className={`text-[.65rem] tracking-wide uppercase flex-1 text-center max-w-[80px] ${i===step?"text-primary font-bold":i<step?"text-primary opacity-45":"text-muted"}`}>{STEP_ICONS[i]}</div>
+                  <div key={lbl} className={`flex-1 flex justify-center max-w-[80px] ${i===step?"text-primary":i<step?"text-primary opacity-45":"text-muted"}`}><Icon name={STEP_ICONS[i]} size={20} /></div>
                 ))}
               </div>
             )}
