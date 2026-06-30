@@ -8917,7 +8917,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
       <div className="max-w-[640px] mx-auto px-4 pt-6 pb-28">
         {clients.length > 0 && (
           <div className={cardCls}>
-            <div className={sectionTitleCls}>🔗 Your Connected Clients</div>
+            <div className={`${sectionTitleCls} flex items-center gap-2`}><Icon name="link" size={19} color="var(--accent)" />Your Connected Clients</div>
             <div className={`${subCls} mt-1 mb-2`}>
               Live data from each client's shared plan. Tap a card to open it.
             </div>
@@ -8926,7 +8926,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
             <button onClick={() => onSetNotifPrefs(reqsOn ? { sentReminders: false } : { master: true, sentReminders: true })}
               title={reqsOn ? "Hide the to-do reminders on each client card" : "Show the to-do reminders on each client card"}
               className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold cursor-pointer border border-border bg-transparent text-muted hover:text-fg">
-              {reqsOn ? "🔔 To-do reminders: On" : "🔕 To-do reminders: Off"}
+              <Icon name="bell" size={14} />{reqsOn ? "To-do reminders: On" : "To-do reminders: Off"}
             </button>
             {clients.length > 1 && (
               <div className="flex gap-1.5 mb-3">
@@ -9030,14 +9030,14 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                       </div>
                     ) : (
                       <div className="flex gap-2 mt-2.5 flex-wrap">
-                        <button className={mPrimaryCls} onClick={() => { setComposingFor(composingFor === c.uid ? null : c.uid); setReqDraft(""); }}>
-                          ✉️ Send request
+                        <button className={`${mPrimaryCls} inline-flex items-center gap-1.5`} onClick={() => { setComposingFor(composingFor === c.uid ? null : c.uid); setReqDraft(""); }}>
+                          <Icon name="invite" size={14} />Send request
                         </button>
                         {c.hasPlan && (
                           <button className={mBtnCls} onClick={() => onOpenClientPlan && onOpenClientPlan(c.uid)}>Open plan</button>
                         )}
-                        <button className={mBtnCls} onClick={() => setPlansForClient(plansForClient === c.uid ? null : c.uid)}>
-                          🗂️ Plans{(c.plans && c.plans.length > 1) ? ` (${c.plans.length})` : ""}
+                        <button className={`${mBtnCls} inline-flex items-center gap-1.5`} onClick={() => setPlansForClient(plansForClient === c.uid ? null : c.uid)}>
+                          <Icon name="folder" size={14} color="var(--accent)" />Plans{(c.plans && c.plans.length > 1) ? ` (${c.plans.length})` : ""}
                         </button>
                         <button className={mBtnCls} onClick={() => setLinkingFor(c.uid)}>
                           {c.hasPlan ? "Re-link a different plan" : "Link a profile"}
@@ -9177,7 +9177,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
         )}
 
         <div className={cardCls}>
-          <div className={`${sectionTitleCls} whitespace-nowrap`}>📋 Local Plans</div>
+          <div className={`${sectionTitleCls} whitespace-nowrap flex items-center gap-2`}><Icon name="clipboard" size={18} color="var(--accent)" />Local Plans</div>
           <div className="flex gap-1.5 mt-2">
             <button onClick={onNewPlan} className={mPrimaryCls}>+ Plan</button>
             <button onClick={onNewSimulation}
