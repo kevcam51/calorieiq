@@ -10762,28 +10762,28 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
               const hour = new Date().getHours();
               // Food-logging reminder — nothing logged yet and it's past midday.
               if (np.master && np.foodReminders !== false && !nudgeDismiss.food && !loggedToday && hour >= 12) {
-                nudges.push({ key: "food", icon: "🍽️", text: "You haven't logged any food today.",
+                nudges.push({ key: "food", icon: "meal", text: "You haven't logged any food today.",
                   cta: { label: "Log now", onClick: onOpenPlan } });
               }
               // Weigh-in reminder — no weigh-in in the last 7 days.
               const weighIns = (planData.checkIns || []).filter((c) => c.weight && c.timestamp).sort((a, b) => b.timestamp - a.timestamp);
               const daysSinceWeigh = weighIns.length ? Math.floor((Date.now() - weighIns[0].timestamp) / 86400000) : null;
               if (np.master && np.weighInReminders !== false && !nudgeDismiss.weigh && (daysSinceWeigh === null || daysSinceWeigh >= 7)) {
-                nudges.push({ key: "weigh", icon: "⚖️",
+                nudges.push({ key: "weigh", icon: "scale",
                   text: daysSinceWeigh === null ? "Log your first weigh-in to start tracking progress." : `It's been ${daysSinceWeigh} days since your last weigh-in.`,
                   cta: { label: "Weigh in", onClick: () => setShowWt(true) } });
               }
               // AI coaching tip — one a day, rotating.
               if (np.master && np.coachingNudges !== false && !nudgeDismiss.coach) {
                 const tip = COACH_TIPS[new Date().getDate() % COACH_TIPS.length];
-                nudges.push({ key: "coach", icon: "💡", text: tip });
+                nudges.push({ key: "coach", icon: "bulb", text: tip });
               }
               if (!nudges.length) return null;
               return (
                 <div className="flex flex-col gap-2">
                   {nudges.map((n) => (
                     <div key={n.key} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-surface2 border border-border">
-                      <span className="text-base shrink-0">{n.icon}</span>
+                      <Icon name={n.icon} size={18} color="var(--accent)" className="shrink-0" />
                       <span className="text-[.85rem] text-fg flex-1 min-w-0">{n.text}</span>
                       {n.cta && (
                         <button onClick={n.cta.onClick} className={`${miniBtnCls} shrink-0`}>{n.cta.label}</button>
@@ -10800,7 +10800,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
               <div className="flex justify-between items-center gap-2 mb-1">
                 <div className="font-display text-base tracking-wide text-primary uppercase flex items-center gap-2"><Icon name="target" size={18} color="var(--accent)" />Weight &amp; goal</div>
                 <div className="flex gap-1.5">
-                  <button className={miniBtnCls} onClick={() => setShowChart(true)} title="See your progress chart">📈 Progress</button>
+                  <button className={miniBtnCls} onClick={() => setShowChart(true)} title="See your progress chart"><span className="inline-flex items-center gap-1"><Icon name="chart" size={13} />Progress</span></button>
                   <button className={showWt ? miniBtnActiveCls : miniBtnCls}
                     onClick={() => setShowWt(s => !s)} title="Log today's weight">
                     {showWt ? "Close" : "✎ Log"}
