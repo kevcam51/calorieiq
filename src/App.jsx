@@ -10124,17 +10124,21 @@ function AIChatPanel({ role, onDataChanged }) {
             // clearly minimizable and the Expand button has an obvious purpose.
             height: "min(620px, 68vh)",
           }}>
-          {/* Header */}
-          <div className="flex items-center gap-2 border-b border-border bg-surface2 px-4 py-3">
-            <Icon name="sparkle" variant="solid" size={18} color="var(--accent)" />
-            <div className="flex flex-col leading-tight">
-              <span className="font-display text-sm uppercase tracking-wide text-primary">Glide AI</span>
-              <span className="text-[.68rem] text-muted">Nutrition &amp; fitness assistant</span>
+          {/* Header — symmetric 3 columns (icon | centered title | controls) so
+              the title/subtitle sit in the middle of the bar. Sides are equal width. */}
+          <div className="flex items-center border-b border-border bg-surface2 px-3 py-3">
+            <div className="flex w-[72px] shrink-0 items-center">
+              <Icon name="sparkle" variant="solid" size={18} color="var(--accent)" />
             </div>
+            <div className="flex flex-1 min-w-0 flex-col items-center text-center leading-tight">
+              <span className="font-display text-sm uppercase tracking-wide text-primary">Glide AI</span>
+              <span className="max-w-full truncate text-[.68rem] text-muted">Nutrition &amp; fitness assistant</span>
+            </div>
+            <div className="flex w-[72px] shrink-0 items-center justify-end gap-2">
             <button onClick={() => setSize(size === "full" ? "compact" : "full")}
               aria-label={size === "full" ? "Shrink to corner" : "Expand to full screen"}
               title={size === "full" ? "Shrink" : "Expand"}
-              className="ml-auto rounded-lg border border-border bg-surface px-2 py-1.5 text-primary cursor-pointer hover:bg-surface2">
+              className="rounded-lg border border-border bg-surface px-2 py-1.5 text-primary cursor-pointer hover:bg-surface2">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
                 {size === "full"
                   ? <><path d="M9 3H5a2 2 0 0 0-2 2v4" /><path d="M15 3h4a2 2 0 0 1 2 2v4" /><path d="M9 21H5a2 2 0 0 1-2-2v-4" /><path d="M15 21h4a2 2 0 0 0 2-2v-4" /></>
@@ -10143,6 +10147,7 @@ function AIChatPanel({ role, onDataChanged }) {
             </button>
             <button onClick={() => setOpen(false)} aria-label="Close"
               className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-lg leading-none text-fg cursor-pointer hover:bg-surface2">✕</button>
+            </div>
           </div>
 
           {/* Message thread */}
