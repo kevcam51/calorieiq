@@ -8246,11 +8246,19 @@ function getInviteFromUrl() {
   try { return (new URLSearchParams(window.location.search).get("invite") || "").trim(); }
   catch { return ""; }
 }
-// Remove ?invite= from the URL without reloading, so it can't re-fire.
+// Read the inviter's name (?n=Kevin), carried through the personalized invite
+// landing (/i/CODE?n=…) so we can greet the new client by who invited them.
+function getInviteNameFromUrl() {
+  try { return (new URLSearchParams(window.location.search).get("n") || "").trim(); }
+  catch { return ""; }
+}
+// Remove ?invite= (and the ?n= inviter name) from the URL without reloading, so
+// they can't re-fire on refresh.
 function clearInviteFromUrl() {
   try {
     const url = new URL(window.location.href);
     url.searchParams.delete("invite");
+    url.searchParams.delete("n");
     window.history.replaceState({}, "", url.toString());
   } catch { /* ignore */ }
 }
@@ -11468,7 +11476,12 @@ function SideMenu({ open, onClose, role, meName, meEmail, isTrainer, trial, noti
     finally { setBusy(false); }
   };
   const go = (fn) => { onClose(); if (fn) fn(); };
-  const shareLink = invite ? `${window.location.origin}/?invite=${invite}` : "";
+  // Personalized invite link: /i/CODE?n=FirstName. The /i/ landing (api/invite.js)
+  // serves a "{Name} invited you to Glide" share card, then redirects into the app.
+  const inviterFirst = (meName || "").trim().split(/\s+/)[0] || "";
+  const shareLink = invite
+    ? `${window.location.origin}/i/${invite}${inviterFirst ? `?n=${encodeURIComponent(inviterFirst)}` : ""}`
+    : "";
   const copy = async (which, text) => { try { await navigator.clipboard.writeText(text); setCopied(which); setTimeout(() => setCopied(""), 1500); } catch { /* ignore */ } };
 
   const item = { display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",

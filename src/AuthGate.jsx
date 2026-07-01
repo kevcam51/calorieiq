@@ -54,6 +54,12 @@ export default function AuthGate({ children }) {
     try { return (new URLSearchParams(window.location.search).get("invite") || "").trim(); }
     catch { return ""; }
   })();
+  // The inviter's first name, carried through the personalized invite link
+  // (/i/CODE?n=Kevin), so we can greet the new client by who invited them.
+  const inviterName = (() => {
+    try { return (new URLSearchParams(window.location.search).get("n") || "").trim().slice(0, 40); }
+    catch { return ""; }
+  })();
   // profile-completion gate: every signed-in user must have a users/{uid} profile
   const [profileChecked, setProfileChecked] = useState(false);
   const [needsProfile, setNeedsProfile] = useState(false);
@@ -174,8 +180,10 @@ export default function AuthGate({ children }) {
 
         {inviteParam && (
           <div style={S.notice}>
-            You've been invited by a trainer. Sign up (or sign in) as a client and
-            you'll be linked automatically.
+            {inviterName
+              ? `${inviterName} invited you to Glide. `
+              : "You've been invited by a trainer. "}
+            Sign up (or sign in) as a client and you'll be linked automatically.
           </div>
         )}
 

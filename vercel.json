@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/i/:code", "destination": "/api/invite?c=:code" }
+  ],
+  "functions": {
+    "api/og.js": {
+      "includeFiles": "api/_fonts/**"
+    }
+  }
+}

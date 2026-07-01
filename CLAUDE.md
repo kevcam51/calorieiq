@@ -1726,6 +1726,27 @@ enabled (Blaze has no default spending cap).
   the recording path is standard `MediaRecorder` → the proven callable. `npm run build` passes. No `firestore.rules`
   change. **Optional later:** voice OUTPUT (TTS — also cheap); a pro-plan gate (waits for Stripe); promote Groq to
   primary when its paid tier reopens.
+- Session 80: **Custom icon system + OG share-card foundation + Paste-from-AI import.** (Details live in
+  `Glide-Session-Handoff-NEXT.md` history + `docs/AI-INTEROP-VISION.md`.) Highlights: new `src/icons.jsx`
+  (`<Icon>` cyan line-icon family) swept across the app; static OG card `public/og.png` (`npm run gen:og` via
+  `scripts/gen-og.mjs` + resvg + Sora) + og/twitter meta in `index.html`; Paste-from-AI import box in the chat.
+- Session 81: **Personalized "[Name] invited you" share card (Option B) — builds on the S80 OG foundation.**
+  Trainer invite links are now **`…/i/CODE?n=FirstName`** (was `…/?invite=CODE`; old links still work), built in
+  the side-menu invite section from `meName`. Two NEW Vercel serverless functions (the repo's first `api/` +
+  first `vercel.json`): **`api/invite.js`** serves HTML whose OG/Twitter meta say "**{Name} invited you to
+  Glide**" with `og:image` → `/api/og?n={Name}`, then redirects real browsers to `/?invite=CODE&n=Name`
+  (crawlers read the meta; humans bounce into the app; name HTML-escaped, code sanitized — XSS-tested);
+  **`api/og.js`** renders the personalized 1200×630 PNG (resvg + Sora, like `gen-og.mjs`) and **302s to the
+  static `/og.png` on ANY error** (can only improve the unfurl, never break it). `vercel.json` rewrites
+  `/i/:code → /api/invite` + `includeFiles` for `api/_fonts/` (Sora 700/400 copied there); `@resvg/resvg-js`
+  moved to `dependencies` (function runtime). In-app: `AuthGate` notice + `App.jsx` `?n=` reader/cleaner greet
+  the invitee by the inviter's name. **Verified locally** (build passes; both handlers tested in Node — valid
+  PNG, correct meta, XSS sanitization; preview shows the personalized notice; no console errors). **The
+  Vercel-runtime bits (resvg on Vercel, the rewrite, font bundling) are only confirmable post-deploy** — test
+  the unfurl at opengraph.xyz/Slack after the push; static fallback covers the worst case. No `firestore.rules`
+  change. Also wrote **`docs/VIDEO-LINK-INGEST.md`** answering Kevin's question about ingesting Instagram/
+  YouTube/video links to improve a program (feasible; YouTube auto-fetch + universal paste-the-caption fallback,
+  reusing the existing AI tools; deep video/vision is a later premium tier).
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a

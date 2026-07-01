@@ -12,6 +12,7 @@
     "test:rules": "firebase emulators:exec --only firestore --project calorieiq-rules-test \"node firestore.rules.test.js\""
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "firebase": "^12.14.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
@@ -20,7 +21,6 @@
     "@eslint/js": "^10.0.1",
     "@firebase/rules-unit-testing": "^5.0.1",
     "@fontsource/sora": "^5.2.8",
-    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

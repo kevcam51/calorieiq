@@ -1,24 +1,41 @@
 # Glide — Next-Session Handoff (start here)
 
-_Updated end of **Session 80** (custom icon system + Paste-from-AI import). Read this first, then
-`CLAUDE.md` (standing context) and `docs/AI-INTEROP-VISION.md` (the "works with your AI" plan).
-Everything below is pushed to `main` and live unless noted. Firebase project `calorieiq-29762`;
+_Updated end of **Session 81** (personalized "[Name] invited you" share card — Option B). Read this
+first, then `CLAUDE.md` (standing context) and `docs/AI-INTEROP-VISION.md` (the "works with your AI"
+plan). Everything below is pushed to `main` and live unless noted. Firebase project `calorieiq-29762`;
 prod URL `calorieiq-jet.vercel.app`._
 
 ---
 
 ## ⏭️ DO FIRST
 
-- **Next feature (Kevin's chosen order):** ~~Paste-from-AI import (DONE)~~ → **Option B: personalized
-  invite card** (build on the OG-card foundation + a small Vercel image function + name filter) →
-  **Option C: in-app/email invites + referral** → **calendar back-dating**.
-- Everything from S80 is deployed/live (including the paste-import backend prompt tweak — deployed
-  after reauth at end of session). Firebase CLI reauthed + updated to 15.22.4. Nothing pending.
-- **Late S80 addition (post-handoff-write):** request-template icons now custom (meal/scale/dumbbell/
-  edit) across "From your trainer" + the trainer request composer; plus tip bulb, sim flasks, Client
-  Profiles/folders, Nudge, Search food, Get started, hide-reminder bell-off. Remaining emoji are the
-  intentional carve-outs (dropdown/data emoji, mood faces, ⭐ marker, playful 👋🎉🙌, ✓✕ symbols) +
-  the Results-tab emoji the parallel agent owns — **worth a quick check that Results tabs finished.**
+- **Verify the S81 invite-card unfurl in prod (Vercel-function work — only confirmable live).** Copy a
+  trainer's invite link (≡ menu → Invite clients → Copy invite link → now `…/i/CODE?n=First`) and paste
+  it into https://www.opengraph.xyz (or Slack/iMessage): expect a "**[Name] invited you to Glide**"
+  card. Crawlers cache — cache-bust with a fresh `?n=`. The functions **fall back to the static
+  `/og.png`** on any render error, so worst case is the old generic card (never broken). If the image
+  500s, confirm `api/_fonts/` shipped + `@resvg/resvg-js` installed on Vercel.
+- **Next feature (Kevin's chosen order):** ~~Paste-from-AI import~~ → ~~Option B: personalized invite
+  card (DONE, S81)~~ → **Option C: in-app/email invites + referral** → **calendar back-dating**.
+- **On the table (Kevin's S81 question):** ingest an **Instagram/YouTube/video link** to improve or
+  complement a program. Feasibility + phased plan written up in **`docs/VIDEO-LINK-INGEST.md`**.
+
+## What shipped in Session 81 (Option B — personalized invite share card)
+
+- **Trainer invite links are now `…/i/CODE?n=FirstName`** (was `…/?invite=CODE`), built in the side
+  menu from `meName`. Old `?invite=` links still work (backward compatible).
+- **`api/invite.js`** (NEW Vercel fn) — serves HTML whose OG/Twitter meta say "**{Name} invited you to
+  Glide**", `og:image` → `/api/og?n={Name}`, then redirects real browsers to `/?invite=CODE&n=Name`.
+  Crawlers (no JS) read the meta; humans bounce into the app. Name HTML-escaped, code sanitized (XSS-tested).
+- **`api/og.js`** (NEW) — renders the personalized 1200×630 PNG (resvg + Sora, like `gen-og.mjs`). **On
+  ANY failure it 302s to the static `/og.png`** — can only improve the unfurl, never break it.
+- **`vercel.json`** (NEW, first in repo) — rewrite `/i/:code → /api/invite?c=:code` + `includeFiles`
+  for `api/_fonts/` (Sora 700/400). Additive; doesn't touch the Vite build.
+- **`@resvg/resvg-js` → `dependencies`** (needed at function runtime). `AuthGate` notice + `App.jsx`
+  `?n=` reader greet the invitee by the inviter's name.
+- **Verified locally:** build passes; both handlers tested in Node (valid PNG + correct meta + XSS
+  sanitization); preview shows the personalized notice; no console errors. Vercel-runtime bits only
+  confirmable post-deploy (see DO FIRST).
 
 ## What shipped in Session 80 (all live)
 
