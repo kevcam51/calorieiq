@@ -9,14 +9,16 @@ prod URL `calorieiq-jet.vercel.app`._
 
 ## ⏭️ DO FIRST
 
-1. **Deploy the pending backend prompt tweak.** `functions/aichat.js` has an uncommitted-to-prod
-   change (the paste-import bullet) — it's committed to git but NOT deployed (Firebase token expired
-   mid-session). Kevin must run `firebase login --reauth --no-localhost`, then:
-   `firebase deploy --only functions:aiChat,functions:aiChatStream --project calorieiq-29762`.
-   (The paste-import feature already WORKS without it — the frontend import message drives the AI —
-   this deploy just sharpens multi-item handling.)
-2. **Next feature (Kevin's chosen order):** ~~Paste-from-AI import (DONE)~~ → **Option B: personalized
-   invite card** → **Option C: in-app/email invites + referral** → **calendar back-dating**.
+- **Next feature (Kevin's chosen order):** ~~Paste-from-AI import (DONE)~~ → **Option B: personalized
+  invite card** (build on the OG-card foundation + a small Vercel image function + name filter) →
+  **Option C: in-app/email invites + referral** → **calendar back-dating**.
+- Everything from S80 is deployed/live (including the paste-import backend prompt tweak — deployed
+  after reauth at end of session). Firebase CLI reauthed + updated to 15.22.4. Nothing pending.
+- **Late S80 addition (post-handoff-write):** request-template icons now custom (meal/scale/dumbbell/
+  edit) across "From your trainer" + the trainer request composer; plus tip bulb, sim flasks, Client
+  Profiles/folders, Nudge, Search food, Get started, hide-reminder bell-off. Remaining emoji are the
+  intentional carve-outs (dropdown/data emoji, mood faces, ⭐ marker, playful 👋🎉🙌, ✓✕ symbols) +
+  the Results-tab emoji the parallel agent owns — **worth a quick check that Results tabs finished.**
 
 ## What shipped in Session 80 (all live)
 
