@@ -6472,6 +6472,8 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
   const [dayLog, setDayLog] = useState(null);             // selected day's log
   const [dayCals, setDayCals] = useState({});             // date -> logged calories (month view tinting)
   const [dayProt, setDayProt] = useState({});             // date -> logged protein g (week macro adherence)
+  const [calQuick, setCalQuick] = useState("");           // quick calorie entry (type a number)
+  const [calQuickType, setCalQuickType] = useState("");   // optional meal type for the typed amount
 
   // Daily calorie target — same formula the dashboard/Results use, for adherence tinting.
   const calTarget = (computeClientCalories(data) || {}).target || null;
@@ -6788,6 +6790,15 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
     const cals = dayLog ? (dayLog.calories || 0) : 0;
     const target = tdee ? Math.round(tdee) : null;
     const goStep = (n) => { const p = parseKey(sel); setSel(keyOf(p.y, p.m, p.d + n)); };
+    // Quick typed calories: Add (tagged to a meal type if chosen → a meal entry,
+    // else just the day's total) or Remove (reduce the day's total).
+    const applyQuick = (sign) => {
+      const v = Math.round(Number(calQuick));
+      if (!v || v <= 0) { setCalQuick(""); return; }
+      if (sign > 0 && calQuickType) addMeal({ type: calQuickType, calories: v });
+      else addCal(sign * v);
+      setCalQuick("");
+    };
     const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, marginBottom: 12 };
     const lbl = { fontFamily: "'Sora',sans-serif", fontSize: "1.1rem", letterSpacing: 1.5, color: "var(--accent)", marginBottom: 10 };
     const quick = { padding: "6px 10px", fontSize: ".78rem", fontWeight: 700, borderRadius: 7, cursor: "pointer", border: "1px solid var(--border)", background: "var(--s2)", color: "var(--text)" };
@@ -6820,8 +6831,30 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
             {cals.toLocaleString()}{target ? <span style={{ fontSize: ".9rem", color: "var(--muted)", fontWeight: 400 }}> / {target.toLocaleString()} cal</span> : " cal"}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-            {[100, 250, 500].map((n) => <button key={n} style={quick} onClick={() => addCal(n)}>+{n}</button>)}
+            {[100, 250, 500].map((n) => <button key={"p" + n} style={quick} onClick={() => addCal(n)}>+{n}</button>)}
+            {[100, 250, 500].map((n) => <button key={"m" + n} style={quick} onClick={() => addCal(-n)}>−{n}</button>)}
             <button style={quick} onClick={() => addCal(-(dayLog?.calories || 0))}>Clear</button>
+          </div>
+          {/* Type an amount — fast entry: optionally tag a meal type, then Add
+              (a meal entry, or just the day's calories) or Remove from the total. */}
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {[["", "Just calories"], ["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"], ["snack", "Snack"]].map(([v, l]) => (
+                <button key={v || "none"} onClick={() => setCalQuickType(v)}
+                  style={{ padding: "5px 10px", fontSize: ".72rem", fontWeight: 700, borderRadius: 999, cursor: "pointer",
+                    border: `1px solid ${calQuickType === v ? "var(--accent)" : "var(--border)"}`,
+                    background: calQuickType === v ? "var(--accent)" : "transparent",
+                    color: calQuickType === v ? "#0b0b12" : "var(--muted)" }}>{l}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input type="number" inputMode="numeric" placeholder="Type calories" value={calQuick}
+                onChange={(e) => setCalQuick(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") applyQuick(1); }}
+                style={{ flex: 1, minWidth: 0, padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--s2)", color: "var(--text)", fontSize: ".9rem" }} />
+              <button onClick={() => applyQuick(-1)} style={{ ...quick, padding: "9px 12px" }}>− Remove</button>
+              <button onClick={() => applyQuick(1)} style={{ padding: "9px 14px", fontSize: ".82rem", fontWeight: 800, borderRadius: 8, cursor: "pointer", border: "none", background: "var(--accent)", color: "#0b0b12" }}>+ Add</button>
+            </div>
           </div>
           <div style={{ marginTop: 12 }}>
             <MealLog meals={(dayLog && dayLog.meals) || []} onAddMeal={addMeal} onRemoveMeal={removeMeal} onEditMeal={editMeal} recentFoods={recentFoods} />
