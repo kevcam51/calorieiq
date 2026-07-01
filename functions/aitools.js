@@ -23,6 +23,110 @@ const EX_LABEL = {};
 for (const e of CARDIO) EX_LABEL[e.id] = e.label;
 for (const e of STRENGTH) EX_LABEL[e.id] = e.label;
 
+// ── fetch_link: read a shared URL's text (title + description/caption) ─────────
+// Lets the AI turn a workout/recipe LINK into program changes. We only extract
+// meta/description text (what any link-preview crawler reads) — never return raw
+// page bodies — and cap size/time. The workout is almost always in the caption,
+// so text is enough; we don't download or "watch" the video.
+const HTML_ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", apos: "'", nbsp: " " };
+function decodeEntities(s) {
+  return String(s || "")
+    .replace(/&(#\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);/g, (m, e) => {
+      if (e[0] === "#") {
+        const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+      }
+      return Object.prototype.hasOwnProperty.call(HTML_ENTITIES, e) ? HTML_ENTITIES[e] : m;
+    })
+    .replace(/\\u[0-9a-fA-F]{4}/g, (m) => String.fromCharCode(parseInt(m.slice(2), 16))) // JSON \uXXXX (YouTube shortDescription)
+    .replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\//g, "/");
+}
+// Pull a <meta property|name="key" content="..."> value (either attribute order).
+function metaContent(html, key) {
+  const k = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${k}["'][^>]*\\bcontent=["']([^"']*)["']`, "i"));
+  if (m) return decodeEntities(m[1]).trim();
+  m = html.match(new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${k}["']`, "i"));
+  return m ? decodeEntities(m[1]).trim() : "";
+}
+// Reject links that could point at internal/cloud-metadata hosts (SSRF).
+function isBlockedHost(host) {
+  const h = (host || "").toLowerCase();
+  if (!h || !h.includes(".")) return true;                 // no TLD (e.g. "localhost", bare hostnames)
+  if (h === "metadata.google.internal" || h.endsWith(".internal") || h.endsWith(".local")) return true;
+  if (/^(127\.|10\.|0\.|169\.254\.|192\.168\.)/.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+  if (/^\[?::1\]?$/.test(h) || h.startsWith("fd") || h.startsWith("fe80")) return true; // IPv6 loopback/private
+  return false;
+}
+async function fetchLinkMeta(rawUrl) {
+  let u;
+  try { u = new URL(String(rawUrl).trim()); } catch { return { error: "That doesn't look like a valid link." }; }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return { error: "Only http/https links are supported." };
+  if (isBlockedHost(u.hostname)) return { error: "That link can't be fetched." };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  let res;
+  try {
+    res = await fetch(u.toString(), {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        // A normal browser UA — most broadly accepted for articles/blogs/YouTube.
+        // (Social platforms block server fetches regardless, so we lean on the
+        // paste-the-caption fallback for those.)
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
+        "Accept-Language": "en",
+      },
+    });
+  } catch (e) {
+    clearTimeout(timer);
+    return { error: "Couldn't open that link.", hint: "Ask the user to paste the caption or description text and work from that." };
+  }
+  try {
+    if (!res.ok) {
+      return { error: `That link couldn't be opened (the site returned ${res.status}).`,
+        hint: "Some sites block apps from reading them — ask the user to paste the caption/description text." };
+    }
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const clen = parseInt(res.headers.get("content-length") || "0", 10);
+    if (clen && clen > 4 * 1024 * 1024) return { error: "That page is too large to read.", hint: "Ask the user to paste the caption/description." };
+    if (ct && !/(text\/html|xml|text\/plain|json)/.test(ct)) {
+      return { error: "That link isn't a readable page (it may be a file or image).", hint: "Ask the user to paste the caption/description text." };
+    }
+    const buf = Buffer.from(await res.arrayBuffer()).subarray(0, 1024 * 1024); // cap at 1MB
+    const html = buf.toString("utf8");
+
+    let title = metaContent(html, "og:title") || metaContent(html, "twitter:title");
+    if (!title) { const t = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i); if (t) title = decodeEntities(t[1]).trim(); }
+    let description = metaContent(html, "og:description") || metaContent(html, "twitter:description") || metaContent(html, "description");
+    const siteName = metaContent(html, "og:site_name") || u.hostname.replace(/^www\./, "");
+
+    // Best-effort: YouTube's full description lives in a JSON "shortDescription"
+    // field on the watch page (og:description is only a truncated snippet). Prefer
+    // it when it's longer — that's where the actual workout/recipe usually is.
+    const sd = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+    if (sd) { const full = decodeEntities(sd[1]).trim(); if (full.length > description.length) description = full; }
+
+    title = (title || "").slice(0, 300);
+    description = (description || "").slice(0, 4000);
+    if (!title && !description) {
+      return { url: u.toString(), siteName, error: "That page didn't expose any readable text.",
+        hint: "Some sites (often Instagram/TikTok) hide it from apps — ask the user to paste the caption/description text." };
+    }
+    return {
+      url: u.toString(), siteName, title, description,
+      note: "This is the link's public title + description/caption. Extract any exercises, workouts, or foods from it and offer to add them with the normal tools. If it's thin or clearly incomplete, ask the user to paste the full caption.",
+    };
+  } catch (e) {
+    return { error: "Couldn't read that link.", hint: "Ask the user to paste the caption or description text." };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Build one validated week ({day:[{type,duration}]}) from a provided day-keyed
 // object — drops unknown ids (collected in `dropped`). Shared by the
 // set_workout_schedule write and the propose_workout card. replace=true sets the
@@ -550,6 +654,23 @@ function buildTools(role) {
         },
       },
     },
+    {
+      name: "fetch_link",
+      description:
+        "Read a web/video LINK the user shares (a YouTube/Instagram/TikTok workout or recipe, a blog, an article) and get "
+        + "its text — title + description/caption — so you can turn it into program changes. Use this whenever the user "
+        + "pastes a URL and wants you to use its content (e.g. 'add the exercises from this video', 'log this recipe'). "
+        + "After reading it, extract the exercises/meals and offer to add them with the normal tools (propose_workout / "
+        + "add_custom_exercise / propose_meal). Note: for some platforms (especially Instagram/TikTok) the caption may not "
+        + "be fetchable — if this returns little or an error, ask the user to paste the caption/description text instead.",
+      input_schema: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "The full http(s) link the user shared." },
+        },
+        required: ["url"],
+      },
+    },
   ];
 
   if (isTrainer) {
@@ -616,6 +737,11 @@ async function runTool(name, input, ctx) {
     for (const e of STRENGTH) { (byCat[e.cat] = byCat[e.cat] || []).push({ id: e.id, label: e.label }); }
     return { days: DAYS, cardio: CARDIO, strength: byCat,
       note: "Use these EXACT ids in set_workout_schedule (type field). duration is in minutes." };
+  }
+
+  if (name === "fetch_link") {
+    // Read a shared URL's text (no account target needed). All guards in the helper.
+    return await fetchLinkMeta(input.url);
   }
 
   if (name === "list_clients") {

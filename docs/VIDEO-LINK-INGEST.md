@@ -43,13 +43,18 @@ expensive, ToS-risky (downloading from IG/TikTok), and usually unnecessary. Park
 
 ## Recommended build (phased, reuses what we have)
 
-**Phase 1 — Link-or-paste in the chat (small, mostly done).** Extend the existing Paste-from-AI box to
-accept a URL *or* pasted caption. If it's a YouTube URL, a new Cloud Function `ingestLink` fetches
-title + description + transcript and hands the text to the AI; otherwise the user pastes the caption.
-The AI then extracts exercises/meals and offers to add them via the existing tools (custom-exercise +
-propose_workout / propose_meal confirm cards). **Works day-one for every platform** because the floor is
-"paste the text," and YouTube gets the nice auto-fetch. Needs: Blaze (have it) + a YouTube Data API key
-in Secret Manager. ~1 session.
+**Phase 1 — Link-or-paste in the chat. ✅ SHIPPED (Session 82).** Implemented as a **`fetch_link` AI
+tool** (`functions/aitools.js`), not a separate function: when the user pastes a URL in chat, the AI
+calls `fetch_link`, which fetches the page server-side and extracts its title + description/caption
+(with a best-effort pull of YouTube's full description from the page JSON). The AI then extracts the
+exercises/meals and offers to add them via the existing tools (`propose_workout` / `add_custom_exercise`
+/ `propose_meal`). **Guards:** http(s) only, SSRF denylist (blocks localhost/private/cloud-metadata
+hosts), 8s timeout, 1MB/4MB caps, content-type filter, non-2xx handled. **Universal fallback:** if a site
+blocks the fetch (Instagram/TikTok often do) or the text is thin, the tool returns a hint and the AI asks
+the user to paste the caption — which just works as text. No YouTube Data API key needed for the MVP (we
+read the watch-page description directly); adding one later would let us pull full transcripts too.
+Verified live: the AI read a real YouTube link end-to-end and summarized its actual content. Frontend:
+the chat placeholder + empty-state suggestions now hint "paste a workout/recipe link."
 
 **Phase 2 — oEmbed caption fetch for IG/TikTok.** Best-effort: `ingestLink` calls the platform oEmbed
 endpoint to auto-pull the caption so the user doesn't have to copy/paste. Degrades gracefully to "paste

@@ -10078,8 +10078,8 @@ function AIChatPanel({ role, onDataChanged }) {
 
   const isTrainer = role === "head_trainer" || role === "sub_trainer" || role === "admin";
   const suggestions = isTrainer
-    ? ["Which clients need attention?", "Tips to improve client adherence"]
-    : ["I had 2 eggs and toast for breakfast", "How much protein should I eat?"];
+    ? ["Which clients need attention?", "Turn this workout video into a program: (paste a link)"]
+    : ["I had 2 eggs and toast for breakfast", "Add the exercises from this video: (paste a link)"];
 
   const bubbleUser = "self-end max-w-[85%] rounded-2xl rounded-br-sm bg-primaryfill px-3.5 py-2.5 text-[.95rem] leading-relaxed text-primaryfg whitespace-pre-wrap break-words";
   const bubbleAI = "self-start max-w-[90%] rounded-2xl rounded-bl-sm bg-surface2 px-3.5 py-2.5 text-[.95rem] leading-relaxed text-fg whitespace-pre-wrap break-words";
@@ -10336,7 +10336,7 @@ function AIChatPanel({ role, onDataChanged }) {
                 className="flex items-center justify-center rounded-xl border border-border bg-surface2 px-3 py-2.5 text-fg cursor-pointer disabled:opacity-50 hover:text-primary">
                 <Icon name="clipboard" size={20} /></button>
               <textarea ref={taRef} value={draft} onChange={e => setDraft(e.target.value)} rows={1}
-                placeholder={recording ? "Listening… tap ⏹ to stop" : transcribing ? "Transcribing…" : pendingImage ? "Add a note (optional)…" : "Message Glide AI…"}
+                placeholder={recording ? "Listening… tap ⏹ to stop" : transcribing ? "Transcribing…" : pendingImage ? "Add a note (optional)…" : "Message Glide AI — or paste a workout/recipe link…"}
                 style={{ fontFamily: "var(--font-sans)" }}
                 className="flex-1 resize-none box-border min-h-[48px] rounded-xl border border-border bg-surface2 px-3.5 py-3 text-[.95rem] leading-relaxed text-fg outline-none placeholder:text-muted"
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />

@@ -1747,6 +1747,31 @@ enabled (Blaze has no default spending cap).
   change. Also wrote **`docs/VIDEO-LINK-INGEST.md`** answering Kevin's question about ingesting Instagram/
   YouTube/video links to improve a program (feasible; YouTube auto-fetch + universal paste-the-caption fallback,
   reusing the existing AI tools; deep video/vision is a later premium tier).
+- Session 82: **Video/link ingest — the AI can now READ a shared link (Phase 1 of `docs/VIDEO-LINK-INGEST.md`).
+  DEPLOYED & LIVE.** Kevin's question ("send an Instagram/YouTube/video link to Glide to improve/complement a
+  program") shipped as a new **`fetch_link`** AI tool (`functions/aitools.js`, both roles, no account target).
+  When the user pastes a URL in chat, the AI calls `fetch_link` → it fetches the page server-side (Blaze
+  outbound) and extracts **title + description/caption** (og/twitter/`<title>`/meta-description, plus a
+  best-effort pull of YouTube's full description from the watch-page `"shortDescription"` JSON) → the AI turns
+  it into program changes via the existing tools (`propose_workout` / `add_custom_exercise` / `propose_meal`).
+  **The workout is almost always in the caption text, so we read text — we don't download or "watch" the
+  video** (cheap; deep vision is a later premium tier). **Guards (in the helper, not the model):** http(s)
+  only; **SSRF denylist** (blocks localhost / 127.*/10.*/192.168.*/172.16-31.* / 169.254.* / cloud-metadata /
+  no-TLD / IPv6 loopback); 8s timeout; 1MB read cap + 4MB content-length cap; content-type filter; non-2xx
+  handled. **Universal fallback:** Instagram/TikTok usually block server fetches (they 403 or hide captions) —
+  the tool returns a hint and the AI asks the user to paste the caption, which just works as text. **No YouTube
+  Data API key needed** for the MVP (reads the watch-page description directly); a key later would add full
+  transcripts. UA is a plain browser string (Wikipedia 403s the facebookexternalhit UA — switched). System
+  prompt (`aichat.js`) got a "Links / videos" block. Frontend: chat placeholder + empty-state suggestions hint
+  "paste a workout/recipe link" (no new callable — a URL rides normal chat). **Deployed all four AI functions**
+  (`aiChat`, `aiChatStream`, `logMeal`, `setWorkoutSchedule` — `aitools.js` is shared, per the standing gotcha).
+  **Verified:** `fetch_link` unit-tested in Node (real YouTube → full title+description; SSRF/protocol/invalid
+  all blocked; Wikipedia → title, empty desc → AI asks for paste); build passes; and **live end-to-end** in the
+  preview (signed in as Casey, the AI read a real YouTube link and summarized its actual content, no console/
+  function errors). `docs/VIDEO-LINK-INGEST.md` Phase 1 marked shipped. No `firestore.rules` change. Model
+  `claude-sonnet-4-6`. **NEXT:** back to the plan — **Option C (in-app/email invites + referral)** → **calendar
+  back-dating**. Video-ingest Phase 2 (oEmbed caption auto-fetch for IG/TikTok) / Phase 3 (transcript + vision,
+  premium) remain optional per the doc.
 - **Saved-for-later roadmap (Kevin's calls, Sessions 68–69):**
   - **AI calendar management (in-app):** let the AI back-date logs, schedule workouts on specific weekdays, and review
     by date — same tool pattern (overlaps the plan-builder). **NOT** external calendars (Acuity/Google) — that's a

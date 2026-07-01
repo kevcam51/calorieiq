@@ -16,9 +16,12 @@ prod URL `calorieiq-jet.vercel.app`._
   `/og.png`** on any render error, so worst case is the old generic card (never broken). If the image
   500s, confirm `api/_fonts/` shipped + `@resvg/resvg-js` installed on Vercel.
 - **Next feature (Kevin's chosen order):** ~~Paste-from-AI import~~ → ~~Option B: personalized invite
-  card (DONE, S81)~~ → **Option C: in-app/email invites + referral** → **calendar back-dating**.
-- **On the table (Kevin's S81 question):** ingest an **Instagram/YouTube/video link** to improve or
-  complement a program. Feasibility + phased plan written up in **`docs/VIDEO-LINK-INGEST.md`**.
+  card (DONE, S81)~~ → ~~Video/link ingest Phase 1 (DONE, S82 — `fetch_link` tool, deployed & live)~~ →
+  **Option C: in-app/email invites + referral** → **calendar back-dating**.
+- **Video/link ingest (S82, LIVE):** paste a URL in the AI chat → the AI reads its title/caption via
+  the `fetch_link` tool and turns it into program changes. IG/TikTok fetches often fail (they block
+  apps) → the AI asks for a pasted caption. Phase 2 (oEmbed auto-fetch) / Phase 3 (transcript + vision,
+  premium) are optional next steps in `docs/VIDEO-LINK-INGEST.md`.
 
 ## What shipped in Session 81 (Option B — personalized invite share card)
 
