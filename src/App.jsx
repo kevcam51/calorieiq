@@ -5982,6 +5982,9 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
   const [searchErr, setSearchErr] = useState("");
   const [picked, setPicked] = useState(null); // chosen food's per-100g macros, for serving rescale
   const [grams, setGrams] = useState("100");
+  const [scanning, setScanning] = useState(false); // barcode scan in progress
+  const [scanErr, setScanErr] = useState("");
+  const barcodeRef = useRef(null);            // hidden file input for barcode photo
 
   const list = meals || [];
   const loggedTotal = list.reduce((s, m) => s + (m.calories || 0), 0);
@@ -6027,6 +6030,40 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
   };
   // Adjust serving size after a pick — rescales the filled macros live.
   const setServing = (g) => { setGrams(g); if (picked) applyServing(picked, g); };
+  // ── Barcode scanning: snap a product barcode → look it up in Open Food Facts
+  // → prefill the food. Uses the browser BarcodeDetector on a captured photo (no
+  // extra library); OFF is barcode-native so the lookup is a single request. ──
+  const lookupBarcode = async (code) => {
+    try {
+      const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands,nutriments`);
+      const j = await r.json();
+      if (j.status !== 1 || !j.product) { setSearchOpen(true); setScanErr(`No product found for barcode ${code}. Search by name or enter it manually.`); return; }
+      const p = j.product; const nm = p.nutriments || {};
+      const tidy = (s) => (s || "Food").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+      const food = { name: tidy(p.product_name), brand: (p.brands || "").split(",")[0].trim(),
+        kcal: Math.round(nm["energy-kcal_100g"] || 0), p: Math.round(nm.proteins_100g || 0),
+        c: Math.round(nm.carbohydrates_100g || 0), f: Math.round(nm.fat_100g || 0) };
+      setSearchOpen(true);
+      if (!food.kcal) { setName(food.name); setScanErr("Found the product, but it has no nutrition data — enter the numbers manually."); return; }
+      setScanErr(""); pickFood(food);
+    } catch { setSearchOpen(true); setScanErr("Barcode lookup failed — check your connection and try again."); }
+  };
+  const onBarcodeFile = async (e) => {
+    const file = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!file) return;
+    if (!("BarcodeDetector" in window)) { setSearchOpen(true); setScanErr("Barcode scanning isn't supported on this browser — try Chrome or iOS 17+, or search by name."); return; }
+    setScanning(true); setScanErr("");
+    try {
+      const bitmap = await createImageBitmap(file);
+      const det = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"] });
+      const codes = await det.detect(bitmap);
+      if (bitmap.close) bitmap.close();
+      if (!codes || !codes.length) { setSearchOpen(true); setScanErr("No barcode detected — try a clearer, closer photo, or search by name."); return; }
+      await lookupBarcode(codes[0].rawValue);
+    } catch { setSearchOpen(true); setScanErr("Couldn't read that barcode — try again, or search by name."); }
+    finally { setScanning(false); }
+  };
+  const scanBarcode = () => { setScanErr(""); if (barcodeRef.current) barcodeRef.current.click(); };
   const openForm = (key) => { resetFields(); setEditingId(null); setAddingTo(key); };
   const closeForm = () => { resetFields(); setEditingId(null); setAddingTo(null); };
   // Open the form pre-filled to fix an existing entry.
@@ -6111,11 +6148,23 @@ function MealLog({ meals, onAddMeal, onRemoveMeal, onEditMeal, recentFoods }) {
       {/* Food-database search — find a food and auto-fill calories + macros (only when adding new) */}
       {!editingId && (
         <div>
-          <button onClick={() => { const n = !searchOpen; setSearchOpen(n); if (!n) resetSearch(); }}
-            style={{ border:"none", background:"transparent", color:"var(--accent)", cursor:"pointer",
-              fontSize:".74rem", fontWeight:700, padding:"0", textAlign:"left" }}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:"6px"}}><Icon name={searchOpen ? "close" : "search"} size={13} />{searchOpen ? "Close food search" : "Search food database"}</span>
-          </button>
+          <div style={{ display:"flex", alignItems:"center", gap:"16px", flexWrap:"wrap" }}>
+            <button onClick={() => { const n = !searchOpen; setSearchOpen(n); if (!n) resetSearch(); }}
+              style={{ border:"none", background:"transparent", color:"var(--accent)", cursor:"pointer",
+                fontSize:".74rem", fontWeight:700, padding:"0", textAlign:"left" }}>
+              <span style={{display:"inline-flex",alignItems:"center",gap:"6px"}}><Icon name={searchOpen ? "close" : "search"} size={13} />{searchOpen ? "Close food search" : "Search food database"}</span>
+            </button>
+            <button onClick={scanBarcode} disabled={scanning}
+              style={{ border:"none", background:"transparent", color:"var(--accent)", cursor:"pointer",
+                fontSize:".74rem", fontWeight:700, padding:"0", textAlign:"left", opacity: scanning ? .6 : 1 }}>
+              <span style={{display:"inline-flex",alignItems:"center",gap:"6px"}}>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M22 5v14"/></svg>
+                {scanning ? "Scanning…" : "Scan barcode"}
+              </span>
+            </button>
+          </div>
+          <input ref={barcodeRef} type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={onBarcodeFile} />
+          {scanErr && <div style={{ fontSize:".74rem", color:"var(--red)", marginTop:"6px" }}>{scanErr}</div>}
           {searchOpen && (
             <div style={{ marginTop:"6px", display:"flex", flexDirection:"column", gap:"6px" }}>
               <div style={{ display:"flex", gap:"6px" }}>
