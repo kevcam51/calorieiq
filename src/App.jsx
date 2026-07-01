@@ -9192,8 +9192,8 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
           <div className="flex gap-1.5 mt-2">
             <button onClick={onNewPlan} className={mPrimaryCls}>+ Plan</button>
             <button onClick={onNewSimulation}
-              className="px-2.5 py-2 rounded-md text-xs font-bold border border-[#b57bff] bg-transparent text-[#b57bff] cursor-pointer whitespace-nowrap">
-              + 🧪 Simulation
+              className="flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-bold border border-[#b57bff] bg-transparent text-[#b57bff] cursor-pointer whitespace-nowrap">
+              <Icon name="flask" size={14} color="#b57bff" />Simulation
             </button>
           </div>
           <div className={`${subCls} mt-1.5 mb-1.5`}>
@@ -9264,7 +9264,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                           )}
                         </span>
                         {sim
-                          ? <span className="text-[.66rem] font-bold text-[#b57bff]">🧪 SANDBOX</span>
+                          ? <span className="inline-flex items-center gap-1 text-[.66rem] font-bold text-[#b57bff]"><Icon name="flask" size={11} color="#b57bff" />SANDBOX</span>
                           : <span className="text-[.72rem] font-semibold" style={{ color: st.color }}>{st.label}</span>}
                       </div>
                     )}
