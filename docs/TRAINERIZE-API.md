@@ -43,6 +43,23 @@ logged now and built later. This is the reference + the plan — nothing impleme
 4. **Transitional parallel run.** Pull weigh-ins, workout completion, compliance into Glide dashboards
    during migration so he can run both.
 
+## Multi-tenant: every trainer brings their OWN Trainerize token (Kevin's Q)
+The API is **per-Group-token**, and a token only sees **its own group's clients**. So this isn't
+Kevin-only — it's naturally multi-tenant:
+- **Each Glide trainer connects their own Trainerize Group API token** (from their Trainerize settings)
+  via a "Connect Trainerize" screen. Glide then imports **that trainer's** clients — trainer A's token
+  never sees trainer B's data (Trainerize enforces the scope).
+- **Rate limits are per-token** (1000/min each), so trainers don't share a budget — it scales cleanly.
+- This turns migration into a **platform acquisition hook**: any incoming trainer on Trainerize can
+  one-click import their roster + history into Glide.
+- **Requirement:** the trainer needs **API access on their Trainerize plan** (Studio/higher tiers).
+  Trainers without it fall back to CSV / manual / AI-paste import.
+- **Security (important):** these are third-party credentials we'd store on the trainer's behalf. Store
+  them **server-side only, encrypted / in a restricted store the browser can't read back**, decrypt only
+  inside the Cloud Function, validate on connect (a test call), and let the trainer disconnect/delete.
+  Do NOT store raw tokens in a client-readable Firestore field. (Kevin's single token today can be a
+  Secret; the multi-tenant version needs the per-trainer encrypted store.)
+
 ## Build plan (when we pick it up — READ-ONLY importer)
 - A Cloud Function (Blaze) storing the **Group API token as a Secret** (like RESEND/ANTHROPIC).
 - Map Trainerize fields → Glide schema: profile→`data`, bodystats→`checkIns`/weight, goals→goal fields,
