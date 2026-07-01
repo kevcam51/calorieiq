@@ -10110,7 +10110,9 @@ function AIChatPanel({ role, onDataChanged }) {
       {/* Chat panel — "compact" is a bigger bottom-right card; "full" nearly
           fills the screen. Toggle with the expand control in the header. */}
       {open && (
-        <div className="fixed z-[1000] flex flex-col overflow-hidden rounded-card border border-border bg-surface text-fg shadow-2xl"
+        // z above the fixed hamburger (1390) so it doesn't overlap the chat in
+        // full-screen mode, but below the side menu (1400).
+        <div className="fixed z-[1395] flex flex-col overflow-hidden rounded-card border border-border bg-surface text-fg shadow-2xl"
           style={size === "full" ? {
             top: "calc(10px + env(safe-area-inset-top,0px))",
             bottom: "calc(10px + env(safe-area-inset-bottom,0px))",
