@@ -6343,7 +6343,7 @@ function ActivityFeed({ history, onRefresh }) {
       <div style={{ padding:"12px 14px", background:"var(--s2)", borderRadius:"8px",
         border:"1px solid var(--border)", marginBottom:"6px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div className="sec-title" style={{ marginTop:0, marginBottom:0 }}>🕓 Recent Activity</div>
+          <div className="sec-title" style={{ marginTop:0, marginBottom:0, display:"flex", alignItems:"center", gap:"8px" }}><Icon name="clock" size={17} color="var(--accent)" />Recent Activity</div>
           <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
             {list.length > 0 && (
               <span style={{ fontSize:".72rem", color:"var(--muted)" }}>
@@ -6388,7 +6388,7 @@ function ActivityFeed({ history, onRefresh }) {
               border:"1px solid var(--border)", borderRadius:"12px", padding:"16px",
               display:"flex", flexDirection:"column", gap:"10px" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div className="sec-title" style={{ margin:0 }}>🕓 All Activity ({list.length})</div>
+              <div className="sec-title" style={{ margin:0, display:"flex", alignItems:"center", gap:"8px" }}><Icon name="clock" size={17} color="var(--accent)" />All Activity ({list.length})</div>
               <button onClick={() => setShowFull(false)}
                 style={{ border:"none", background:"transparent", color:"var(--muted)",
                   cursor:"pointer", fontSize:"1.2rem", lineHeight:1 }}>✕</button>
@@ -6547,7 +6547,7 @@ function CalendarView({ data, tdee, onClose, onReadDay, onWriteDay, onListLogged
   const header = (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: "1.15rem", fontWeight: 800 }}>📅 Calendar</div>
+        <div style={{ fontSize: "1.15rem", fontWeight: 800, display:"flex", alignItems:"center", gap:"8px" }}><Icon name="calendar" size={19} color="var(--accent)" />Calendar</div>
         <button style={navBtn} onClick={onClose}>✕ Close</button>
       </div>
       <div style={{ display: "flex", gap: 4, background: "var(--s2)", padding: 4, borderRadius: 10, marginBottom: 14 }}>
@@ -7455,13 +7455,13 @@ function DailyDashboard({ data, step, tdee, dayData, strengthDayData, avgBurnPer
       )}
 
       {/* ── Progress & insights (display, not entry) ── */}
-      <div className="sec-title">📈 Progress &amp; Insights</div>
+      <div className="sec-title" style={{ display:"flex", alignItems:"center", gap:"8px" }}><Icon name="chart" size={17} color="var(--accent)" />Progress &amp; Insights</div>
 
       {/* This week — nutrition averages over the days logged in the last 7 (Session 40) */}
       {weekSummary && weekSummary.days > 0 && (
         <div style={{padding:"12px 14px",background:"var(--s2)",borderRadius:"8px",border:"1px solid var(--border)",marginBottom:"6px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"8px"}}>
-            <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",letterSpacing:".5px"}}>📅 This Week</span>
+            <span style={{fontFamily:"'Sora',sans-serif",fontSize:"1rem",letterSpacing:".5px",display:"inline-flex",alignItems:"center",gap:"7px"}}><Icon name="calendar" size={16} color="var(--accent)" />This Week</span>
             <span style={{fontSize:".72rem",color:"var(--muted)"}}>avg over {weekSummary.days} logged day{weekSummary.days!==1?"s":""}</span>
           </div>
           <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
@@ -7725,7 +7725,7 @@ function DailyCheckIn({ data, onSaveCheckIn }) {
     <div className="checkin-card">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"4px"}}>
         <div>
-          <div className="checkin-title">{isFuture ? "📅 Plan Ahead" : isPast ? "🕐 Log Past Day" : "📝 Daily Check-In"}</div>
+          <div className="checkin-title" style={{display:"flex",alignItems:"center",gap:"8px"}}>{isFuture ? <><Icon name="calendar" size={18} color="var(--accent)" />Plan Ahead</> : isPast ? <><Icon name="clock" size={18} color="var(--accent)" />Log Past Day</> : <><Icon name="edit" size={18} color="var(--accent)" />Daily Check-In</>}</div>
           <div className="checkin-sub">
             {data.firstName ? `Logging for ${data.firstName}` : "Quick daily log"} — {isFuture ? "plan future targets to preview your trajectory" : isPast ? "fill in a missed day to keep your history complete" : "builds your progress history and keeps your streak alive"}.
           </div>
@@ -7971,7 +7971,7 @@ function ProgressChart({ checkIns, goalWeight, currentWeight, showValues, pxPerP
     <div className="card" style={{padding:"16px",marginBottom:"16px",...cardStyle}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
         <div>
-          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"var(--accent)"}}>📈 Progress</div>
+          <div style={{fontFamily:"'Sora',sans-serif",fontSize:"1.1rem",letterSpacing:"2px",color:"var(--accent)",display:"flex",alignItems:"center",gap:"8px"}}><Icon name="chart" size={18} color="var(--accent)" />Progress</div>
           <div style={{fontSize:".74rem",color:"var(--muted)"}}>{sorted.length} {sorted.length === 1 ? "weigh-in" : "weigh-ins"} · {checkIns.length} {checkIns.length === 1 ? "check-in" : "check-ins"}</div>
         </div>
         <div style={{textAlign:"right"}}>
@@ -8116,7 +8116,7 @@ function WeightChartModal({ checkIns, goalWeight, currentWeight, rangeLow, range
       <div onClick={e => e.stopPropagation()}
         className="w-full max-w-[640px] max-h-[88vh] overflow-auto rounded-card border border-border bg-surface p-4 text-fg">
         <div className="mb-3 flex items-center justify-between">
-          <div className="text-[1.05rem] font-extrabold">📈 Weight progress</div>
+          <div className="text-[1.05rem] font-extrabold flex items-center gap-2"><Icon name="chart" size={17} color="var(--accent)" />Weight progress</div>
           <button onClick={onClose}
             className="rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs font-semibold text-fg cursor-pointer whitespace-nowrap">✕ Close</button>
         </div>
@@ -9167,7 +9167,7 @@ function TrainerDashboard({ profiles, loading, onSelect, onManageClients, onOpen
                       <div className="mt-2.5 flex flex-col gap-1">
                         {openReqs.map((r) => (
                           <div key={r.id} className="flex justify-between items-start gap-2 text-sm px-2.5 py-1.5 rounded-md bg-[rgba(8,220,224,.06)] border border-[rgba(8,220,224,.18)]">
-                            <span className="text-fg">📬 {r.prompt}
+                            <span className="text-fg inline-flex items-start gap-1.5"><Icon name="inbox" size={14} color="var(--accent)" style={{marginTop:2}} />{r.prompt}
                               {r.createdAt ? <span className="block text-[.66rem] opacity-70 mt-0.5">Sent {fmtStamp(r.createdAt)}</span> : null}
                             </span>
                             <button onClick={() => cancelRequest(c.uid, r.id)} disabled={reqBusy} title="Cancel this request"
@@ -10715,8 +10715,8 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
           if (!np.trainerReminders) {
             return (
               <div className="mb-4 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface2 border border-border">
-                <span className="text-muted text-xs">
-                  🔕 {openReqs.length} trainer reminder{openReqs.length !== 1 ? "s" : ""} hidden
+                <span className="text-muted text-xs inline-flex items-center gap-1.5">
+                  <Icon name="bellOff" size={13} />{openReqs.length} trainer reminder{openReqs.length !== 1 ? "s" : ""} hidden
                 </span>
                 <button onClick={() => onSetNotifPrefs({ trainerReminders: true })}
                   className="border-0 bg-transparent text-primary cursor-pointer text-xs font-bold whitespace-nowrap">Show</button>
@@ -10729,7 +10729,7 @@ function ClientHome({ onOpenPlan, meUid, meName, role, notifPrefs, onSetNotifPre
               <div className="flex justify-between items-start gap-2 mb-0.5">
                 <div className="font-display text-base tracking-wide text-primary uppercase flex items-center gap-2"><Icon name="inbox" size={18} color="var(--accent)" />From your trainer</div>
                 <button onClick={() => onSetNotifPrefs({ trainerReminders: false })} title="Hide trainer reminders"
-                  className="border-0 bg-transparent text-muted cursor-pointer text-xs font-bold whitespace-nowrap">🔕 Hide</button>
+                  className="border-0 bg-transparent text-muted cursor-pointer text-xs font-bold whitespace-nowrap inline-flex items-center gap-1"><Icon name="bellOff" size={13} />Hide</button>
               </div>
               <div className="text-muted text-sm mb-3">
                 {openReqs.length} thing{openReqs.length !== 1 ? "s" : ""} to do
